@@ -82,6 +82,14 @@ enum PendingDataEntry {
   }
 }
 
+/// Map op `key` member and op types, built once instead of on every op.
+private let keyMember: JSString = "key"
+private let setOpType: JSString = "set"
+private let deleteOpType: JSString = "delete"
+private let clearOpType: JSString = "clear"
+/// `__proto__`, which a plain-object assignment does not store as an own property.
+private let protoKey: JSString = "__proto__"
+
 /// `mapKernel.ts` PendingLocalOpMetadata.
 public enum PendingLocalOpMetadata {
   case set(PendingKeySet)
@@ -201,9 +209,9 @@ public final class MapKernel {
     lifetime.keySets.append(pendingKeySet)
 
     var op = JSObject<JSONValue>()
-    op["key"] = .string(key)
-    op["type"] = .string("set")
-    op["value"] = serializableValue(localValue.value)
+    op[keyMember] = .string(key)
+    op[typeMember] = .string(setOpType)
+    op[valueMember] = serializableValue(localValue.value)
     try submitMessage(.object(op), .set(pendingKeySet))
     valueChanged?(
       IValueChanged(key: key, previousValue: previousOptimisticLocalValue?.value), true)
@@ -225,8 +233,8 @@ public final class MapKernel {
     pendingData.append(.delete(pendingKeyDelete))
 
     var op = JSObject<JSONValue>()
-    op["key"] = .string(key)
-    op["type"] = .string("delete")
+    op[keyMember] = .string(key)
+    op[typeMember] = .string(deleteOpType)
     try submitMessage(.object(op), .delete(pendingKeyDelete))
     // Speculative deletes submit even when nothing is visible, but only emit when something was.
     if let previousOptimisticLocalValue {
@@ -255,7 +263,7 @@ public final class MapKernel {
     pendingData.append(.clear(pendingClear))
 
     var op = JSObject<JSONValue>()
-    op["type"] = .string("clear")
+    op[typeMember] = .string(clearOpType)
     try submitMessage(.object(op), .clear(pendingClear))
     clearEvent?(true)
     for changed in keysToDelete {
@@ -267,7 +275,7 @@ public final class MapKernel {
   /// enumerate first and `__proto__` (which sets the prototype) is not an own property.
   func getSerializedStorage() -> JSObject<ISerializedValue> {
     var serializedMapData = JSObject<ISerializedValue>()
-    for key in sequencedData.keys where key != "__proto__" {
+    for key in sequencedData.keys where key != protoKey {
       serializedMapData[key] = serializeValue(sequencedData.get(key)!.value)
     }
     return serializedMapData
@@ -286,13 +294,13 @@ public final class MapKernel {
   }
 
   func tryApplyStashedOp(_ op: JSONValue) throws {
-    switch try op.member("type").asString() {
-    case "clear":
+    switch try op.member(typeMember).asString() {
+    case clearOpType:
       try clear()
-    case "delete":
-      try delete(op.member("key").asString())
-    case "set":
-      try set(op.member("key").asString(), parseSerializableValue(op.member("value")))
+    case deleteOpType:
+      try delete(op.member(keyMember).asString())
+    case setOpType:
+      try set(op.member(keyMember).asString(), parseSerializableValue(op.member(valueMember)))
     default:
       throw SharedObjectError("unknown map stashed op")
     }
@@ -301,8 +309,8 @@ public final class MapKernel {
   /// Rollback removes the overlay rather than restoring a captured value, exposing current
   /// sequenced state.
   func rollback(_ op: JSONValue, _ localOpMetadata: PendingLocalOpMetadata) throws {
-    let type = try op.member("type").asString()
-    if type == "clear" {
+    let type = try op.member(typeMember).asString()
+    if type == clearOpType {
       guard case .clear(let pendingClear) = pendingData.popLast(),
         case .clear(let metadata) = localOpMetadata, pendingClear === metadata
       else {
@@ -313,7 +321,7 @@ public final class MapKernel {
       }
       return
     }
-    let key = try op.member("key").asString()
+    let key = try op.member(keyMember).asString()
     // The entry need not be last: lifetimes are ordered by creation, not by last modification.
     guard let pendingEntryIndex = pendingData.lastIndex(where: { !$0.isClear && $0.key == key })
     else {
@@ -347,12 +355,12 @@ public final class MapKernel {
   func tryProcessMessage(
     _ op: JSONValue, local: Bool, localOpMetadata: PendingLocalOpMetadata?
   ) throws {
-    switch try op.member("type").asString() {
-    case "clear":
+    switch try op.member(typeMember).asString() {
+    case clearOpType:
       try processClear(local: local, localOpMetadata: localOpMetadata)
-    case "delete":
+    case deleteOpType:
       try processDelete(op, local: local, localOpMetadata: localOpMetadata)
-    case "set":
+    case setOpType:
       try processSet(op, local: local, localOpMetadata: localOpMetadata)
     default:
       throw SharedObjectError(
@@ -392,7 +400,7 @@ public final class MapKernel {
   private func processDelete(
     _ op: JSONValue, local: Bool, localOpMetadata: PendingLocalOpMetadata?
   ) throws {
-    let key = try op.member("key").asString()
+    let key = try op.member(keyMember).asString()
     if local {
       guard let pendingEntryIndex = pendingData.firstIndex(where: { !$0.isClear && $0.key == key }),
         case .delete(let pendingDelete) = pendingData[pendingEntryIndex],
@@ -415,7 +423,7 @@ public final class MapKernel {
   private func processSet(
     _ op: JSONValue, local: Bool, localOpMetadata: PendingLocalOpMetadata?
   ) throws {
-    let key = try op.member("key").asString()
+    let key = try op.member(keyMember).asString()
     if local {
       guard let pendingEntryIndex = pendingData.firstIndex(where: { !$0.isClear && $0.key == key }),
         case .lifetime(let lifetime) = pendingData[pendingEntryIndex]
@@ -434,7 +442,7 @@ public final class MapKernel {
       sequencedData.set(key, pendingKeySet.value)
       return
     }
-    let localValue = ILocalValue(value: try parseSerializableValue(op.member("value")))
+    let localValue = ILocalValue(value: try parseSerializableValue(op.member(valueMember)))
     let previousValue = valueChanged == nil ? nil : sequencedData.get(key)?.value
     sequencedData.set(key, localValue)
     // Suppress the event if local changes would hide the incoming change optimistically.

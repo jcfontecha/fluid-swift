@@ -9,6 +9,6 @@ let package = Package(
         .target(name: "BenchMergeTree", dependencies: [.product(name: "FluidContainerLoader", package: "FluidSwift")], path: "Sources/FluidMergeTree"),
         .target(name: "BenchSequence", dependencies: ["BenchMergeTree", .product(name: "FluidContainerLoader", package: "FluidSwift")], path: "Sources/FluidSequence", swiftSettings: [.unsafeFlags(["-module-alias", "FluidMergeTree=BenchMergeTree"])]),
         .target(name: "BenchTestRuntimeUtils", dependencies: [.product(name: "FluidContainerLoader", package: "FluidSwift")], path: "Sources/FluidTestRuntimeUtils"),
-        .executableTarget(name: "FluidBench", dependencies: ["BenchCounter", "BenchSequence", "BenchTestRuntimeUtils", .product(name: "FluidContainerLoader", package: "FluidSwift")])
+        .executableTarget(name: "FluidBench", dependencies: ["BenchCounter", "BenchSequence", "BenchTestRuntimeUtils", .product(name: "FluidContainerLoader", package: "FluidSwift"), .product(name: "FluidMap", package: "FluidSwift")])
     ]
 )

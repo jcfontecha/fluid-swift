@@ -105,8 +105,8 @@ public final class SharedMap: SharedObject<PendingLocalOpMetadata> {
   /// `{type, value: JSON.parse(value.value)}`.
   private func serializable(_ value: ISerializedValue) -> JSONValue {
     var result = JSObject<JSONValue>()
-    result["type"] = .string(value.type)
-    result["value"] = value.parsed
+    result[typeMember] = .string(value.type)
+    result[valueMember] = value.parsed
     return .object(result)
   }
 

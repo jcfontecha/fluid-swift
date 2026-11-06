@@ -17,6 +17,10 @@ struct ISerializedValue {
 /// `ValueType[ValueType.Plain]` (shared-object-base/src/valueType.ts).
 let plainValueType: JSString = "Plain"
 
+/// `ISerializableValue` and op member names, built once instead of on every op.
+let typeMember: JSString = "type"
+let valueMember: JSString = "value"
+
 /// Port of `localValues.ts` serializeValue. Handles are already in their encoded JSON form.
 func serializeValue(_ value: JSONValue?) -> ISerializedValue {
   ISerializedValue(
@@ -27,8 +31,8 @@ func serializeValue(_ value: JSONValue?) -> ISerializedValue {
 /// Undefined omits `value`, as `JSON.stringify` does.
 func serializableValue(_ value: JSONValue?) -> JSONValue {
   var serializable = JSObject<JSONValue>()
-  serializable["type"] = .string(plainValueType)
-  serializable["value"] = value
+  serializable[typeMember] = .string(plainValueType)
+  serializable[valueMember] = value
   return .object(serializable)
 }
 
@@ -37,8 +41,8 @@ func serializableValue(_ value: JSONValue?) -> JSONValue {
 /// context; that migration is not ported, so such values fail loudly instead of loading wrong.
 func parseSerializableValue(_ serializable: JSONValue) throws -> JSONValue? {
   let object = try serializable.asObject()
-  guard object["type"] == .string(plainValueType) else {
+  guard object[typeMember] == .string(plainValueType) else {
     throw JSONDecodingError("unsupported legacy map value type")
   }
-  return object["value"]
+  return object[valueMember]
 }

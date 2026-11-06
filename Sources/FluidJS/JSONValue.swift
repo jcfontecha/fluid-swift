@@ -1,6 +1,6 @@
 /// A JSON value with JavaScript semantics: numbers are `Double`, strings are UTF-16, objects keep
 /// JS property order.
-public indirect enum JSONValue: Equatable, Sendable {
+public enum JSONValue: Equatable, Sendable {
     case null
     case bool(Bool)
     case number(Double)

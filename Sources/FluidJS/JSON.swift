@@ -10,12 +10,16 @@ public enum JSON {
     public static func parse(_ text: String) throws -> JSONValue {
         var text = text
         return try text.withUTF8 { bytes in
-            var parser = Parser(bytes: bytes)
-            parser.skipWhitespace()
-            let value = try parser.parseValue()
-            parser.skipWhitespace()
-            guard parser.position == bytes.count else { throw parser.error("unexpected trailing input") }
-            return value
+            try withUnsafeTemporaryAllocation(of: JSString?.self, capacity: Parser.recentStringSlots) { recentStrings in
+                recentStrings.initialize(repeating: nil)
+                defer { recentStrings.deinitialize() }
+                var parser = Parser(bytes: bytes, recentStrings: recentStrings)
+                parser.skipWhitespace()
+                let value = try parser.parseValue()
+                parser.skipWhitespace()
+                guard parser.position == bytes.count else { throw parser.error("unexpected trailing input") }
+                return value
+            }
         }
     }
 
@@ -195,11 +199,21 @@ public enum JSON {
 }
 
 private struct Parser {
+    /// Slots in the recent-string table; a power of two.
+    static let recentStringSlots = 64
+    /// Longer strings are rarely repeated and always get their own buffer.
+    static let maxRecentStringLength = 32
+
     let bytes: UnsafeBufferPointer<UInt8>
+    /// Short ASCII strings parsed so far, by hash of their bytes. Repeated keys and values ("type",
+    /// "value", "Plain") share one buffer instead of each allocating, as V8 internalizes keys.
+    /// A collision replaces the slot; sharing is invisible because JSString is a value type.
+    let recentStrings: UnsafeMutableBufferPointer<JSString?>
     var position = 0
 
-    init(bytes: UnsafeBufferPointer<UInt8>) {
+    init(bytes: UnsafeBufferPointer<UInt8>, recentStrings: UnsafeMutableBufferPointer<JSString?>) {
         self.bytes = bytes
+        self.recentStrings = recentStrings
     }
 
     func error(_ message: String) -> JSONDecodingError {
@@ -231,13 +245,15 @@ private struct Parser {
         position += count
     }
 
-    mutating func expect(_ byte: Character) throws {
-        guard position < bytes.count, bytes[position] == byte.asciiValue! else { throw error("expected '\(byte)'") }
+    mutating func expect(_ byte: UInt8) throws {
+        guard position < bytes.count, bytes[position] == byte else {
+            throw error("expected '\(Character(Unicode.Scalar(byte)))'")
+        }
         position += 1
     }
 
     mutating func parseObject() throws -> JSObject<JSONValue> {
-        try expect("{")
+        try expect(UInt8(ascii: "{"))
         var object = JSObject<JSONValue>()
         skipWhitespace()
         if position < bytes.count, bytes[position] == UInt8(ascii: "}") {
@@ -248,7 +264,7 @@ private struct Parser {
             skipWhitespace()
             let key = try parseString()
             skipWhitespace()
-            try expect(":")
+            try expect(UInt8(ascii: ":"))
             skipWhitespace()
             object[key] = try parseValue()
             skipWhitespace()
@@ -257,12 +273,12 @@ private struct Parser {
                 position += 1
                 return object
             }
-            try expect(",")
+            try expect(UInt8(ascii: ","))
         }
     }
 
     mutating func parseArray() throws -> [JSONValue] {
-        try expect("[")
+        try expect(UInt8(ascii: "["))
         var array: [JSONValue] = []
         skipWhitespace()
         if position < bytes.count, bytes[position] == UInt8(ascii: "]") {
@@ -278,23 +294,19 @@ private struct Parser {
                 position += 1
                 return array
             }
-            try expect(",")
+            try expect(UInt8(ascii: ","))
         }
     }
 
     mutating func parseString() throws -> JSString {
-        try expect("\"")
+        try expect(UInt8(ascii: "\""))
         let start = position
         while position < bytes.count {
             let byte = bytes[position]
             if byte == 34 {
-                let count = position - start
-                let units = ContiguousArray<UInt16>(unsafeUninitializedCapacity: count) { buffer, initialized in
-                    for i in 0..<count { buffer[i] = UInt16(bytes[start + i]) }
-                    initialized = count
-                }
+                let string = asciiString(from: start, to: position)
                 position += 1
-                return JSString(utf16: units)
+                return string
             }
             if byte < 0x20 || byte >= 0x80 || byte == 92 { break }
             position += 1
@@ -335,6 +347,24 @@ private struct Parser {
                 try appendUTF8Scalar(to: &units)
             }
         }
+    }
+
+    /// The string for `bytes[start..<end]`, all ASCII without escapes, reusing a recent equal one.
+    func asciiString(from start: Int, to end: Int) -> JSString {
+        let ascii = UnsafeBufferPointer(rebasing: bytes[start..<end])
+        guard ascii.count <= Self.maxRecentStringLength else { return JSString(ascii: ascii) }
+        // FNV-1a.
+        var hash: UInt32 = 2_166_136_261
+        for byte in ascii {
+            hash = (hash ^ UInt32(byte)) &* 16_777_619
+        }
+        let slot = Int(hash) & (Self.recentStringSlots - 1)
+        if let recent = recentStrings[slot], recent.utf16.elementsEqual(ascii, by: { $0 == UInt16($1) }) {
+            return recent
+        }
+        let string = JSString(ascii: ascii)
+        recentStrings[slot] = string
+        return string
     }
 
     mutating func parseHexUnit() throws -> UInt16 {

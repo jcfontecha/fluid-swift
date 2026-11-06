@@ -10,16 +10,18 @@ public struct JSString: Hashable, Sendable, ExpressibleByStringLiteral, CustomSt
 
     public init(_ string: String) {
         var string = string
-        let original = string
-        self.utf16 = string.withUTF8 { bytes in
-            if bytes.allSatisfy({ $0 < 0x80 }) {
-                return ContiguousArray(unsafeUninitializedCapacity: bytes.count) { buffer, initialized in
-                    for i in bytes.indices { buffer[i] = UInt16(bytes[i]) }
-                    initialized = bytes.count
-                }
-            }
-            return ContiguousArray(original.utf16)
+        let ascii = string.withUTF8 { bytes in
+            bytes.allSatisfy { $0 < 0x80 } ? JSString(ascii: bytes) : nil
         }
+        self = ascii ?? JSString(utf16: ContiguousArray(string.utf16))
+    }
+
+    /// Widens ASCII bytes. Copying a lazy sequence specializes the buffer allocation in this module;
+    /// `ContiguousArray(unsafeUninitializedCapacity:)` instead calls the standard library's exported
+    /// `UInt16` prespecialization, which resolves its metadata through the runtime's generic
+    /// metadata cache on every call and measured about 30% more instructions per string.
+    @usableFromInline internal init(ascii bytes: UnsafeBufferPointer<UInt8>) {
+        self.utf16 = ContiguousArray(bytes.lazy.map { UInt16($0) })
     }
 
     public init(stringLiteral value: String) {
