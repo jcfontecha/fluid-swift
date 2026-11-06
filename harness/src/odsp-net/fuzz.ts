@@ -312,7 +312,7 @@ try {
     snapshotDelay = 0;
     // The CLP case rides on the failed put: in one process only the oracle's first successful
     // prefetch observes the 5-second eviction, so a second successful run would not compare.
-    for (const [failPut, clp] of [[false, false], [true, true]]) {
+    for (const [failPut, clp] of [[false, false], [true, true]] as const) {
         reset(2);
         const expected = await prefetchOracle(origin, failPut, clp);
         const expectedRequests = structuredClone(trace);
