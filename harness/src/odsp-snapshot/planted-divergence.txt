@@ -1,0 +1,10 @@
+Mutation 1: ZipItDataRepresentationUtils.swift, the integer-marker case of NodeCore.loadStructure, sign-extended the Int8 marker (value >= 128 became value - 256), the bug the spec warns about ("02 ff decodes to 255, not -1").
+Command: npm run fuzz:odsp-snapshot -- --seeds=1000
+Result: seed 11, grammar/parseTree: expected {"k":"num","v":255}, actual {"k":"num","v":-1}.
+(Before the grammar-bytes generator was added the same mutation survived until seed 988, found only by random byte mutation; that gap is why `grammar` exists.)
+
+Mutation 2: CompactSnapshotWriter.swift, writeTreeSectionCore read `unreferenced` from the child entry instead of the enclosing tree.
+Command: npm run fuzz:odsp-snapshot -- --seeds=1000
+Result: seed 1, snapshot/writeSnapshot: the Swift bytes differed from the TS writer's.
+
+Both mutations were reverted by restoring the original files (verified byte-identical with cmp); the clean 1,000-seed Swift differential rerun passed.

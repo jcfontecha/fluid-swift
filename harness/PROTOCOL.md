@@ -969,3 +969,68 @@ TimerManager, join response election (preferred, backup, fully and partially ans
 cases, acknowledgement, unrecognized messages, attendee lifecycle (connect, disconnect, rejoin, stale after 30 s),
 latest, latestMap, notifications, batching, and the upstream behaviors above.
 
+## ODSP compact snapshot codec (H10)
+
+`npm run fuzz:odsp-snapshot` builds `FluidOdspSnapshotPeer` in release mode with `--scratch-path .build/h10` and checks
+seeds 0–999. `--self` runs the harness against the TS oracle instead of the Swift peer (the TS self-check: it exercises
+the generators, the outcome classification and the comparison path); `--seeds=10` selects the first ten seeds. No
+package installation or service is needed. Failures save `harness/traces/odsp-snapshot/<seed>.json` with the step, both
+outcome texts and the input.
+
+The oracle imports the installed 3.11.0 `lib` files of `@fluidframework/odsp-driver` directly:
+`parseCompactSnapshotResponse`, `convertToCompactSnapshot`, `ReadBuffer`, `TreeBuilderSerializer` and
+`TreeBuilder`. Swift is `Sources/FluidOdspDriver` (one file per TS file: `ReadBufferUtils`, `WriteBufferUtils`,
+`ZipItDataRepresentationUtils`, `CompactSnapshotParser`, `CompactSnapshotWriter`).
+
+**Peer protocol.** Newline-delimited `{method, params}`; one outcome per line, `{"ok": value}` or `{"err": class}`.
+Bytes travel as lowercase hex. Methods: `writeSnapshot(spec)` → hex; `parseSnapshot(hex)` → the canonical parse result;
+`writeTree(elements)` → hex (the raw `TreeBuilderSerializer`); `parseTree(hex)` → the loaded top-level elements. The
+canonical parse result has a fixed key order (`snapshotTree` {`id`, `blobs`, `trees`, `unreferenced`, `groupId`},
+`blobContents` as `[id, hex]` pairs in Map order, `ops`, `sequenceNumber`, `latestSequenceNumber`,
+`snapshotFormatV`, `telemetry` = the three slow-path counters; durations are not compared). Replies compare as exact
+text, so the `Object.keys` order of `trees` and `blobs` (integer-like keys first) is part of the check.
+
+**Error classes** (compared, not just "it threw"): `assert` with its 0x code, `invalidCode`, `bufferParsing` (message,
+`nodeType`, `expectedNodeType`), `undefinedAccess` (a JS `TypeError` from reading a missing element or property),
+`invalidJSON` (`SyntaxError` from a delta string), and `sequenceNumberOutOfRange`. The last is the one deliberate
+difference: Swift protocol counters are exact integers below 2^53 (ARCHITECTURE §3), so a parsed `sequenceNumber` or
+`lsn` above that is rejected where TS returns a rounded double; the oracle outcome is mapped to the same class.
+
+**Per seed** (deterministic Mulberry32):
+1. A random `ISnapshot`: nested trees (wide ones with more than 255 distinct names, so dictionary IDs reach 256+ and
+   big declarations), `unreferenced` true/false, `groupId` including `""`, integer-like and `__proto__` names, lone
+   surrogates, blobs of 0/1/255/256/257/65536/70000 bytes as `ArrayBuffer`, and `IBlob` strings (UTF-8 with astral
+   characters, default encoding, base64 with whitespace/URL-safe/unpadded/garbage variants), 0–6 ops (including an op
+   without `sequenceNumber`, a non-object and `null`), explicit/undefined/zero `latestSequenceNumber`, missing
+   `sequenceNumber`. Checks: (a) the TS writer's bytes equal the Swift writer's exactly (or both fail identically);
+   (b) TS's bytes parsed by Swift equal TS's parse; (c) Swift's bytes parsed by TS equal that same parse; four byte
+   mutations of the bytes (truncate, flip, insert, delete, plant markers, plant NUL) parse identically in both
+   `parseSnapshot` and `parseTree`.
+2. A random raw ZipIt tree written by both `TreeBuilderSerializer`s (integer boundaries 0/255/256/65535/65536/2^24/2^32/
+   2^53/2^63/2^64-2048/2^64, invalid numbers, 250–290 dictionary strings, strings of 255–70000 bytes), loaded back by
+   both, and mutated.
+3. A hand-shaped `application/ms-fluid` snapshot built with the raw writer so the reader sees every path: fast-path
+   entries, service-style `nodeType` entries, `unreferenced` with `true`/`false`/non-bool, general-path entries with
+   shuffled pairs, unknown fields and duplicates, `groupId` on empty/non-empty children, `value` beside `children`,
+   odd pair counts, non-string keys, `__proto__` keys, blob entries in both orders, version strings (`1.00`, `abc`,
+   ` 1`, `2.0`, …), missing `lsn`/sections, empty/mismatched/malformed deltas, extra or missing roots; then mutated.
+4. Grammar bytes: every valid marker written directly, including the ones the TS writer never emits: Int8/16/32/64
+   markers with the high bit set, 16/32-bit string lengths, 2/4-byte dictionary references, big declarations with
+   IDs 0/256/70000/2^32-1, 64-bit blob lengths, mismatched list/set end markers, invalid UTF-8, a BOM, embedded NUL.
+
+**Reproduced oracle behavior** (all from specs/odsp-driver/compact-snapshot.md): "signed" markers decode unsigned;
+declarations are not elements; an embedded NUL in any string fails with 0x3ea after structural errors; a missing child
+or property is a `TypeError` (`undefinedAccess`); `unreferenced` marks the enclosing tree; `groupId` is dropped on an
+empty child; `cv` must be exactly `"1.0"` (`parseFloat` gates for the rest); `Object.entries` order; the writer's
+8-byte blob-length marker bug. Two further consequences of TS building records as plain objects were derived from the
+source, are ported, and are covered by the farm: a `__proto__` key in an entry is not stored but replaces the record's prototype (so an inherited
+`children`/`data` array can appear), and a tree or blob *named* `__proto__` silently disappears from the parsed
+snapshot. See `src/odsp-snapshot/planted-divergence.txt` for the planted-divergence record.
+
+**Not covered.** The `logger` argument and its `StringParsingError` event (it is emitted immediately before the 0x3ea
+assertion) are not ported; `telemetryProps` durations are measured but not compared; blob lengths of 4 GiB or more;
+sequence numbers above 2^53 (see above); `IBlob` encodings other than `utf-8`/`base64`.
+
+Swift Testing ports (`swift test --scratch-path .build/h10 --filter FluidOdspDriverTests`): the unit tests of
+`zipItDataRepresentationTests.spec.ts` and `snapshotFormatTests.spec.ts`, the spec's 133-byte worked hex example in
+both directions, and the byte-grammar, hazard and error-code tests.

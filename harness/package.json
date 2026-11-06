@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "fuzz:odsp-snapshot": "tsx src/odsp-snapshot/fuzz.ts",
     "fuzz:summarize": "tsx src/summarize/fuzz.ts",
     "fuzz:datastore": "tsx src/datastore/fuzz.ts",
     "fuzz:tree-changes": "tsx src/tree/fuzz.ts",
