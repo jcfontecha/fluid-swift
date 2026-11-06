@@ -4,7 +4,25 @@ import FluidJS
 /// transient references never join, and therefore deliberately do not follow splits.
 public final class LocalReferenceCollection {
   private weak var segment: BaseSegment?
-  private var refs: [LocalReference] = []
+  private struct WeakReference { weak var value: LocalReference? }
+  private var strongRefs: [LocalReference] = []
+  private var detachedRefs: [WeakReference]?
+  private var refs: [LocalReference] {
+    get { detachedRefs?.compactMap(\.value) ?? strongRefs }
+    set {
+      if detachedRefs != nil {
+        detachedRefs = newValue.map { WeakReference(value: $0) }
+      } else {
+        strongRefs = newValue
+      }
+    }
+  }
+  func detachOwner() {
+    let current = refs
+    for ref in current { ref.retainDetachedSegment() }
+    detachedRefs = current.map { WeakReference(value: $0) }
+    strongRefs = []
+  }
   init(segment: BaseSegment) { self.segment = segment }
   public var size: Int { refs.count }
   public var empty: Bool { refs.isEmpty }
@@ -21,16 +39,19 @@ public final class LocalReferenceCollection {
     ref.offset = offset
     ref.bucket = bucket
     if ref.includes(256) { return }
-    let index = refs.firstIndex {
-      $0.offset > offset || ($0.offset == offset && ($0.bucket > bucket || (prepend && $0.bucket == bucket)))
-    } ?? refs.count
+    let index =
+      refs.firstIndex {
+        $0.offset > offset
+          || ($0.offset == offset && ($0.bucket > bucket || (prepend && $0.bucket == bucket)))
+      } ?? refs.count
     refs.insert(ref, at: index)
   }
   internal func addSliding(_ ref: LocalReference, forward: Bool, preceding: LocalReference?) {
     guard let segment else { return }
     add(ref, offset: forward ? 0 : segment.length - 1, bucket: forward ? 0 : 2, prepend: forward)
     if forward, let preceding,
-       let source = refs.firstIndex(where: { $0 === ref }) {
+      let source = refs.firstIndex(where: { $0 === ref })
+    {
       refs.remove(at: source)
       if let index = refs.firstIndex(where: { $0 === preceding }) {
         refs.insert(ref, at: index + 1)

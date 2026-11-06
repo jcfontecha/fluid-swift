@@ -1,3 +1,4 @@
+import type { IMergeTreeOp } from '../../node_modules/@fluidframework/merge-tree/lib/ops.js';
 import { Client } from '../../node_modules/@fluidframework/merge-tree/lib/client.js';
 import { Marker } from '../../node_modules/@fluidframework/merge-tree/lib/mergeTreeNodes.js';
 import { createChildLogger } from '@fluidframework/telemetry-utils/internal';
@@ -12,22 +13,28 @@ import { TextSegment } from '../../node_modules/@fluidframework/merge-tree/lib/t
 import { PriorPerspective } from '../../node_modules/@fluidframework/merge-tree/lib/perspective.js';
 import { SnapshotV1 } from '../../node_modules/@fluidframework/merge-tree/lib/snapshotV1.js';
 import { SnapshotLegacy } from '../../node_modules/@fluidframework/merge-tree/lib/snapshotlegacy.js';
-import { MockHandle } from '@fluidframework/test-runtime-utils/internal';
+import { MockFluidDataStoreRuntime, MockObjectStorageService, MockHandle } from '@fluidframework/test-runtime-utils/internal';
 import type { LocalReferencePosition } from '../../node_modules/@fluidframework/merge-tree/lib/localReference.js';
 import type { ISequencedDocumentMessage } from '@fluidframework/driver-definitions/internal';
-import { editSchema, messageSchema, requestSchema } from './protocol.js';
+import { editSchema, messageSchema, requestSchema, summarySchema } from './protocol.js';
 import { createInterface } from 'node:readline';
 class Oracle extends Client {
-    constructor(obliterate = false) {
+    constructor(obliterate = false, endpointSliding = false) {
         super(spec => {
             const s = TextSegment.fromJSONObject(spec) ?? Marker.fromJSONObject(spec);
             if (!s)
                 throw Error('invalid segment');
             return s;
-        }, createChildLogger(), { mergeTreeEnableObliterate: obliterate, newMergeTreeSnapshotFormat: true });
+        }, createChildLogger(), { mergeTreeEnableObliterate: obliterate, mergeTreeReferencesCanSlideToEndpoint: endpointSliding, newMergeTreeSnapshotFormat: true });
     }
     get mergeTree() {
         return this['_mergeTree'];
+    }
+    pendingEdits: { op: IMergeTreeOp; metadata: unknown }[] = [];
+    record(op: IMergeTreeOp | undefined) {
+        if (op)
+            this.pendingEdits.push({ op, metadata: this.peekPendingSegmentGroups() });
+        return op;
     }
     readonly references = new Map<string, LocalReferencePosition>();
     state() {
@@ -62,7 +69,19 @@ for await (const line of createInterface({ input: process.stdin })) {
         else if (req.method === 'create') {
             if (!p.client)
                 throw Error('client required');
-            const c = new Oracle(p.obliterate);
+            const c = new Oracle(p.obliterate, p.endpointSliding);
+            c.startOrUpdateCollaboration(p.client);
+            clients.set(p.client, c);
+        }
+        else if (req.method === 'load') {
+            if (!p.client)
+                throw Error('client required');
+            const summary = summarySchema.parse(p.summary);
+            const blobs = Object.fromEntries(Object.entries(summary.tree).map(([name, blob]) => [name, blob.content]));
+            const c = new Oracle();
+            const loaded = await c.load(new MockFluidDataStoreRuntime({ clientId: 'snapshot' }), new MockObjectStorageService(blobs), serializer);
+            for (const message of await loaded.catchupOpsP)
+                c.applyMsg(message);
             c.startOrUpdateCollaboration(p.client);
             clients.set(p.client, c);
         }
@@ -75,26 +94,26 @@ for await (const line of createInterface({ input: process.stdin })) {
                     const e = editSchema.parse(p.edit);
                     switch (e.kind) {
                         case 'insert':
-                            result = c.insertSegmentLocal(e.pos, new TextSegment(e.text));
+                            result = c.record(c.insertSegmentLocal(e.pos, new TextSegment(e.text)));
                             break;
                         case 'marker':
-                            result = c.insertSegmentLocal(e.pos, Marker.make(0));
+                            result = c.record(c.insertSegmentLocal(e.pos, Marker.make(0)));
                             break;
                         case 'remove':
-                            result = c.removeRangeLocal(e.start, e.end);
+                            result = c.record(c.removeRangeLocal(e.start, e.end));
                             break;
                         case 'obliterate':
-                            result = c.obliterateRangeLocal(e.start, e.end);
+                            result = c.record(c.obliterateRangeLocal(e.start, e.end));
                             break;
                         case 'annotate':
-                            result = c.annotateRangeLocal(e.start, e.end, e.props ?? {});
+                            result = c.record(c.annotateRangeLocal(e.start, e.end, e.props ?? {}));
                             break;
                         case 'reference': {
                             const found = c.getContainingSegment(e.pos);
                             if (!found)
                                 throw Error('reference out of bounds');
                             const { segment, offset } = found;
-                            c.references.set(e.id, c.createLocalReferencePosition(segment, offset, e.refType, undefined, e.slidingPreference));
+                            c.references.set(e.id, c.createLocalReferencePosition(segment, offset, e.refType, undefined, e.slidingPreference, e.canSlideToEndpoint));
                             break;
                         }
                     }
@@ -103,6 +122,25 @@ for await (const line of createInterface({ input: process.stdin })) {
                 case 'process': {
                     const m = messageSchema.parse(p.message);
                     c.applyMsg({ ...m, contents: m.contents, term: 1, timestamp: 0 } as ISequencedDocumentMessage);
+                    if (m.clientId === p.client)
+                        c.pendingEdits.shift();
+                    break;
+                }
+                case 'reconnect': {
+                    const original = c.pendingEdits;
+                    c.pendingEdits = [];
+                    result = original.map(({ op, metadata }) => {
+                        const next = c.regeneratePendingOp(op, metadata, false);
+                        c.pendingEdits.push({ op: next, metadata: c.peekPendingSegmentGroups(next.type === 3 ? next.ops.length : 1) });
+                        return next;
+                    });
+                    break;
+                }
+                case 'rollback': {
+                    const last = c.pendingEdits.pop();
+                    if (!last)
+                        throw Error('no pending operation');
+                    c.rollback(last.op, last.metadata);
                     break;
                 }
                 case 'state':
@@ -116,7 +154,7 @@ for await (const line of createInterface({ input: process.stdin })) {
                 case 'snapshot': {
                     const snap = p.version === 'legacy' ? new SnapshotLegacy(c.mergeTree, c.logger) : new SnapshotV1(c.mergeTree, c.logger, id => c.getLongClientId(id));
                     snap.extractSync();
-                    result = snap instanceof SnapshotLegacy ? snap.emit([], serializer, new MockHandle(null)).summary : snap.emit(serializer, new MockHandle(null)).summary;
+                    result = snap instanceof SnapshotLegacy ? snap.emit((p.catchup ?? []).map(value => ({ ...messageSchema.parse(value), term: 1, timestamp: 0 })), serializer, new MockHandle(null)).summary : snap.emit(serializer, new MockHandle(null)).summary;
                     break;
                 }
             }

@@ -38,7 +38,6 @@ public enum Perspective: Sendable {
   }
 }
 
-
 func object(_ entries: [(JSString, JSONValue)]) -> JSONValue {
   var result = JSObject<JSONValue>()
   for (key, value) in entries { result[key] = value }

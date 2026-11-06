@@ -1,0 +1,12 @@
+/Users/juan/.t3/scratch/2026-11-06-https-github-com-microsoft-fluidframework-c98490f3/harness/src/mergetree/driver.ts:27
+        throw Error(`${label}: ${JSON.stringify(a)} != ${JSON.stringify(b)}`);
+              ^
+
+Error: snapshot: {"type":1,"tree":{"header":{"type":2,"content":"{\"version\":\"1\",\"segmentCount\":5,\"length\":9,\"segments\":[{\"marker\":{\"refType\":0}},\"\\udfff\\ud83da\\ude00\",{\"marker\":{\"refType\":0}},\"é\\n\",\"a\"],\"startIndex\":0,\"headerMetadata\":{\"minSequenceNumber\":20,\"sequenceNumber\":20,\"orderedChunkMetadata\":[{\"id\":\"header\"}],\"totalLength\":9,\"totalSegmentCount\":5}}"}}} != {"type":1,"tree":{"header":{"type":2,"content":"{\"version\":\"1\",\"segmentCount\":9,\"length\":9,\"segments\":[{\"marker\":{\"refType\":0}},\"\\udfff\",\"\\ud83d\",\"a\",\"\\ude00\",{\"marker\":{\"refType\":0}},\"é\",\"\\n\",\"a\"],\"startIndex\":0,\"headerMetadata\":{\"minSequenceNumber\":20,\"sequenceNumber\":20,\"orderedChunkMetadata\":[{\"id\":\"header\"}],\"totalLength\":9,\"totalSegmentCount\":9}}"}}}
+    at equal (/Users/juan/.t3/scratch/2026-11-06-https-github-com-microsoft-fluidframework-c98490f3/harness/src/mergetree/driver.ts:27:15)
+    at both (/Users/juan/.t3/scratch/2026-11-06-https-github-com-microsoft-fluidframework-c98490f3/harness/src/mergetree/driver.ts:34:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async checkpoint (/Users/juan/.t3/scratch/2026-11-06-https-github-com-microsoft-fluidframework-c98490f3/harness/src/mergetree/driver.ts:95:33)
+    at async <anonymous> (/Users/juan/.t3/scratch/2026-11-06-https-github-com-microsoft-fluidframework-c98490f3/harness/src/mergetree/driver.ts:102:17)
+
+Node.js v22.22.3

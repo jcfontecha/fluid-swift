@@ -1,9 +1,10 @@
 import FluidJS
 import Testing
+
 @testable import FluidMergeTree
 
 @Test func referencesFollowSplitButTransientReferencesDoNot() throws {
-  let client = MergeTreeClient(id: "A")
+  let client = Client(id: "A")
   _ = try client.insert(at: 0, text: "abcd")
   let ref = try client.createLocalReferencePosition(at: 3, refType: 128)
   let transient = try client.createLocalReferencePosition(at: 3, refType: 256)
@@ -18,7 +19,7 @@ import Testing
 }
 
 @Test func slideWaitsForAckAndSkipsPendingInsertion() throws {
-  let client = MergeTreeClient(id: "A")
+  let client = Client(id: "A")
   let initial = try client.insert(at: 0, text: "abcd")
   try client.process(initial, sender: "A", sequence: 1, referenceSequence: 0)
   let ref = try client.createLocalReferencePosition(at: 1, refType: 64)
@@ -39,7 +40,7 @@ import Testing
 }
 
 @Test func slideGroupsPreserveOrderAndSimpleReferencesDetach() throws {
-  let client = MergeTreeClient(id: "A")
+  let client = Client(id: "A")
   let initial = try client.insert(at: 0, text: "abcd")
   try client.process(initial, sender: "A", sequence: 1, referenceSequence: 0)
   let first = try client.createLocalReferencePosition(at: 0, refType: 64)
@@ -64,7 +65,7 @@ import Testing
 }
 
 @Test func emptyTreeDetachesSlidingReferencesAndCallsBothCallbacks() throws {
-  let client = MergeTreeClient(id: "A")
+  let client = Client(id: "A")
   let initial = try client.insert(at: 0, text: "a")
   try client.process(initial, sender: "A", sequence: 1, referenceSequence: 0)
   let slide = try client.createLocalReferencePosition(at: 0, refType: 64)
@@ -81,8 +82,8 @@ import Testing
 }
 
 @Test func appendTransfersRegisteredReferencesBeforeLengthChanges() throws {
-  let left = BaseSegment(text: "ab", insertion: Stamp(sequence: 0, client: "A"))
-  let right = BaseSegment(text: "cd", insertion: Stamp(sequence: 0, client: "A"))
+  let left = TextSegment(text: "ab", insertion: Stamp(sequence: 0, client: "A"))
+  let right = TextSegment(text: "cd", insertion: Stamp(sequence: 0, client: "A"))
   let ref = try LocalReference(segment: right, offset: 1, refType: 128)
   right.localRefs.addLocalRef(ref, offset: 1)
   left.localRefs.append(right.localRefs)
@@ -90,4 +91,41 @@ import Testing
   #expect(ref.offset == 3)
   #expect(right.localRefs.empty)
   #expect(left.localRefs.has(ref))
+}
+
+@Test func endpointReferencesRemainAnchoredAfterNewInsertion() throws {
+  let client = Client(id: "A", referencesCanSlideToEndpoint: true)
+  let insert = try client.insert(at: 0, text: "ab")
+  try client.process(insert, sender: "A", sequence: 1, referenceSequence: 0)
+  let end = try client.createLocalReferencePosition(at: 1, refType: 64, canSlideToEndpoint: true)
+  let start = try client.createLocalReferencePosition(
+    at: 0, refType: 64,
+    slidingPreference: .backward, canSlideToEndpoint: true)
+  let remove = try client.remove(start: 0, end: 2)
+  try client.process(remove, sender: "A", sequence: 2, referenceSequence: 1)
+  #expect(client.localReferencePositionToPosition(start) == 0)
+  #expect(client.localReferencePositionToPosition(end) == 0)
+  _ = try client.insert(at: 0, text: "xyz")
+  #expect(client.localReferencePositionToPosition(start) == 0)
+  #expect(client.localReferencePositionToPosition(end) == 3)
+}
+
+@Test func trackingGroupRetainsReferenceAcrossSplitAndReclamation() throws {
+  let client = Client(id: "A")
+  let initial = try client.insert(at: 0, text: "abc")
+  try client.process(initial, sender: "A", sequence: 1, referenceSequence: 0)
+  let group = TrackingGroup()
+  do {
+    let ref = try client.createLocalReferencePosition(at: 1, refType: 128)
+    group.link(ref)
+    #expect(group.has(ref))
+  }
+  let removal = try client.remove(start: 1, end: 2)
+  try client.process(removal, sender: "A", sequence: 2, referenceSequence: 1)
+  try client.advanceMinimum(to: 2)
+  let ref = try #require(group.references.first)
+  #expect(ref.segment?.text == "b")
+  #expect(client.localReferencePositionToPosition(ref) == -1)
+  group.unlink(ref)
+  #expect(group.references.isEmpty)
 }

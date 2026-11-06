@@ -1,18 +1,53 @@
 import FluidJS
 
 /// Synchronous segment engine. Callers serialize access on their container executor.
-public final class MergeTreeClient {
+public final class Client {
   public let id: JSString
+  let referencesCanSlideToEndpoint: Bool
   public private(set) var currentSequence = 0
   public private(set) var minimumSequence = 0
-  public private(set) var segments: ContiguousArray<BaseSegment> = []
-  private var localSequence = 0
-  private var pending: [Int] = []
-  private var pendingHead = 0
+  let mergeTree = MergeTree()
+  let startOfTree = Marker(refType: 0, insertion: Stamp(sequence: 0, client: ""))
+  let endOfTree = Marker(refType: 0, insertion: Stamp(sequence: 0, client: ""))
+  public var segments: ContiguousArray<BaseSegment> { mergeTree.segments }
+  var localSequence = 0
+  var lastNormalization: (sequence: Int, localSequence: Int)?
+  var pending: [SegmentGroup] = []
+  var pendingHead = 0
+  var pendingMessages: [Int] = []
 
-  public init(id: JSString) { self.id = id }
+  public init(id: JSString, referencesCanSlideToEndpoint: Bool = false) {
+    self.id = id
+    self.referencesCanSlideToEndpoint = referencesCanSlideToEndpoint
+  }
+  func loadHeader(_ segments: [BaseSegment], minimum: Int, sequence: Int) {
+    mergeTree.reload(segments)
+    minimumSequence = minimum
+    currentSequence = sequence
+  }
+  func replayCatchup(_ message: JSONValue) throws {
+    let sequence = try message.member("sequenceNumber").asInt()
+    let sender = try message.member("clientId").asString()
+    let reference = try message.member("referenceSequenceNumber").asInt()
+    guard sequence > currentSequence, reference >= minimumSequence, reference < sequence else {
+      throw JSONDecodingError("invalid catchup sequence window")
+    }
+    func replay(_ operation: JSONValue) throws {
+      if try operation.member("type").asInt() == 3 {
+        for child in try operation.member("ops").asArray() { try replay(child) }
+      } else {
+        try apply(
+          operation, perspective: .prior(sequence: reference, client: sender),
+          stamp: Stamp(sequence: sequence, client: sender))
+        mergeTree.zamboni(minimum: minimumSequence)
+      }
+    }
+    try replay(message.member("contents"))
+    currentSequence = sequence
+    try advanceMinimum(to: message.member("minimumSequenceNumber").asInt())
+  }
   public var length: Int {
-    segments.reduce(0) { $0 + (Perspective.local.contains($1) ? $1.length : 0) }
+    mergeTree.root.localLength
   }
   public var text: JSString {
     var units = ContiguousArray<UInt16>()
@@ -23,7 +58,7 @@ public final class MergeTreeClient {
     return JSString(utf16: units)
   }
   public func length(from perspective: Perspective) -> Int {
-    segments.reduce(0) { $0 + (perspective.contains($1) ? $1.length : 0) }
+    mergeTree.root.length(from: perspective)
   }
   public func insert(at position: Int, text: JSString) throws -> JSONValue {
     try edit(
@@ -51,38 +86,63 @@ public final class MergeTreeClient {
     }
     localSequence += 1
     let stamp = Stamp(sequence: -1, client: id, localSequence: localSequence)
-    try apply(operation, perspective: .local, stamp: stamp)
-    pending.append(localSequence)
+    let group = SegmentGroup(localSequence: localSequence, operation: operation)
+    try apply(operation, perspective: .local, stamp: stamp, group: group)
+    pending.append(group)
+    pendingMessages.append(localSequence)
     return operation
   }
   public func process(
     _ operation: JSONValue, sender: JSString, sequence: Int, referenceSequence: Int
   ) throws {
+    try processOperation(
+      operation, sender: sender, sequence: sequence, referenceSequence: referenceSequence)
+    currentSequence = sequence
+    if sender == id {
+      guard !pendingMessages.isEmpty else { throw JSONDecodingError("ack without pending message") }
+      pendingMessages.removeFirst()
+    }
+  }
+  private func processOperation(
+    _ operation: JSONValue, sender: JSString, sequence: Int, referenceSequence: Int
+  ) throws {
     guard sequence >= currentSequence, referenceSequence >= minimumSequence,
       referenceSequence < sequence
     else { throw JSONDecodingError("invalid sequence window") }
+    if try operation.member("type").asInt() == 3 {
+      for child in try operation.member("ops").asArray() {
+        try processOperation(
+          child, sender: sender, sequence: sequence, referenceSequence: referenceSequence)
+      }
+      return
+    }
     var removed: [BaseSegment] = []
     if sender == id {
       guard pendingHead < pending.count else {
         throw JSONDecodingError("ack without pending operation")
       }
-      let local = pending[pendingHead]
+      let group = pending[pendingHead]
+      let local = group.localSequence
       pendingHead += 1
-      for index in segments.indices {
-        segments[index].propertyManager.ack(localSequence: local)
-        if segments[index].insertion.sequence == -1
-          && segments[index].insertion.localSequence == local
+      for segment in group.segments {
+        let before = segment.clone()
+        group.unlink(segment)
+        mergeTree.schedule(segment, sequence: sequence, current: currentSequence)
+        segment.propertyManager.ack(localSequence: local)
+        if segment.insertion.sequence == -1
+          && segment.insertion.localSequence == local
         {
-          segments[index].insertion = Stamp(sequence: sequence, client: sender)
+          segment.insertion = Stamp(sequence: sequence, client: sender)
         }
-        for removal in segments[index].removals.indices
-        where segments[index].removals[removal].sequence == -1
-          && segments[index].removals[removal].localSequence == local
+        for removal in segment.removals.indices
+        where segment.removals[removal].sequence == -1
+          && segment.removals[removal].localSequence == local
         {
-          removed.append(segments[index])
-          segments[index].removals[removal] = Stamp(sequence: sequence, client: sender)
+          removed.append(segment)
+          segment.removals[removal] = Stamp(sequence: sequence, client: sender)
         }
-        segments[index].removals.sort()
+        segment.removals.sort()
+        mergeTree.update(segment, before: before)
       }
       if pendingHead == pending.count {
         pending.removeAll(keepingCapacity: true)
@@ -94,101 +154,23 @@ public final class MergeTreeClient {
         stamp: Stamp(sequence: sequence, client: sender))
     }
     slideReferences(on: removed)
-    currentSequence = sequence
-  }
-  func normalizeSnapshotProperties(at index: Int) {
-    if segments[index].properties?.isEmpty == true {
-      segments[index].properties = nil
-    }
+    mergeTree.zamboni(minimum: minimumSequence)
   }
   public func advanceMinimum(to sequence: Int) throws {
     guard sequence >= minimumSequence, sequence <= currentSequence else {
       throw JSONDecodingError("invalid minimum sequence")
     }
-    minimumSequence = sequence
-  }
-  private func splitBoundary(_ position: Int, perspective: Perspective) throws {
-    var remaining = position
-    for index in segments.indices where perspective.contains(segments[index]) {
-      let count = segments[index].length
-      if remaining > 0 && remaining < count {
-        let right = try segments[index].split(at: remaining)
-        segments.insert(right, at: index + 1)
-        return
-      }
-      remaining -= count
-      if remaining <= 0 { return }
+    if sequence > minimumSequence {
+      minimumSequence = sequence
+      mergeTree.zamboni(minimum: sequence)
     }
   }
-  private func apply(_ operation: JSONValue, perspective: Perspective, stamp: Stamp) throws {
-    let type = try operation.member("type").asInt()
-    guard type == 0 || type == 1 || type == 2 else {
-      throw JSONDecodingError("merge-tree operation \(type) is not implemented")
-    }
-    if type == 2 {
-      _ = try operation.member("props").asObject()
-    }
-    let start = try operation.member("pos1").asInt()
-    try splitBoundary(start, perspective: perspective)
-    if type == 0 {
-      let payload = try operation.member("seg")
-      let segment: BaseSegment
-      switch payload {
-      case .string(let text): segment = BaseSegment(text: text, insertion: stamp)
-      case .object(let fields):
-        let props = try fields["props"].map { try $0.asObject() }
-        if let text = fields["text"] {
-          segment = BaseSegment(text: try text.asString(), insertion: stamp, properties: props)
-        } else {
-          segment = BaseSegment(
-            markerType: try payload.member("marker").member("refType").asInt(), insertion: stamp,
-            properties: props)
-        }
-      default: throw JSONDecodingError("invalid segment payload")
-      }
-      if segment.length == 0 { return }
-      var position = start
-      var destination = segments.count
-      for index in segments.indices {
-        let leaf = segments[index]
-        if let first = leaf.removals.first, first.sequence != -1, first.sequence <= minimumSequence
-        {
-          continue
-        }
-        let count = perspective.contains(leaf) ? leaf.length : 0
-        let winsTie =
-          position == 0
-          && (leaf.insertion < stamp
-            || leaf.removals.first.map { $0.sequence != -1 && stamp < $0 } == true)
-        if position < count || (position == count && winsTie) {
-          destination = index
-          break
-        }
-        position -= count
-      }
-      segments.insert(segment, at: destination)
-    } else {
-      let end = try operation.member("pos2").asInt()
-      try splitBoundary(end, perspective: perspective)
-      var removed: [BaseSegment] = []
-      var position = 0
-      for index in segments.indices where perspective.contains(segments[index]) {
-        let count = segments[index].length
-        if position >= start && position < end {
-          if type == 2 {
-            let updates = try operation.member("props").asObject()
-            var properties = segments[index].properties
-            segments[index].propertyManager.handleProperties(updates, properties: &properties, stamp: stamp)
-            segments[index].properties = properties
-          } else {
-            if stamp.sequence != -1 { removed.append(segments[index]) }
-            segments[index].removals.append(stamp)
-            segments[index].removals.sort()
-          }
-        }
-        position += count
-      }
-      slideReferences(on: removed)
-    }
+  private func apply(
+    _ operation: JSONValue, perspective: Perspective, stamp: Stamp, group: SegmentGroup? = nil
+  ) throws {
+    let removed = try mergeTree.apply(
+      operation, perspective: perspective, stamp: stamp, group: group,
+      minimumSequence: minimumSequence, currentSequence: currentSequence)
+    slideReferences(on: removed)
   }
 }

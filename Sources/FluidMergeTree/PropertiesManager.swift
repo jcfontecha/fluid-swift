@@ -44,6 +44,18 @@ public struct PropertiesManager: Sendable {
     }
   }
 
+  public mutating func rollback(localSequence: Int, properties: inout JSObject<JSONValue>?) {
+    var values = properties ?? JSObject<JSONValue>()
+    for (key, var history) in changes.entries {
+      guard history.local.last?.localSequence == localSequence else { continue }
+      history.local.removeLast()
+      let value = history.local.last?.value ?? history.consensus
+      values[key] = value == .null ? nil : value
+      changes[key] = history.local.isEmpty ? nil : history
+    }
+    properties = values
+  }
+
   public func getAtSeq(_ properties: JSObject<JSONValue>?) -> JSObject<JSONValue> {
     var values = properties ?? JSObject<JSONValue>()
     for (key, history) in changes.entries {

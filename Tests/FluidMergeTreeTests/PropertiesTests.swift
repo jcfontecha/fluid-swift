@@ -1,10 +1,11 @@
 import FluidJS
 import XCTest
+
 @testable import FluidMergeTree
 
 final class PropertiesTests: XCTestCase {
   func testPendingAnnotationMasksRemoteAndSurvivesSplit() throws {
-    let client = MergeTreeClient(id: "A")
+    let client = Client(id: "A")
     let insert = try client.insert(at: 0, text: "abcd")
     try client.process(insert, sender: "A", sequence: 1, referenceSequence: 0)
     let local = object([
@@ -30,7 +31,7 @@ final class PropertiesTests: XCTestCase {
     XCTAssertTrue(client.segments.allSatisfy { $0.properties?.isEmpty == true })
   }
   func testV1NormalizesLiveEmptyPropertiesButLegacyDoesNot() throws {
-    let client = MergeTreeClient(id: "A")
+    let client = Client(id: "A")
     let insert = try client.insert(at: 0, text: "x")
     try client.process(insert, sender: "A", sequence: 1, referenceSequence: 0)
     let annotation = object([

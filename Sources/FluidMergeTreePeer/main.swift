@@ -8,7 +8,7 @@ func object(_ fields: [(JSString, JSONValue)]) -> JSONValue {
   return .object(result)
 }
 var references: [JSString: JSObject<LocalReference>] = [:]
-var clients: [JSString: MergeTreeClient] = [:]
+var clients: [JSString: Client] = [:]
 while let line = readLine() {
   var requestID: JSONValue = .null
   do {
@@ -22,7 +22,12 @@ while let line = readLine() {
       references.removeAll()
     } else if method == "create" {
       let id = try params.member("client").asString()
-      clients[id] = MergeTreeClient(id: id)
+      clients[id] = try Client(
+        id: id, referencesCanSlideToEndpoint: params.asObject()["endpointSliding"] == .bool(true))
+      references[id] = JSObject<LocalReference>()
+    } else if method == "load" {
+      let id = try params.member("client").asString()
+      clients[id] = try SnapshotLoader().load(params.member("summary"), id: id)
       references[id] = JSObject<LocalReference>()
     } else {
       let id = try params.member("client").asString()
@@ -56,7 +61,8 @@ while let line = readLine() {
           }
           let ref = try client.createLocalReferencePosition(
             at: edit.member("pos").asInt(), refType: edit.member("refType").asInt(),
-            slidingPreference: preference == 0 ? .backward : .forward)
+            slidingPreference: preference == 0 ? .backward : .forward,
+            canSlideToEndpoint: edit.asObject()["canSlideToEndpoint"] == .bool(true))
           let name = try edit.member("id").asString()
           references[id]?[name] = ref
         case "remove":
@@ -73,8 +79,17 @@ while let line = readLine() {
           sequence: message.member("sequenceNumber").asInt(),
           referenceSequence: message.member("referenceSequenceNumber").asInt())
         try client.advanceMinimum(to: message.member("minimumSequenceNumber").asInt())
+      case "rollback": try client.rollbackPendingOp()
+      case "reconnect": result = .array(try client.regeneratePendingOps())
       case "minSeq": try client.advanceMinimum(to: params.member("seq").asInt())
-      case "snapshot": result = try client.snapshot(version: params.member("version").asString())
+      case "snapshot":
+        let catchup = try (params.asObject()["catchup"].map { try $0.asArray() } ?? []).map {
+          message in
+          var fields = try message.asObject()
+          fields["timestamp"] = .number(0)
+          return JSONValue.object(fields)
+        }
+        result = try client.snapshot(version: params.member("version").asString(), catchup: catchup)
       case "state":
         var lengths: [JSONValue] = []
         for sequence in client.minimumSequence...client.currentSequence {

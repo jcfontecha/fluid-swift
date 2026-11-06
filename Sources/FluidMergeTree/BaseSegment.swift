@@ -3,38 +3,36 @@ import FluidJS
 /// Ports mergeTreeNodes.ts BaseSegment: stable identity, stamps, properties and split metadata.
 /// Snapshot clones intentionally do not share local reference collections.
 /// Markers occupy one position, but never contribute a character to text extraction.
-public final class BaseSegment {
+public class BaseSegment {
+  weak var parent: MergeBlock?
+  private struct PendingLink { weak var group: SegmentGroup? }
+  private var pendingLinks: [PendingLink] = []
+  var pendingGroups: [SegmentGroup] {
+    get { pendingLinks.compactMap(\.group) }
+    set { pendingLinks = newValue.map { PendingLink(group: $0) } }
+  }
+  public let trackingCollection = TrackingGroupCollection()
   public lazy var localRefs = LocalReferenceCollection(segment: self)
-  public var text: JSString?
-  public var markerType: Int?
+  public var text: JSString? {
+    get { nil }
+    set { preconditionFailure("only text segments have text") }
+  }
+  public var markerType: Int? { nil }
   public var properties: JSObject<JSONValue>?
   public var propertyManager = PropertiesManager()
   public var insertion: Stamp
   public var removals: [Stamp]
   public var length: Int { text?.length ?? 1 }
 
-  public init(
-    text: JSString, insertion: Stamp, removals: [Stamp] = [], properties: JSObject<JSONValue>? = nil
-  ) {
-    self.text = text
+  init(insertion: Stamp, removals: [Stamp] = [], properties: JSObject<JSONValue>? = nil) {
     self.insertion = insertion
     self.removals = removals
     self.properties = properties
   }
-  public init(markerType: Int, insertion: Stamp, properties: JSObject<JSONValue>? = nil) {
-    self.markerType = markerType
-    self.insertion = insertion
-    self.removals = []
-    self.properties = properties
-  }
+  func clonePayload() -> BaseSegment { preconditionFailure("abstract segment") }
   public func clone() -> BaseSegment {
-    let copy: BaseSegment
-    if let text {
-      copy = BaseSegment(text: text, insertion: insertion, removals: removals, properties: properties)
-    } else {
-      copy = BaseSegment(markerType: markerType ?? 0, insertion: insertion, properties: properties)
-      copy.removals = removals
-    }
+    let copy = clonePayload()
+    copy.removals = removals
     copy.propertyManager = propertyManager
     return copy
   }
@@ -45,22 +43,11 @@ public final class BaseSegment {
     let right = clone()
     right.text = JSString(utf16: ContiguousArray(text.utf16[offset...]))
     self.text = JSString(utf16: ContiguousArray(text.utf16[..<offset]))
+    for group in pendingGroups { group.link(right) }
+    for group in trackingCollection.groups { group.link(right) }
     localRefs.split(at: offset, into: right.localRefs)
     return right
   }
-  public func canAppend(_ other: BaseSegment) -> Bool {
-    guard let text, let rhs = other.text else { return false }
-    return text.utf16.last != 10 && (text.length <= 256 || rhs.length <= 256)
-  }
-  public func toJSON() -> JSONValue {
-    if let text {
-      guard let properties else { return .string(text) }
-      return object([("text", .string(text)), ("props", .object(properties))])
-    }
-    var result = JSObject<JSONValue>()
-    result["marker"] = object([("refType", .number(Double(markerType ?? 0)))])
-    if let properties { result["props"] = .object(properties) }
-    return .object(result)
-  }
+  public func canAppend(_ other: BaseSegment) -> Bool { false }
+  public func toJSON() -> JSONValue { preconditionFailure("abstract segment") }
 }
-

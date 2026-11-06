@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 import { Random } from '../random.js';
@@ -86,14 +87,40 @@ try {
                     baseline = visible;
                 await both('snapshot', { client, version: 'v1' });
                 await both('snapshot', { client, version: 'legacy' });
+                if (seed % 2 === 0) {
+                    const summary = await both('snapshot', { client, version: 'v1' });
+                    await both('load', { client, summary });
+                    await both('state', { client });
+                }
             }
             for (const client of ids)
                 await both('minSeq', { client, seq: log.length });
             refs.fill(log.length);
+            for (const client of ids) {
+                const summary = await both('snapshot', { client, version: seed % 2 === 0 ? 'v1' : 'legacy' });
+                await both('load', { client, summary });
+                await both('state', { client });
+            }
         };
         for (let step = 0; step < 120; step++) {
             if (step % 30 === 29) {
                 await checkpoint();
+                continue;
+            }
+            if (step % 30 === 20) {
+                for (let index = 0; index < ids.length; index++) {
+                    await deliver(index, log.length);
+                    const client = ids[index]!;
+                    const regenerated = z.array(z.unknown()).parse(await both('reconnect', { client }));
+                    equal(regenerated, await both('reconnect', { client }), 'repeated reconnect');
+                    const messages = queue.filter(message => message.clientId === client);
+                    equal(regenerated.length, messages.length, 'reconnect pending count');
+                    for (const [offset, message] of messages.entries()) {
+                        message.contents = regenerated[offset];
+                        message.referenceSequenceNumber = cursors[index]!;
+                    }
+                    await both('state', { client });
+                }
                 continue;
             }
             const i = random.int(3);
@@ -121,7 +148,11 @@ try {
                 edit = { kind: choice === 7 ? 'remove' : 'annotate', start, end: start + 1 + random.int(n - start), props: { color: random.pick(['red', 'blue', null]) } };
             }
             const contents = await both('edit', { client, edit }, i % peers.length);
-            if (contents !== null)
+            if (contents !== null && step % 17 === 16) {
+                await both('rollback', { client });
+                await both('state', { client });
+            }
+            else if (contents !== null)
                 queue.push({ clientId: client, clientSequenceNumber: ++clientSeq[i]!, referenceSequenceNumber: cursors[i]!, sequenceNumber: 0, minimumSequenceNumber: 0, type: 'op', contents });
         }
         await checkpoint();
