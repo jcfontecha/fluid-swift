@@ -125,3 +125,35 @@ range, so concurrent boundary probes can make even two real TS counters disagree
 Ordinary increments in [-100, 100] retain arbitrary edit/sequence/delivery interleaving.
 The sequencer updates the sender's latest reference when sequencing its message, before
 computing the minimum over all clients; receiving a message alone does not advance that reference.
+
+## Service mode (M1)
+
+`npm run service -- --seeds 0..9` owns a tinylicious 7.0.1 process on port **7073**
+with temporary storage, and launches `.build/debug/FluidServicePeer`. It uses the same
+JSON-RPC stdio framing. Requests are serialized; each has `params.client` (a local
+client handle). Runtime payloads are recorded, not interpreted in Swift.
+
+| Method | Additional params | Result |
+|---|---|---|
+| `open` | `endpoint`, `document` | view (connection may still be waiting for its own join) |
+| `view` | none | view, or error if processing failed |
+| `disconnect` | none | null |
+| `reconnect` | none | null (retains protocol state and observation log) |
+| `signal` | `content` (serialized runtime signal envelope) | null |
+
+A view contains the loaded `snapshotSequenceNumber`, `sequenceNumber`, `minimumSequenceNumber`, quorum `members`,
+`proposals`, `values`, raw `audience` entries, `clientId`, `connected`, raw received
+`ops`, and raw `signals`. `opSources` is parallel to `ops`, containing `socket` or
+`storage`: tinylicious's REST deltas and live broadcasts can carry **different
+trace fields for the same sequence number**. No fields are stripped or normalized.
+Socket entries compare byte-for-byte with the TS inbound queue before protocol
+mutation; storage entries compare with the real TS driver's delta-storage stream.
+Quorum and audience compare against the live TS container at equal sequence numbers.
+
+Each seed creates/attaches a TS SharedMap container, opens Swift at creation, edits
+from TS, obtains a real acknowledged TS summary, opens another Swift client from
+that snapshot, adds a second TS writer, checks a pending quorum proposal while that
+writer's outbound queue is paused, resumes it and checks commitment, sends a runtime
+signal, disconnects the second TS client, and disconnects/reconnects Swift across a
+TS edit. Failures write `traces/service-<seed>.jsonl` with RPC exchanges and checkpoint
+views. Service runs clean up their processes and temporary storage on success/failure.

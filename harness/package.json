@@ -11,6 +11,7 @@
     "peer:ts": "tsx src/peer.ts",
     "fixtures": "tsx src/fixtures.ts",
     "check": "tsc --noEmit",
+    "service": "tsx src/service.ts",
     "lz4-fixtures": "tsx src/lz4-fixtures.ts",
     "lz4-check": "tsx src/lz4-check.ts"
   },

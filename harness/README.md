@@ -34,3 +34,16 @@ The exact counter summary for value 5 is:
 The golden semantics fixture is generated with seed `0x5eed1234`; it contains explicit edge
 cases, 1,000 random binary doubles and 1,000 random decimal spellings, plus UTF-16 string and
 property-order cases. Its only top-level fields are the four arrays specified in the task.
+
+M1 real-service differential run (build Swift first):
+
+```
+swift build  # from repository root
+npm run service -- --seeds 0..9
+```
+
+Uses private temporary tinylicious storage on port 7073. See the service-mode
+protocol section for the raw observation contract and transport trace distinction.
+
+The CLI exits after cleanup: the upstream TS summarizer retains 120-second race
+timers after disposal. This does not alter any oracle/client processing.

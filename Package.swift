@@ -11,6 +11,12 @@ let package = Package(
     ],
     targets: [
         .target(name: "FluidJS"),
+        .target(name: "FluidDriverBase", dependencies: ["FluidJS", "FluidSocketIO", "FluidDriverDefinitions"]),
+        .target(name: "FluidRouterliciousDriver", dependencies: ["FluidJS", "FluidDriverBase"]),
+        .target(name: "FluidTinyliciousDriver", dependencies: ["FluidJS", "FluidRouterliciousDriver"]),
+        .target(name: "FluidContainerLoader", dependencies: ["FluidJS", "FluidSocketIO", "FluidDriverBase", "FluidRouterliciousDriver", "FluidTinyliciousDriver"]),
+        .executableTarget(name: "FluidServicePeer", dependencies: ["FluidJS", "FluidContainerLoader"]),
+        .testTarget(name: "FluidContainerLoaderTests", dependencies: ["FluidJS", "FluidContainerLoader", "FluidTinyliciousDriver"]),
         .target(name: "FluidSocketIO", dependencies: ["FluidJS"]),
         .executableTarget(name: "FluidSocketIOCheck", dependencies: ["FluidSocketIO", "FluidJS"]),
         .testTarget(name: "FluidSocketIOTests", dependencies: ["FluidSocketIO", "FluidJS"], resources: [.copy("Fixtures")]),
