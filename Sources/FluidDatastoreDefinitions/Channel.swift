@@ -1,5 +1,5 @@
 import FluidJS
-import FluidProtocol
+import FluidDriverDefinitions
 
 /// A DDS as seen by its hosting runtime (`IChannel` + the `SharedObject` runtime hooks).
 ///

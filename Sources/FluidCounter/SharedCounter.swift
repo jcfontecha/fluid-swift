@@ -1,6 +1,6 @@
 import FluidDatastoreDefinitions
 import FluidJS
-import FluidProtocol
+import FluidDriverDefinitions
 
 /// Port of `@fluidframework/counter` `SharedCounter` (counter.ts).
 public final class SharedCounter: Channel {

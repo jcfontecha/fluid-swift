@@ -1,0 +1,687 @@
+[
+  {
+    "type": "ICapabilities",
+    "text": "{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IClientDetails",
+    "text": "{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"type\":\"value\",\"environment\":\"value\",\"device\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IUser",
+    "text": "{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IClient",
+    "text": "{\"mode\":\"write\",\"details\":{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"type\":\"value\",\"environment\":\"value\",\"device\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"permission\":[\"value\"],\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"scopes\":[\"value\"],\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISequencedClient",
+    "text": "{\"client\":{\"mode\":\"write\",\"details\":{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"type\":\"value\",\"environment\":\"value\",\"device\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"permission\":[\"value\"],\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"scopes\":[\"value\"],\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"sequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISignalClient",
+    "text": "{\"clientId\":\"value\",\"client\":{\"mode\":\"write\",\"details\":{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"type\":\"value\",\"environment\":\"value\",\"device\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"permission\":[\"value\"],\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"scopes\":[\"value\"],\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"clientConnectionNumber\":1,\"referenceSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IClientJoin",
+    "text": "{\"clientId\":\"value\",\"detail\":{\"mode\":\"write\",\"details\":{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"type\":\"value\",\"environment\":\"value\",\"device\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"permission\":[\"value\"],\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"scopes\":[\"value\"],\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IClientConfiguration",
+    "text": "{\"maxMessageSize\":1,\"blockSize\":1,\"noopTimeFrequency\":1,\"noopCountFrequency\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IProposal",
+    "text": "{\"key\":\"value\",\"value\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISequencedProposal",
+    "text": "{\"key\":\"value\",\"value\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"sequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IApprovedProposal",
+    "text": "{\"key\":\"value\",\"value\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"sequenceNumber\":1,\"approvalSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ICommittedProposal",
+    "text": "{\"key\":\"value\",\"value\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"sequenceNumber\":1,\"approvalSequenceNumber\":1,\"commitSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IProcessMessageResult",
+    "text": "{\"immediateNoOp\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ITrace",
+    "text": "{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IBranchOrigin",
+    "text": "{\"id\":\"value\",\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "INackContent",
+    "text": "{\"code\":1,\"type\":\"ThrottlingError\",\"message\":\"value\",\"retryAfter\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "INack",
+    "text": "{\"operation\":{\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"metadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"serverMetadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"traces\":[{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"compression\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"sequenceNumber\":1,\"content\":{\"code\":1,\"type\":\"ThrottlingError\",\"message\":\"value\",\"retryAfter\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IUploadedSummaryDetails",
+    "text": "{\"includesProtocolTree\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryContent",
+    "text": "{\"handle\":\"value\",\"message\":\"value\",\"parents\":[\"value\"],\"head\":\"value\",\"details\":{\"includesProtocolTree\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IServerError",
+    "text": "{\"errorMessage\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryProposal",
+    "text": "{\"summarySequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryAck",
+    "text": "{\"handle\":\"value\",\"summaryProposal\":{\"summarySequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryNack",
+    "text": "{\"summaryProposal\":{\"summarySequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"code\":1,\"message\":\"value\",\"retryAfter\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ITokenClaims",
+    "text": "{\"documentId\":\"value\",\"scopes\":[\"value\"],\"tenantId\":\"value\",\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"iat\":1,\"exp\":1,\"ver\":\"value\",\"jti\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IConnect",
+    "text": "{\"tenantId\":\"value\",\"id\":\"value\",\"token\":null,\"client\":{\"mode\":\"write\",\"details\":{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"type\":\"value\",\"environment\":\"value\",\"device\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"permission\":[\"value\"],\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"scopes\":[\"value\"],\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"versions\":[\"value\"],\"driverVersion\":\"value\",\"mode\":\"write\",\"nonce\":\"value\",\"epoch\":\"value\",\"supportedFeatures\":{},\"relayUserAgent\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IConnected",
+    "text": "{\"claims\":{\"documentId\":\"value\",\"scopes\":[\"value\"],\"tenantId\":\"value\",\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"iat\":1,\"exp\":1,\"ver\":\"value\",\"jti\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"clientId\":\"value\",\"existing\":true,\"maxMessageSize\":1,\"initialMessages\":[],\"initialSignals\":[{\"content\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"type\":\"value\",\"clientConnectionNumber\":1,\"referenceSequenceNumber\":1,\"targetClientId\":\"value\",\"clientId\":null,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"initialClients\":[{\"clientId\":\"value\",\"client\":{\"mode\":\"write\",\"details\":{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"type\":\"value\",\"environment\":\"value\",\"device\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"permission\":[\"value\"],\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"scopes\":[\"value\"],\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"clientConnectionNumber\":1,\"referenceSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"version\":\"value\",\"supportedVersions\":[\"value\"],\"serviceConfiguration\":{\"maxMessageSize\":1,\"blockSize\":1,\"noopTimeFrequency\":1,\"noopCountFrequency\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"mode\":\"write\",\"nonce\":\"value\",\"checkpointSequenceNumber\":1,\"epoch\":\"value\",\"supportedFeatures\":{},\"timestamp\":1,\"relayServiceAgent\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IDocumentAttributes",
+    "text": "{\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IBlob",
+    "text": "{\"contents\":\"value\",\"encoding\":\"utf-8\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IAttachment",
+    "text": "{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ICreateBlobResponse",
+    "text": "{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ITree",
+    "text": "{\"entries\":[],\"id\":\"value\",\"unreferenced\":true,\"groupId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISnapshotTree",
+    "text": "{\"id\":\"value\",\"blobs\":{},\"trees\":{},\"unreferenced\":true,\"groupId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISnapshotTreeEx",
+    "text": "{\"id\":\"value\",\"blobs\":{},\"trees\":{},\"unreferenced\":true,\"groupId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IVersion",
+    "text": "{\"id\":\"value\",\"treeId\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryHandle",
+    "text": "{\"type\":3,\"handleType\":4,\"handle\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryBlob",
+    "text": "{\"type\":2,\"content\":{\"0\":0,\"1\":255},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryAttachment",
+    "text": "{\"type\":4,\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryTree",
+    "text": "{\"type\":1,\"tree\":{},\"unreferenced\":true,\"groupId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryContext",
+    "text": "{\"proposalHandle\":\"value\",\"ackHandle\":\"value\",\"referenceSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISnapshotFetchOptions",
+    "text": "{\"scenarioName\":\"value\",\"cacheSnapshot\":true,\"versionId\":\"value\",\"loadingGroupIds\":[\"value\"],\"fetchSource\":\"default\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISnapshot",
+    "text": "{\"snapshotTree\":{\"id\":\"value\",\"blobs\":{},\"trees\":{},\"unreferenced\":true,\"groupId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"blobContents\":{},\"ops\":[],\"sequenceNumber\":1,\"latestSequenceNumber\":1,\"snapshotFormatV\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IDeltasFetchResult",
+    "text": "{\"messages\":[],\"partialResult\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IDocumentMessage",
+    "text": "{\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"metadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"serverMetadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"traces\":[{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"compression\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IDocumentSystemMessage",
+    "text": "{\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"metadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"serverMetadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"traces\":[{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"compression\":\"value\",\"data\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISequencedDocumentMessage",
+    "text": "{\"clientId\":null,\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"metadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"serverMetadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"traces\":[{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"compression\":\"value\",\"origin\":{\"id\":\"value\",\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"timestamp\":1,\"data\":\"value\",\"expHash1\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISequencedDocumentSystemMessage",
+    "text": "{\"clientId\":null,\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"metadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"serverMetadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"traces\":[{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"compression\":\"value\",\"origin\":{\"id\":\"value\",\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"timestamp\":1,\"data\":\"value\",\"expHash1\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISequencedDocumentAugmentedMessage",
+    "text": "{\"clientId\":null,\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"metadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"serverMetadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"traces\":[{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"compression\":\"value\",\"origin\":{\"id\":\"value\",\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"timestamp\":1,\"data\":\"value\",\"expHash1\":\"value\",\"additionalContent\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISignalMessageBase",
+    "text": "{\"content\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"type\":\"value\",\"clientConnectionNumber\":1,\"referenceSequenceNumber\":1,\"targetClientId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISignalMessage",
+    "text": "{\"content\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"type\":\"value\",\"clientConnectionNumber\":1,\"referenceSequenceNumber\":1,\"targetClientId\":\"value\",\"clientId\":null,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IProtocolState",
+    "text": "{\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"members\":[[\"client\",{\"client\":{\"mode\":\"write\",\"details\":{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"type\":\"value\",\"environment\":\"value\",\"device\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"permission\":[\"value\"],\"user\":{\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"scopes\":[\"value\"],\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"sequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}]],\"proposals\":[[1,{\"key\":\"value\",\"value\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"sequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},[\"rejector\"]]],\"values\":[[\"key\",{\"key\":\"value\",\"value\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"sequenceNumber\":1,\"approvalSequenceNumber\":1,\"commitSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}]],\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.IAuthor",
+    "text": "{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICommitter",
+    "text": "{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICommitHash",
+    "text": "{\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICreateCommitParams",
+    "text": "{\"message\":\"value\",\"tree\":\"value\",\"parents\":[\"value\"],\"author\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICommit",
+    "text": "{\"sha\":\"value\",\"url\":\"value\",\"author\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"committer\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"message\":\"value\",\"tree\":{\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"parents\":[{\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICommitDetails",
+    "text": "{\"url\":\"value\",\"sha\":\"value\",\"commit\":{\"url\":\"value\",\"author\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"committer\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"message\":\"value\",\"tree\":{\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"parents\":[{\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.CommitDetail",
+    "text": "{\"url\":\"value\",\"author\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"committer\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"message\":\"value\",\"tree\":{\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.IBlob",
+    "text": "{\"content\":\"value\",\"encoding\":\"value\",\"url\":\"value\",\"sha\":\"value\",\"size\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICreateBlobParams",
+    "text": "{\"content\":\"value\",\"encoding\":\"utf-8\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICreateBlobResponse",
+    "text": "{\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ObjectReference",
+    "text": "{\"type\":\"value\",\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.IRef",
+    "text": "{\"ref\":\"value\",\"url\":\"value\",\"object\":{\"type\":\"value\",\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICreateRefParams",
+    "text": "{\"ref\":\"value\",\"sha\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.IPatchRefParams",
+    "text": "{\"sha\":\"value\",\"force\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICreateRepoParams",
+    "text": "{\"name\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICreateTreeEntry",
+    "text": "{\"path\":\"value\",\"mode\":\"value\",\"type\":\"value\",\"sha\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICreateTreeParams",
+    "text": "{\"base_tree\":\"value\",\"tree\":[{\"path\":\"value\",\"mode\":\"value\",\"type\":\"value\",\"sha\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ITreeEntry",
+    "text": "{\"path\":\"value\",\"mode\":\"value\",\"type\":\"value\",\"size\":1,\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ITree",
+    "text": "{\"sha\":\"value\",\"url\":\"value\",\"tree\":[{\"path\":\"value\",\"mode\":\"value\",\"type\":\"value\",\"size\":1,\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ITagger",
+    "text": "{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ICreateTagParams",
+    "text": "{\"tag\":\"value\",\"message\":\"value\",\"object\":\"value\",\"type\":\"value\",\"tagger\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "Git.ITag",
+    "text": "{\"tag\":\"value\",\"sha\":\"value\",\"url\":\"value\",\"message\":\"value\",\"tagger\":{\"name\":\"value\",\"email\":\"value\",\"date\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"object\":{\"type\":\"value\",\"sha\":\"value\",\"url\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ConnectionMode",
+    "text": "\"write\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "ConnectionMode",
+    "text": "\"read\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"noop\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"join\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"leave\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"propose\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"reject\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"accept\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"summarize\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"summaryAck\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"summaryNack\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"op\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"noClient\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"tripComplete\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "MessageType",
+    "text": "\"control\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "SignalType",
+    "text": "\"join\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "SignalType",
+    "text": "\"leave\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "NackErrorType",
+    "text": "\"ThrottlingError\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "NackErrorType",
+    "text": "\"InvalidScopeError\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "NackErrorType",
+    "text": "\"BadRequestError\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "NackErrorType",
+    "text": "\"LimitExceededError\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "ScopeType",
+    "text": "\"doc:read\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "ScopeType",
+    "text": "\"doc:write\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "ScopeType",
+    "text": "\"summary:write\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "FileMode",
+    "text": "\"100644\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "FileMode",
+    "text": "\"100755\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "FileMode",
+    "text": "\"040000\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "FileMode",
+    "text": "\"120000\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "TreeEntry",
+    "text": "\"Blob\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "TreeEntry",
+    "text": "\"Tree\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "TreeEntry",
+    "text": "\"Attachment\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "BlobEncoding",
+    "text": "\"utf-8\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "BlobEncoding",
+    "text": "\"base64\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "FetchSource",
+    "text": "\"default\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "FetchSource",
+    "text": "\"noCache\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryBlobContent",
+    "text": "\"\\ud800text\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryBlobContent",
+    "text": "{\"0\":1,\"1\":255}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ITreeEntry",
+    "text": "{\"path\":\"blob\",\"mode\":\"100644\",\"type\":\"Blob\",\"value\":{\"contents\":\"value\",\"encoding\":\"utf-8\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ITreeEntry",
+    "text": "{\"path\":\"tree\",\"mode\":\"040000\",\"type\":\"Tree\",\"value\":{\"entries\":[]}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ITreeEntry",
+    "text": "{\"path\":\"attachment\",\"mode\":\"100644\",\"type\":\"Attachment\",\"value\":{\"id\":\"id\"}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IDocumentMessage",
+    "text": "{\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IClientDetails",
+    "text": "{\"capabilities\":{\"interactive\":true,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IClientConfiguration",
+    "text": "{\"maxMessageSize\":1,\"blockSize\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISummaryTree",
+    "text": "{\"type\":1,\"tree\":{},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "IDocumentMessage",
+    "text": "{\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"metadata\":null,\"serverMetadata\":null,\"traces\":[{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"compression\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryObject",
+    "text": "{\"type\":1,\"tree\":{},\"unreferenced\":true,\"groupId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryObject",
+    "text": "{\"type\":2,\"content\":{\"0\":0,\"1\":255},\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryObject",
+    "text": "{\"type\":3,\"handleType\":4,\"handle\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryObject",
+    "text": "{\"type\":4,\"id\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryType",
+    "text": "1",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryType",
+    "text": "2",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryType",
+    "text": "3",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryType",
+    "text": "4",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryTypeNoHandle",
+    "text": "1",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryTypeNoHandle",
+    "text": "2",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryTypeNoHandle",
+    "text": "4",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryTreeReference",
+    "text": "{\"type\":1,\"tree\":{},\"unreferenced\":true,\"groupId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryTreeReference",
+    "text": "{\"type\":3,\"handleType\":4,\"handle\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISentSignalMessage",
+    "text": "{\"content\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"type\":\"value\",\"clientConnectionNumber\":1,\"referenceSequenceNumber\":1,\"targetClientId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "ISequencedDocumentMessageExperimental",
+    "text": "{\"clientId\":null,\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"clientSequenceNumber\":1,\"referenceSequenceNumber\":1,\"type\":\"value\",\"contents\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"metadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"serverMetadata\":{\"1\":\"order\",\"2\":\"index\",\"future\":null,\"surrogate\":\"\\ud800\"},\"traces\":[{\"service\":\"value\",\"action\":\"value\",\"timestamp\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}],\"compression\":\"value\",\"origin\":{\"id\":\"value\",\"sequenceNumber\":1,\"minimumSequenceNumber\":1,\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}},\"timestamp\":1,\"data\":\"value\",\"expHash1\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "SummaryTree",
+    "text": "{\"type\":1,\"tree\":{},\"unreferenced\":true,\"groupId\":\"value\",\"futureField\":{\"1\":\"one\",\"2\":\"two\",\"x\":null}}",
+    "source": "synthetic"
+  },
+  {
+    "type": "FiveDaysMs",
+    "text": "432000000",
+    "source": "synthetic"
+  },
+  {
+    "type": "IsoDate",
+    "text": "\"2026-11-06T00:00:00Z\"",
+    "source": "synthetic"
+  },
+  {
+    "type": "LoaderCachingPolicy",
+    "text": "0",
+    "source": "synthetic"
+  },
+  {
+    "type": "LoaderCachingPolicy",
+    "text": "1",
+    "source": "synthetic"
+  }
+]

@@ -1,6 +1,6 @@
 import FluidCounter
 import FluidJS
-import FluidProtocol
+import FluidDriverDefinitions
 import FluidTestRuntimeUtils
 import Foundation
 

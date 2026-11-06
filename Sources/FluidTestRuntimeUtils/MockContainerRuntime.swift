@@ -1,6 +1,6 @@
 import FluidDatastoreDefinitions
 import FluidJS
-import FluidProtocol
+import FluidDriverDefinitions
 
 /// Port of `MockContainerRuntime` (test-runtime-utils mocks.ts) for one channel, flush mode
 /// Immediate, sequenced externally: submitted messages accumulate in `outbound` instead of going
