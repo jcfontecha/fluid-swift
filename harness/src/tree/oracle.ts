@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { inspect } from 'node:util';
+import { makeMessageCodecBuilder } from '../../node_modules/@fluidframework/tree/lib/shared-tree-core/messageCodecs.js';
 import { createIdCompressor } from '@fluidframework/id-compressor/internal';
 import type { SessionId } from '@fluidframework/id-compressor';
 import { ModularChangeFamily } from '../../node_modules/@fluidframework/tree/lib/feature-libraries/modular-schema/modularChangeFamily.js';
@@ -84,9 +85,9 @@ export class Oracle {
         }
         return this.tag(builder.buildChanges(changes), revision);
     }
-    bytes(change: ModularChangeset): string[] {
-        const context = { originatorId: this.compressor.localSessionId, revision: undefined, idCompressor: this.compressor, isSummary: false };
-        return [3, 4, 5].map(version => {
+    bytes(change: ModularChangeset, versions: readonly number[] = [5], revision?: RevisionTag): string[] {
+        const context = { originatorId: this.compressor.localSessionId, revision, idCompressor: this.compressor, isSummary: false };
+        return versions.map(version => {
             const codec = this.codecs.resolve(version);
             let encoded;
             try {
@@ -114,12 +115,38 @@ export class Oracle {
         return this.tag(this.family.rebase(change, over, revisionMetadataSourceFromInfo([...infos.values()])), change.revision);
     }
 }
+// A direct lossless projection supplements codecs (which omit derived metadata).
+// Tagged tuples preserve Maps and undefined instead of silently erasing them.
+export function structure(value: unknown): unknown {
+    if (value === undefined) return ['undefined'];
+    if (value === null || typeof value !== 'object') return value;
+    if (value instanceof Map) return ['map', [...value].map(([key, item]: [unknown, unknown]) => [structure(key), structure(item)])];
+    if (value instanceof Set) return ['set', [...value].map(structure)];
+    if (Array.isArray(value)) return ['array', value.map(structure)];
+    return ['object', Object.entries(value).map(([key, item]) => [key, structure(item)])];
+}
+
+export function wireVersions(): number[] {
+    const builder = makeMessageCodecBuilder();
+    const gates = [FluidClientVersion.v2_0, FluidClientVersion.v2_43, FluidClientVersion.v2_80, FluidClientVersion.v2_117];
+    // shared-tree/sharedTree.ts dependenciesForMessageFormat.
+    const dependencies = new Map([[3, 3], [4, 4], [6, 5], [7, 5]]);
+    return gates.map(gate => {
+        const message = builder.getCodecTree(gate).version;
+        assert(typeof message === 'number');
+        const modular = dependencies.get(message);
+        assert(modular !== undefined);
+        return modular;
+    });
+}
+
 export function run(scenario: Scenario): string[][] {
     const oracle = new Oracle();
     const output: string[][] = [];
-    const record = (change: ModularChangeset) => output.push(oracle.bytes(change));
+    const record = (change: ModularChangeset) => output.push([...oracle.bytes(change), JSON.stringify(structure(change))]);
     const edits = scenario.edits.map(edit => oracle.build(edit));
     for (const change of edits) {
+        output.push(oracle.bytes(change.change, wireVersions(), change.revision));
         record(change.change);
         record(oracle.family.invert(change, false, oracle.mint()));
         record(oracle.family.invert(change, true, oracle.mint()));

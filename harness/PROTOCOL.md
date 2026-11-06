@@ -505,35 +505,54 @@ Regression commands can share the isolated H3 build directory:
 
 ## T1 — SharedTree change-family oracle (not yet native-certified)
 
-`npm run fuzz:tree-changes -- --self --seeds=1000` invokes the installed 3.11.0
-ModularChangeFamily and real sequence/optional editors. Input is
-`{seed, edits:[{kind,index,count,destination,field}]}`. Kinds are insert, remove,
-move, revive, set, clear, crossMove and nested. All edits describe a common base
-with two populated sequence fields, a populated optional field, nested children
-and detached roots. Sequential composition first rebases the second concurrent
-edit. Every seed contains all eight kinds plus sixteen seeded random choices.
+`npm run fuzz:tree-changes -- --self --seeds=1000` runs installed 3.11.0
+ModularChangeFamily with real sequence/optional editors. Every seed contains
+insert, remove, move, revive, set, clear, crossMove and nested, plus sixteen
+seeded random edits. `scenario.ts` preserves the previous generator schedule.
 
-Results include editor changes, singleton compose, undo, rollback, rebase,
-pair composition, rebase over rollback and rebase over composition. Each result
-is encoded with modular versions 3/4/5, selecting sequence 2/3 and optional 2.
-Real compressor-backed RevisionTagCodec handles IDs. Encoded JSON strings compare
-exactly across independent TS runs and encode/decode/encode. Semantic comparisons
-use upstream areEquivalent for singleton compose, empty-base rebase, codec
-roundtrip and rebase-over-composition; these are not the full upstream axiom suite.
-Failures save `traces/tree/<seed>.json`. No seeds or formats are skipped.
+Two separate comparison contracts apply:
 
-**Current TS gate is red at seed 17:** raw multi-revision composition containing
-Rename fails modular 3 / sequence 2 encode's internal decode with `0x996`.
-Supplying an implicit context revision instead fails `0x964` because the result
-has two revisions. `npx tsx src/tree/codec-precondition.ts` is the two-edit repro;
-it verifies those failures and successful modular 4/5 roundtrips. This is a
-raw-result serialization limitation, not proof that ordinary SharedTree ops fail.
-The harness does not silently squash/relabel revisions to bypass it.
+1. **Algebra:** compose, undo, rollback, rebase and their chains use byte-exact
+   modular **5**, the newest available codec, with no implicit revision. There
+   is no fallback or seed skipping. Semantic and byte roundtrips are asserted.
+   A direct tagged structural projection also compares all enumerable in-memory
+   data, preserving Maps, Sets and undefined, including metadata codecs omit.
+2. **Wire:** every individual editor change uses its tagged revision as the
+   encoding context. Exact bytes and semantic/byte roundtrips are checked for
+   every modular writer format, selected through the real Message codec builder.
+   `wire-check.ts` independently checks 24,000 edits across 1,000 seeds; it does
+   not claim valid shared histories or Swift differential coverage.
 
-The default mixed command deliberately fails because no Swift change-family peer
-exists. Native FluidTree currently contains RevisionTagCodec, ChangeAtomIdCodec
-and DefaultAtomIdAliasAllocator only. Swift Testing covers these, including
-1,000 generated real-TS identity fixtures (`src/tree/identity-fixtures.ts`). An
-atom-codec `localId + 1` mutation was detected and reverted; this is identity-only
-mutation evidence, not sequence rebase certification. See `src/tree/README.md`
-for isolated build/test commands and remaining work.
+Writer gating: ContainerRuntime accepts `oldestSupportedClient`, resolves it to
+its internal `minVersionForCollab` (the deprecated alias cannot coexist with the
+new option), and propagates it to SharedTree. `treeFactory.ts` gives an explicit
+Tree `minVersionForCollab` precedence, then the runtime value, then 2.0.0.
+`shared-tree-core/messageCodecs.ts` selects Message 3 at 2.0, 4 at 2.43, 6 at
+2.80 and 7 at 2.117. `shared-tree/sharedTree.ts` maps those to SharedTreeChange
+and modular 3, 4, 5, 5 respectively; sequence formats are 2, 3, 3, 3 and optional
+is 2 throughout. `codec/versioned/codec.ts` chooses the newest compatible format.
+`writeVersionOverrides` can select an older compatible format; incompatible or
+unstable selections throw unless `allowPossiblyIncompatibleWriteVersionOverrides`
+is explicitly true. Experimental SharedBranches maps to modular 4, so introduces
+no additional modular format. Outer Message encoding is not covered by T1.
+
+`codec-precondition.ts` remains the seed-17 documentation: modular 3 cannot
+serialize the raw composed Rename (0x996, or 0x964 with an implicit revision),
+while 4/5 can. This is not an ordinary individual-op compatibility failure.
+Seed 17 now passes the split comparison.
+
+**Full TS farm is still red at seed 75, not certified.** `history-precondition.ts`
+reduces it to remove b[2..5), revive root:32 at b[3], and concurrently revive
+root:32..34 at b[2]. The generator places the same detached cells at inconsistent
+base positions; chained rebase asserts 0x8a0 in compareCellPositionsUsingTombstones.
+A forest-backed valid-history generator is still needed. Failures save
+`traces/tree/<seed>.json`; no seeds are skipped and no expected-failure exception
+is added to the farm.
+
+Native FluidTree contains the identity foundation and SequenceFieldEditor only.
+Eight Swift tests pass, including 1,000 identity fixtures and 1,000 sequence
+editor fixtures (7,000 outputs). The sequence tests failed to compile against
+missing native types before implementation. No sequence algebra/codecs,
+optional handler, ModularChangeFamily or native change-family transport exists.
+The default mixed command therefore continues to fail explicitly. The requested
+planted rebase tie-break divergence is not yet exercised. See `src/tree/README.md`.
