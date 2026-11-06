@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "fixtures:driver-definitions": "tsx src/driver-definitions-fixtures.ts",
-    "socketio-fixtures": "node src/socketio-fixtures.mjs",
-    "socketio-check": "node src/socketio-check.mjs",
+    "socketio-fixtures": "tsx src/socketio-fixtures.ts",
+    "socketio-check": "tsx src/socketio-check.ts",
     "fuzz": "tsx src/driver.ts",
     "replay": "tsx src/replay.ts",
     "peer:ts": "tsx src/peer.ts",

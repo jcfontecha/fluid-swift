@@ -33,7 +33,7 @@ io.on('connection', socket => {
   });
   socket.emit('server_event', { ordered: 1 });
   for (let i = 0; i < 20; i++) socket.emit('ordered', i);
-  socket.emit('needs_ack', 'reply', response => {
+  socket.emit('needs_ack', 'reply', (response: unknown) => {
     try { assert.equal(response, 'reply'); socket.emit('server_ack_ok'); }
     catch (error) { failure = error; }
   });
@@ -48,17 +48,17 @@ io.on('connection', socket => {
   });
 });
 
-async function run(command, args, options = {}) {
+async function run(command: string, args: string[], options: import("node:child_process").SpawnOptions = {}) {
   const child = spawn(command, args, { cwd: root, stdio: 'inherit', ...options });
   processes.push(child);
   const [code, signal] = await once(child, 'exit');
   assert.equal(code, 0, `${command} exited ${code} (${signal})`);
 }
 try {
-  await new Promise((resolve, reject) => http.once('error', reject).listen(7172, '127.0.0.1', resolve));
+  await new Promise<void>((resolve, reject) => http.once('error', reject).listen(7172, '127.0.0.1', resolve));
   const portProbe = createNetServer();
-  await new Promise((resolve, reject) => portProbe.once('error', reject).listen(7072, '127.0.0.1', resolve));
-  await new Promise(resolve => portProbe.close(resolve));
+  await new Promise<void>((resolve, reject) => portProbe.once('error', reject).listen(7072, '127.0.0.1', resolve));
+  await new Promise<void>(resolve => portProbe.close(() => resolve()));
   const tiny = spawn(process.execPath, [resolve(root, 'harness/node_modules/tinylicious/dist/index.js')], {
     cwd: temporary, env: { ...process.env, PORT: '7072', storage: join(temporary, 'storage') }, stdio: ['ignore', 'pipe', 'pipe'],
   });
