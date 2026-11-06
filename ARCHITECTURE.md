@@ -24,13 +24,33 @@ strong models, which implement it themselves: conflict resolution, rebase algebr
 lifecycle, and divergence debugging, with Astra on the most challenging parts. Strong models
 also write the tests and review.
 
-### 2. One serial executor per container; DDS code is synchronous
+### 2. One owner per container; DDS code is synchronous
 
 The TS runtime relies on a single-threaded event loop: op processing, local edits and event
-emission happen in a fixed order with no interleaving. Swift mirrors this exactly: everything a
-container owns is isolated to one actor, and everything below the container boundary (runtime,
-datastores, DDSes, merge-tree, SharedTree) is plain synchronous code — no `async`, no locks, no
-`Task` in op-apply paths. Async exists only at the I/O edge (sockets, storage).
+emission happen in a fixed order with no interleaving. Swift mirrors this exactly. Everything a
+container owns (loader, runtime, datastores, DDSes, merge-tree, SharedTree) is plain, synchronous,
+non-Sendable code — no `async`, no locks, no `Task` in op-apply paths. Async exists only at the I/O
+edge (sockets, storage). The whole graph belongs to exactly one owner actor, chosen when it is
+created, and runs one event-loop task on that owner. Converged design and evidence:
+`specs/design/threading-opus.md` and `specs/design/threading-astra.md`, each ending in a
+"Convergence round" section.
+
+- **The owner is an explicit, non-optional `isolated any Actor` argument** on every public factory
+  (`loadExistingContainer(_:isolation:)`, `OdspClient.getContainer(_:containerSchema:isolation:)`).
+  Apps pass `MainActor.shared` and hold DDS references directly in MainActor code. Headless
+  clients, summarizer children and harness peers pass a private actor. There is no default and no
+  `= #isolation` form: in Swift 6.4 that form lets a nil owner escape, and TSan reports races.
+- **Loading is off-owner.** A `@concurrent` preparation step downloads and parses the snapshot and
+  applies stored ops, then returns the graph as `sending`. The owner adopts it before anyone else
+  can see it.
+- **Submission is synchronous.** `submit`/`submitSignal` enqueue in FIFO order onto one ordered
+  transport writer; no `await` sits between preparing a message and enqueueing it. Local flushing
+  follows TS TurnBased batching (`scheduleFlush`); there is no app-facing forced-flush `edit {}`.
+- **Catch-up yields only at a runtime `batchEnd`**, as TS `DeltaScheduler` does, with a fixed 4 ms
+  slice for interactive owners. Lockstep harness peers call the synchronous core directly and never
+  run the scheduler.
+- **Events are synchronous owner-local callbacks.** `AsyncSequence` and Observation are app-side
+  adapters only. Apps need no OT layer between UI and DDS.
 
 ### 3. JavaScript value semantics are reproduced, not approximated (`FluidJS`)
 
