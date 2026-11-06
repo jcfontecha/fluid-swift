@@ -4,6 +4,7 @@ import FluidDatastoreDefinitions
 import FluidDriverDefinitions
 import FluidJS
 import FluidMap
+import FluidRegisterCollection
 import FluidTestRuntimeUtils
 import Foundation
 
@@ -19,6 +20,7 @@ protocol PeerClient: AnyObject {
   func process(_ message: SequencedMessage) throws
   func edit(_ value: JSONValue) throws
   func state() throws -> JSONValue
+  func queries() throws -> JSONValue
   func summarize() -> SummaryTree
   func disconnect()
   func flush()
@@ -30,6 +32,7 @@ final class RuntimeClient<C: Channel>: PeerClient {
   let runtime: MockContainerRuntime<C>
   let editChannel: (C, JSONValue) throws -> Void
   let stateChannel: (C) throws -> JSONValue
+  let queriesChannel: (C) throws -> JSONValue
   var events: [JSONValue] = []
   func takeEvents() -> [JSONValue] {
     defer { events.removeAll() }
@@ -37,11 +40,13 @@ final class RuntimeClient<C: Channel>: PeerClient {
   }
   init(
     _ runtime: MockContainerRuntime<C>, edit: @escaping (C, JSONValue) throws -> Void,
-    state: @escaping (C) throws -> JSONValue
+    state: @escaping (C) throws -> JSONValue,
+    queries: @escaping (C) throws -> JSONValue = { _ in .object(JSObject()) }
   ) {
     self.runtime = runtime
     editChannel = edit
     stateChannel = state
+    queriesChannel = queries
   }
   func flush() { runtime.flush() }
   func rollback() throws { try runtime.rollback() }
@@ -54,6 +59,7 @@ final class RuntimeClient<C: Channel>: PeerClient {
   func process(_ message: SequencedMessage) throws { try runtime.process(message) }
   func edit(_ value: JSONValue) throws { try editChannel(runtime.channel, value) }
   func state() throws -> JSONValue { try stateChannel(runtime.channel) }
+  func queries() throws -> JSONValue { try queriesChannel(runtime.channel) }
   func summarize() -> SummaryTree { runtime.channel.summarize() }
 }
 final class Peer {
@@ -141,6 +147,13 @@ final class Peer {
           : try SharedCell.load(id: channelId, summary: SummaryTree(json: summary))
         clients[id] = cellAdapter(
           MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
+      } else if type == ConsensusRegisterCollection.type {
+        let c =
+          summary == .null
+          ? ConsensusRegisterCollection(id: channelId)
+          : try ConsensusRegisterCollection.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = registerCollectionAdapter(
+          MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
       } else {
         throw PeerError(description: "not implemented: \(type)")
       }
@@ -153,7 +166,7 @@ final class Peer {
       let c = try client(params)
       try c.process(SequencedMessage(json: params.member("message")))
       return result("outbound", .array(c.takeOutbound().map(\.json)))
-    case "queries": return result("queries", .object(JSObject()))
+    case "queries": return result("queries", try client(params).queries())
     case "events": return result("events", .array(try client(params).takeEvents()))
     case "state": return result("state", try client(params).state())
     case "summarize": return result("summary", try client(params).summarize().json)
