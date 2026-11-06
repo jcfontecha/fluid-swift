@@ -357,3 +357,38 @@ and aggregate blob/host dirty-event reentrancy are outside this farm.
 Regression commands can share the isolated H3 build directory:
 `npm run fuzz:oplifecycle -- --scratch-path=.build/h3` and
 `npm run fuzz:idcompressor -- --scratch-path=.build/h3`.
+
+## T1 — SharedTree change-family oracle (not yet native-certified)
+
+`npm run fuzz:tree-changes -- --self --seeds=1000` invokes the installed 3.11.0
+ModularChangeFamily and real sequence/optional editors. Input is
+`{seed, edits:[{kind,index,count,destination,field}]}`. Kinds are insert, remove,
+move, revive, set, clear, crossMove and nested. All edits describe a common base
+with two populated sequence fields, a populated optional field, nested children
+and detached roots. Sequential composition first rebases the second concurrent
+edit. Every seed contains all eight kinds plus sixteen seeded random choices.
+
+Results include editor changes, singleton compose, undo, rollback, rebase,
+pair composition, rebase over rollback and rebase over composition. Each result
+is encoded with modular versions 3/4/5, selecting sequence 2/3 and optional 2.
+Real compressor-backed RevisionTagCodec handles IDs. Encoded JSON strings compare
+exactly across independent TS runs and encode/decode/encode. Semantic comparisons
+use upstream areEquivalent for singleton compose, empty-base rebase, codec
+roundtrip and rebase-over-composition; these are not the full upstream axiom suite.
+Failures save `traces/tree/<seed>.json`. No seeds or formats are skipped.
+
+**Current TS gate is red at seed 17:** raw multi-revision composition containing
+Rename fails modular 3 / sequence 2 encode's internal decode with `0x996`.
+Supplying an implicit context revision instead fails `0x964` because the result
+has two revisions. `npx tsx src/tree/codec-precondition.ts` is the two-edit repro;
+it verifies those failures and successful modular 4/5 roundtrips. This is a
+raw-result serialization limitation, not proof that ordinary SharedTree ops fail.
+The harness does not silently squash/relabel revisions to bypass it.
+
+The default mixed command deliberately fails because no Swift change-family peer
+exists. Native FluidTree currently contains RevisionTagCodec, ChangeAtomIdCodec
+and DefaultAtomIdAliasAllocator only. Swift Testing covers these, including
+1,000 generated real-TS identity fixtures (`src/tree/identity-fixtures.ts`). An
+atom-codec `localId + 1` mutation was detected and reverted; this is identity-only
+mutation evidence, not sequence rebase certification. See `src/tree/README.md`
+for isolated build/test commands and remaining work.

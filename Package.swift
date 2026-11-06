@@ -16,6 +16,8 @@ let package = Package(
         .target(name: "FluidIdCompressor", dependencies: ["FluidJS"]),
         .executableTarget(name: "FluidIdCompressorPeer", dependencies: ["FluidIdCompressor", "FluidJS"]),
         .testTarget(name: "FluidIdCompressorTests", dependencies: ["FluidIdCompressor", "FluidJS"]),
+        .target(name: "FluidTree", dependencies: ["FluidJS", "FluidIdCompressor"]),
+        .testTarget(name: "FluidTreeTests", dependencies: ["FluidTree", "FluidJS", "FluidIdCompressor"], resources: [.copy("Fixtures")]),
         .target(name: "FluidJS"),
         .target(name: "FluidContainerRuntime", dependencies: ["FluidJS", "FluidLZ4", "FluidDriverDefinitions", "FluidIdCompressor"]),
         .executableTarget(name: "FluidOpLifecyclePeer", dependencies: ["FluidContainerRuntime", "FluidJS"]),
