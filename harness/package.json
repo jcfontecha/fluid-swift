@@ -1,0 +1,25 @@
+{
+  "name": "fluid-differential-harness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fuzz": "tsx src/driver.ts",
+    "replay": "tsx src/replay.ts",
+    "peer:ts": "tsx src/peer.ts",
+    "fixtures": "tsx src/fixtures.ts",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fluidframework/counter": "3.11.0",
+    "@fluidframework/datastore-definitions": "3.11.0",
+    "@fluidframework/driver-definitions": "3.11.0",
+    "@fluidframework/runtime-definitions": "3.11.0",
+    "@fluidframework/test-runtime-utils": "3.11.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}
