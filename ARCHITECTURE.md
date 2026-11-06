@@ -51,7 +51,13 @@ datastores, DDSes, merge-tree, SharedTree) is plain synchronous code — no `asy
 ### 4. Layout mirrors the TS packages
 
 One Swift target per TS package, named `Fluid<Package>` (`FluidCounter` ↔ `@fluidframework/counter`),
-so ports, specs and upstream diffs map 1:1. Shared JS semantics live in `FluidJS`. The harness peer
+so ports, specs and upstream diffs map 1:1. The mapping holds inside a package too: each TS class
+gets a Swift type with the same name and the same responsibilities. Each type's doc comment names
+the TS file it ports. Do not collapse several TS classes into one namespace of static functions.
+
+Code is written for review: one statement per line, no `;`-joined statements, small functions,
+and a comment wherever behavior mirrors a non-obvious TS rule (cite the assert code or the spec
+section). This applies to harness TypeScript too. Shared JS semantics live in `FluidJS`. The harness peer
 is the executable `fluid-swift-peer`.
 
 ### 5. Performance is designed in, then measured on device
