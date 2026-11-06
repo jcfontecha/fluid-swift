@@ -52,6 +52,10 @@ struct JSSemanticsTests {
             #expect(JSON.stringify(.string(JSString(utf16: units))) == json, "utf16 \(Array(units))")
             let parsed = try JSON.parse(json).asString()
             #expect(parsed.utf16 == units, "json \(json)")
+            let text = parsed.description
+            if ContiguousArray(text.utf16) == units {
+                #expect(JSON.stringify(.string(JSString(text))) == json)
+            }
         }
     }
 
@@ -68,6 +72,15 @@ struct JSSemanticsTests {
             #expect(JSON.stringify(.object(object)) == json, "keys \(keys)")
             let reparsed = try JSON.parse(json)
             #expect(JSON.stringify(reparsed) == json)
+            let keysSnapshot = object.orderedKeys
+            let entriesSnapshot = object.orderedEntries
+            #expect(Array(keysSnapshot) == object.keys)
+            for key in object.keys { object[key] = nil }
+            #expect(object.isEmpty)
+            var restored = JSObject<JSONValue>()
+            for (key, value) in entriesSnapshot { restored[key] = value }
+            #expect(JSON.stringify(.object(restored)) == json)
+            #expect(Array(keysSnapshot) == restored.keys)
         }
     }
 }

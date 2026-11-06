@@ -18,35 +18,35 @@ public struct JSONDecodingError: Error, CustomStringConvertible {
 }
 
 extension JSONValue {
-    public func member(_ key: JSString) throws -> JSONValue {
+    @inlinable public func member(_ key: JSString) throws -> JSONValue {
         guard let value = try asObject()[key] else {
             throw JSONDecodingError("missing member \"\(key)\"")
         }
         return value
     }
 
-    public func asObject() throws -> JSObject<JSONValue> {
+    @inlinable public func asObject() throws -> JSObject<JSONValue> {
         guard case .object(let object) = self else { throw JSONDecodingError("expected object, got \(self)") }
         return object
     }
 
-    public func asArray() throws -> [JSONValue] {
+    @inlinable public func asArray() throws -> [JSONValue] {
         guard case .array(let array) = self else { throw JSONDecodingError("expected array, got \(self)") }
         return array
     }
 
-    public func asString() throws -> JSString {
+    @inlinable public func asString() throws -> JSString {
         guard case .string(let string) = self else { throw JSONDecodingError("expected string, got \(self)") }
         return string
     }
 
-    public func asNumber() throws -> Double {
+    @inlinable public func asNumber() throws -> Double {
         guard case .number(let number) = self else { throw JSONDecodingError("expected number, got \(self)") }
         return number
     }
 
     /// A number that must be an exactly representable integer (sequence numbers, counts).
-    public func asInt() throws -> Int {
+    @inlinable public func asInt() throws -> Int {
         let number = try asNumber()
         guard let int = Int(exactly: number) else { throw JSONDecodingError("expected integer, got \(number)") }
         return int

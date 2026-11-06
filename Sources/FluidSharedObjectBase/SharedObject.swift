@@ -97,9 +97,13 @@ open class SharedObjectCore<Metadata>: Channel {
   }
   public func processMessages(_ contents: [Content], local: Bool) throws {
     if let closed { throw closed }
-    for content in contents { try emit("pre-op", content.message, local) }
+    if !listeners.isEmpty {
+      for content in contents { try emit("pre-op", content.message, local) }
+    }
     try processMessagesCore(contents, local: local)
-    for content in contents { try emit("op", content.message, local) }
+    if !listeners.isEmpty {
+      for content in contents { try emit("op", content.message, local) }
+    }
   }
   open func processMessagesCore(_ contents: [Content], local: Bool) throws {
     throw SharedObjectError("process not implemented")

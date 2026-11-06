@@ -6,11 +6,11 @@ public struct ILocalValue {
   public let value: JSONValue?
 }
 
-/// Port of `internalInterfaces.ts` ISerializedValue: `value` is the JSON text, absent for undefined.
-/// `parsed` is `JSON.parse(value)`, which summaries embed; it is the serialized JSON value itself.
+/// Port of `internalInterfaces.ts` ISerializedValue used during summary partitioning.
+/// Only the serialized UTF-16 length is retained: callers embed `parsed`, not the JSON text.
 struct ISerializedValue {
   let type: JSString
-  let value: JSString?
+  let valueLength: Int
   let parsed: JSONValue?
 }
 
@@ -20,7 +20,7 @@ let plainValueType: JSString = "Plain"
 /// Port of `localValues.ts` serializeValue. Handles are already in their encoded JSON form.
 func serializeValue(_ value: JSONValue?) -> ISerializedValue {
   ISerializedValue(
-    type: plainValueType, value: value.map { JSString(JSON.stringify($0)) }, parsed: value)
+    type: plainValueType, valueLength: value.map { JSON.stringify($0).utf16.count } ?? 0, parsed: value)
 }
 
 /// The persisted and wire `ISerializableValue` `{type:"Plain",value}`, in that property order.

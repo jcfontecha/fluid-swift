@@ -111,7 +111,7 @@ public final class MapKernel {
   }
 
   public var size: Int {
-    internalIterator().count
+    pendingData.isEmpty ? sequencedData.size : internalIterator().count
   }
 
   /// `internalIterator`: sequenced keys that are not optimistically deleted or cleared, then pending
@@ -267,15 +267,15 @@ public final class MapKernel {
   /// enumerate first and `__proto__` (which sets the prototype) is not an own property.
   func getSerializedStorage() -> JSObject<ISerializedValue> {
     var serializedMapData = JSObject<ISerializedValue>()
-    for (key, localValue) in sequencedData.entries where key != "__proto__" {
-      serializedMapData[key] = serializeValue(localValue.value)
+    for key in sequencedData.keys where key != "__proto__" {
+      serializedMapData[key] = serializeValue(sequencedData.get(key)!.value)
     }
     return serializedMapData
   }
 
   /// `populateFromSerializable`: `Object.entries` order, without events.
   func populateFromSerializable(_ json: JSONValue) throws {
-    for (key, serializable) in try json.asObject().entries {
+    for (key, serializable) in try json.asObject().orderedEntries {
       sequencedData.set(key, ILocalValue(value: try parseSerializableValue(serializable)))
     }
   }
@@ -404,7 +404,7 @@ public final class MapKernel {
       sequencedData.delete(key)
       return
     }
-    let previousValue = sequencedData.get(key)?.value
+    let previousValue = valueChanged == nil ? nil : sequencedData.get(key)?.value
     sequencedData.delete(key)
     // Suppress the event if local changes would hide the incoming change optimistically.
     if !pendingData.contains(where: { $0.isClearOrKey(key) }) {
@@ -435,7 +435,7 @@ public final class MapKernel {
       return
     }
     let localValue = ILocalValue(value: try parseSerializableValue(op.member("value")))
-    let previousValue = sequencedData.get(key)?.value
+    let previousValue = valueChanged == nil ? nil : sequencedData.get(key)?.value
     sequencedData.set(key, localValue)
     // Suppress the event if local changes would hide the incoming change optimistically.
     if !pendingData.contains(where: { $0.isClearOrKey(key) }) {

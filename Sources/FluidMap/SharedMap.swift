@@ -70,8 +70,8 @@ public final class SharedMap: SharedObject<PendingLocalOpMetadata> {
     var tree = JSObject<SummaryObject>()
 
     let data = kernel.getSerializedStorage()
-    for (key, value) in data.entries {
-      let length = value.value?.length ?? 0
+    for (key, value) in data.orderedEntries {
+      let length = value.valueLength
       if length >= Self.minValueSizeSeparateSnapshotBlob {
         let blobName = JSString("blob\(counter)")
         counter += 1

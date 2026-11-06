@@ -205,7 +205,7 @@ public final class SharedDirectory: SharedObject<DirectoryLocalOpMetadata> {
         var result = JSObject<JSONValue>()
         result["type"] = .string(value.type)
         result["value"] = value.parsed
-        if let text = value.value, text.length >= Self.minValueSizeSeparateSnapshotBlob {
+        if value.valueLength >= Self.minValueSizeSeparateSnapshotBlob {
           // Computed-property literals: `__proto__` is an own property here.
           var largeStorage = JSObject<JSONValue>()
           largeStorage[key] = .object(result)

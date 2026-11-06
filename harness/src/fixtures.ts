@@ -32,7 +32,21 @@ for (let exponent = -10; exponent <= 25; exponent++)
   for (const sign of [1, -1]) numbers.push(sign * 10 ** exponent);
 for (let i = 0; i < 1000; i++)
   numbers.push(fromBits(random.uint32(), random.uint32()));
+// Integral byte-writer boundaries, including neighbors that must use shortest digits.
+for (const value of [1, 9, 10, 99, 100, 999999, 1000000, 2 ** 31, 2 ** 32,
+  2 ** 52 - 1, 2 ** 52, 2 ** 53 - 1, 2 ** 53, 2 ** 53 + 2]) {
+  for (const sign of [1, -1]) numbers.push(sign * value);
+}
+for (let exponent = 0; exponent <= 15; exponent++) {
+  for (const delta of [-1, 0, 1]) {
+    for (const sign of [1, -1]) numbers.push(sign * (10 ** exponent + delta));
+  }
+}
 const decimals = [
+  "999999999999999",
+  "-999999999999999",
+  "1000000000000000",
+  "-0.0",
   "1E5",
   "1e-0",
   "-0",
@@ -62,6 +76,10 @@ for (let i = 0; i < 1000; i++) {
 }
 const units: number[][] = [
   [],
+  Array.from("Plain-k0123456789", (character) => character.charCodeAt(0)),
+  Array.from("a".repeat(128), (character) => character.charCodeAt(0)),
+  [0x61, 0x7f, 0x80, 0x7ff, 0x800],
+  [0x61, 0x62, 0x22, 0x63, 0x5c, 0x64],
   [0x22],
   [0x5c],
   Array.from({ length: 32 }, (_, i) => i),

@@ -24,55 +24,98 @@ public enum JSON {
         if number.isNaN { return "NaN" }
         if number == 0 { return "0" }
         if number.isInfinite { return number < 0 ? "-Infinity" : "Infinity" }
-        if number < 0 { return "-" + numberToString(-number) }
-
-        let (digits, n) = shortestDigits(number)
-        let k = digits.count
-        var out = ""
-        if k <= n && n <= 21 {
-            out.unicodeScalars.append(contentsOf: digits)
-            out += String(repeating: "0", count: n - k)
-        } else if 0 < n && n <= 21 {
-            out.unicodeScalars.append(contentsOf: digits[..<n])
-            out += "."
-            out.unicodeScalars.append(contentsOf: digits[n...])
-        } else if -6 < n && n <= 0 {
-            out = "0." + String(repeating: "0", count: -n)
-            out.unicodeScalars.append(contentsOf: digits)
-        } else {
-            out.unicodeScalars.append(digits[0])
-            if k > 1 {
-                out += "."
-                out.unicodeScalars.append(contentsOf: digits[1...])
-            }
-            out += n - 1 < 0 ? "e-" : "e+"
-            out += String(abs(n - 1))
-        }
-        return out
+        var out: [UInt8] = []
+        writeNumber(number, into: &out)
+        return String(decoding: out, as: UTF8.self)
     }
 
-    /// Shortest round-trip decimal digits of a positive finite double, and the exponent `n` such
-    /// that the value is `0.d₁d₂…dₖ × 10ⁿ` (the `n` of ECMAScript `Number::toString`).
-    /// Swift's `description` already produces the shortest round-trip digits; only its layout
-    /// differs from ECMAScript, so the digits are lifted out of it.
-    private static func shortestDigits(_ number: Double) -> (digits: [Unicode.Scalar], exponent: Int) {
-        let text = number.description.unicodeScalars
-        let exponentStart = text.firstIndex { $0 == "e" || $0 == "E" }
-        var exponent = 0
-        if let exponentStart {
-            exponent = Int(String(String.UnicodeScalarView(text[text.index(after: exponentStart)...])))!
+    private static func writeInteger(_ value: UInt64, into out: inout [UInt8]) {
+        withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 20) { buffer in
+            var value = value
+            var start = buffer.count
+            repeat {
+                start -= 1
+                buffer[start] = UInt8(value % 10) + 48
+                value /= 10
+            } while value != 0
+            out.append(contentsOf: buffer[start...])
         }
-        var digits: [Unicode.Scalar] = []
-        var pointPosition: Int?
-        for scalar in text[..<(exponentStart ?? text.endIndex)] {
-            if scalar == "." { pointPosition = digits.count } else { digits.append(scalar) }
+    }
+
+    private static func writeNumber(_ number: Double, into out: inout [UInt8]) {
+        guard number.isFinite else {
+            out.append(contentsOf: "null".utf8)
+            return
         }
-        var point = pointPosition ?? digits.count
-        let leadingZeros = digits.prefix { $0 == "0" }.count
-        digits.removeFirst(leadingZeros)
-        point -= leadingZeros
-        while digits.last == "0" { digits.removeLast() }
-        return (digits, point + exponent)
+        if number == 0 {
+            out.append(48)
+            return
+        }
+        let magnitude = abs(number)
+        if number < 0 { out.append(45) }
+        // Every integer through 2^53 has an exact decimal expansion and JS uses fixed notation.
+        if magnitude <= 9_007_199_254_740_992, magnitude.rounded(.towardZero) == magnitude {
+            writeInteger(UInt64(magnitude), into: &out)
+            return
+        }
+        withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 32) { buffer in
+            // Double.description yields Swift's shortest round-trip digits; only the layout differs
+            // from ECMAScript, which the code below rewrites. (Public API only: no runtime hooks.)
+            var count = 0
+            for byte in magnitude.description.utf8 {
+                buffer[count] = byte
+                count += 1
+            }
+            var end = count
+            var exponent = 0
+            if let e = (0..<count).first(where: { buffer[$0] == 101 || buffer[$0] == 69 }) {
+                end = e
+                var i = e + 1
+                let negative = buffer[i] == 45
+                if buffer[i] == 45 || buffer[i] == 43 { i += 1 }
+                while i < count {
+                    exponent = exponent * 10 + Int(buffer[i] - 48)
+                    i += 1
+                }
+                if negative { exponent = -exponent }
+            }
+            // Compact the mantissa in place; no String, scalar array or reparsing allocation.
+            var k = 0
+            var point = end
+            for i in 0..<end {
+                if buffer[i] == 46 { point = k } else {
+                    buffer[k] = buffer[i]
+                    k += 1
+                }
+            }
+            var start = 0
+            while start < k && buffer[start] == 48 { start += 1 }
+            point -= start
+            while k > start && buffer[k - 1] == 48 { k -= 1 }
+            let n = point + exponent
+            let length = k - start
+            if length <= n && n <= 21 {
+                out.append(contentsOf: buffer[start..<k])
+                out.append(contentsOf: repeatElement(48, count: n - length))
+            } else if 0 < n && n <= 21 {
+                out.append(contentsOf: buffer[start..<(start + n)])
+                out.append(46)
+                out.append(contentsOf: buffer[(start + n)..<k])
+            } else if -6 < n && n <= 0 {
+                out.append(contentsOf: "0.".utf8)
+                out.append(contentsOf: repeatElement(48, count: -n))
+                out.append(contentsOf: buffer[start..<k])
+            } else {
+                out.append(buffer[start])
+                if length > 1 {
+                    out.append(46)
+                    out.append(contentsOf: buffer[(start + 1)..<k])
+                }
+                out.append(101)
+                out.append(n - 1 < 0 ? 45 : 43)
+                writeInteger(UInt64(abs(n - 1)), into: &out)
+            }
+        }
     }
 
     private static func write(_ value: JSONValue, into out: inout [UInt8]) {
@@ -82,7 +125,7 @@ public enum JSON {
         case .bool(let bool):
             out.append(contentsOf: (bool ? "true" : "false").utf8)
         case .number(let number):
-            out.append(contentsOf: (number.isFinite ? numberToString(number) : "null").utf8)
+            writeNumber(number, into: &out)
         case .string(let string):
             write(string, into: &out)
         case .array(let array):
@@ -94,7 +137,7 @@ public enum JSON {
             out.append(UInt8(ascii: "]"))
         case .object(let object):
             out.append(UInt8(ascii: "{"))
-            for (index, entry) in object.entries.enumerated() {
+            for (index, entry) in object.orderedEntries.enumerated() {
                 if index > 0 { out.append(UInt8(ascii: ",")) }
                 write(entry.key, into: &out)
                 out.append(UInt8(ascii: ":"))
@@ -128,8 +171,15 @@ public enum JSON {
                 out.append(contentsOf: UTF8.encode(Unicode.Scalar(scalar)!)!)
             case 0xD800...0xDFFF:
                 writeUnicodeEscape(unit, into: &out)
+            case 0..<0x80:
+                out.append(UInt8(unit))
+            case 0x80..<0x800:
+                out.append(UInt8(0xC0 | (unit >> 6)))
+                out.append(UInt8(0x80 | (unit & 0x3F)))
             default:
-                out.append(contentsOf: UTF8.encode(Unicode.Scalar(unit)!)!)
+                out.append(UInt8(0xE0 | (unit >> 12)))
+                out.append(UInt8(0x80 | ((unit >> 6) & 0x3F)))
+                out.append(UInt8(0x80 | (unit & 0x3F)))
             }
         }
         out.append(UInt8(ascii: "\""))
@@ -234,7 +284,24 @@ private struct Parser {
 
     mutating func parseString() throws -> JSString {
         try expect("\"")
+        let start = position
+        while position < bytes.count {
+            let byte = bytes[position]
+            if byte == 34 {
+                let count = position - start
+                let units = ContiguousArray<UInt16>(unsafeUninitializedCapacity: count) { buffer, initialized in
+                    for i in 0..<count { buffer[i] = UInt16(bytes[start + i]) }
+                    initialized = count
+                }
+                position += 1
+                return JSString(utf16: units)
+            }
+            if byte < 0x20 || byte >= 0x80 || byte == 92 { break }
+            position += 1
+        }
         var units = ContiguousArray<UInt16>()
+        units.reserveCapacity(position - start + 8)
+        for i in start..<position { units.append(UInt16(bytes[i])) }
         while true {
             guard position < bytes.count else { throw error("unterminated string") }
             let byte = bytes[position]
@@ -328,6 +395,18 @@ private struct Parser {
                 position += 1
             }
             guard digits(&self) > 0 else { throw error("invalid exponent") }
+        }
+        let negative = bytes[start] == 45
+        let digitStart = start + (negative ? 1 : 0)
+        // At most 15 decimal digits are exact; preserve negative zero as well.
+        if position - digitStart <= 15 {
+            var integer: UInt64 = 0
+            var i = digitStart
+            while i < position, bytes[i] >= 48, bytes[i] <= 57 {
+                integer = integer * 10 + UInt64(bytes[i] - 48)
+                i += 1
+            }
+            if i == position { return negative ? -Double(integer) : Double(integer) }
         }
         let text = String(decoding: UnsafeBufferPointer(rebasing: bytes[start..<position]), as: UTF8.self)
         return Double(text)!

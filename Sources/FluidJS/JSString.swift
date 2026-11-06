@@ -9,11 +9,27 @@ public struct JSString: Hashable, Sendable, ExpressibleByStringLiteral, CustomSt
     }
 
     public init(_ string: String) {
-        self.utf16 = ContiguousArray(string.utf16)
+        var string = string
+        let original = string
+        self.utf16 = string.withUTF8 { bytes in
+            if bytes.allSatisfy({ $0 < 0x80 }) {
+                return ContiguousArray(unsafeUninitializedCapacity: bytes.count) { buffer, initialized in
+                    for i in bytes.indices { buffer[i] = UInt16(bytes[i]) }
+                    initialized = bytes.count
+                }
+            }
+            return ContiguousArray(original.utf16)
+        }
     }
 
     public init(stringLiteral value: String) {
         self.init(value)
+    }
+
+    @inlinable public func hash(into hasher: inout Hasher) {
+        utf16.withUnsafeBufferPointer { buffer in
+            hasher.combine(bytes: UnsafeRawBufferPointer(buffer))
+        }
     }
 
     public var length: Int { utf16.count }
@@ -23,7 +39,7 @@ public struct JSString: Hashable, Sendable, ExpressibleByStringLiteral, CustomSt
 
     /// The array index this key denotes under ECMAScript property-key rules
     /// (canonical decimal `0`…`4294967294`), or `nil` for any other key.
-    var arrayIndex: UInt32? {
+    @usableFromInline internal var arrayIndex: UInt32? {
         let units = utf16
         guard let first = units.first, units.count <= 10 else { return nil }
         if first == 0x30 { return units.count == 1 ? 0 : nil }
