@@ -17,9 +17,12 @@ TS and Swift clients in one document, each consuming the other's ops. See
 
 Every lane is **test-first**. Before any implementation, the failing tests land: ported TS unit
 tests, golden fixtures generated from the TS oracle, and harness scenarios. The implementation is
-done when those tests pass, not before. Because a red test suite pins the behavior, mechanical
-porting goes to small, cheap models in well-bounded units, with stronger models writing the tests
-and reviewing.
+done when those tests pass, not before. Work is routed by difficulty, not by phase. Mechanical
+porting (types, codecs, straightforward DDS logic, test transliteration) goes to small, cheap
+models in well-bounded units, because a red test suite pins the behavior. Hard porting goes to
+strong models, which implement it themselves: conflict resolution, rebase algebra, the op
+lifecycle, and divergence debugging, with Astra on the most challenging parts. Strong models
+also write the tests and review.
 
 ### 2. One serial executor per container; DDS code is synchronous
 
