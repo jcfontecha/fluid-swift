@@ -16,10 +16,10 @@ import Foundation
                 let key = try params.member("client").asString().description
                 let method = try request.member("method").asString()
                 let result: JSONValue
-                if method == "open" {
+                if method == "open" || method == "openM2" {
                     let container = Container(
                         endpoint: try params.member("endpoint").asString().description,
-                        document: try params.member("document").asString().description)
+                        document: try params.member("document").asString().description, loadRuntime: method == "openM2")
                     containers[key] = container
                     try await container.connect()
                     result = try await container.view()
@@ -28,6 +28,20 @@ import Foundation
                         throw JSONDecodingError("unknown service client")
                     }
                     switch method {
+                    case "mapView": result = try await container.mapEntries()
+                    case "mapEdit":
+                        let operation = try params.member("op").asString()
+                        let key = try params.member("key").asString()
+                        let value = try params.asObject()["value"]
+                        try await container.withMap { map in
+                            switch operation {
+                            case "set": try map.set(key, value)
+                            case "delete": _ = try map.delete(key)
+                            case "clear": try map.clear()
+                            default: throw JSONDecodingError("unknown map operation")
+                            }
+                        }
+                        result = .null
                     case "view": result = try await container.view()
                     case "disconnect":
                         await container.disconnect()

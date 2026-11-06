@@ -1,3 +1,4 @@
+import FluidDriverDefinitions
 import FluidJS
 import FluidIdCompressor
 
@@ -9,6 +10,10 @@ public final class ContainerRuntime {
   public let channelCollection = ChannelCollection()
   public var blobManager = BlobManager()
   public let signalTelemetryManager = SignalTelemetryManager()
+  public internal(set) var metadata: JSONValue?
+  public internal(set) var electedSummarizerData: JSONValue?
+  public internal(set) var gcSnapshot: SummaryTree?
+  public internal(set) var aliases: JSONValue = .array([])
   public var closed = false
   public var extensions: Set<JSString> = []
   public var onEvent: (JSString, [JSONValue]) throws -> Void = { _, _ in }
@@ -16,18 +21,23 @@ public final class ContainerRuntime {
   public var onSubmitSignal: (JSONValue, JSString?) throws -> Void = { _, _ in }
   public var onIdAllocation: (([JSONValue], Bool) throws -> Void)?
   public let pendingStateManager: PendingStateManager
-  public let idCompressor: IdCompressor
+  public internal(set) var idCompressor: IdCompressor
   public private(set) var clientId: String
   public var connected = true
   public var referenceSequenceNumber = 0
   public private(set) var clientSequenceNumber = 0
+  public var onSubmitBatch: (([JSONValue]) throws -> Int)?
   public var onSubmit: ([JSONValue], String, Int) throws -> Void = { _, _, _ in }
   public var reSubmit: (JSONValue) throws -> JSONValue = { $0 }
   public var applyStashedOp: (String) throws -> JSONValue? = { _ in nil }
   private let remoteMessageProcessor = RemoteMessageProcessor()
-  private let duplicateBatchDetector: DuplicateBatchDetector
+  var duplicateBatchDetector: DuplicateBatchDetector
   public lazy var outbox: Outbox = {
     let value = Outbox(splitter: OpSplitter(), submitBatch: { [unowned self] messages in
+      if let submit = self.onSubmitBatch {
+        self.clientSequenceNumber = try submit(messages)
+        return self.clientSequenceNumber
+      }
       try self.onSubmit(messages, self.clientId, self.clientSequenceNumber)
       self.clientSequenceNumber += messages.count
       return self.clientSequenceNumber

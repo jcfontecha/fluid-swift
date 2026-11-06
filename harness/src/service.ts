@@ -18,6 +18,7 @@ import { Quorum } from '../node_modules/@fluidframework/container-loader/lib/pro
 import { Random } from './random.js';
 
 const root = resolve(import.meta.dirname, '../..');
+const scratchPath = process.argv.find(arg => arg.startsWith('--scratch-path='))?.slice('--scratch-path='.length) ?? '.build';
 const endpoint = 'http://localhost:7073';
 const objectSchema = z.record(z.string(), z.unknown());
 const opSchema = objectSchema.and(z.object({ sequenceNumber: z.number() }));
@@ -30,7 +31,7 @@ async function until(test: () => boolean | Promise<boolean>, label: string): Pro
   throw new Error(`Timeout: ${label}`);
 }
 class Swift {
-  readonly child = spawn(resolve(root, '.build/debug/FluidServicePeer'), [], { cwd: root });
+  readonly child = spawn(resolve(root, scratchPath, 'debug/FluidServicePeer'), [], { cwd: root });
   readonly lines = createInterface({ input: this.child.stdout })[Symbol.asyncIterator]();
   id = 0;
   constructor(readonly trace: unknown[]) { this.child.stderr.pipe(process.stderr); }
@@ -89,18 +90,23 @@ async function scenario(seed: number) {
     await swift.call('open', 'start', { endpoint, document });
     await until(async () => (await swift.view('start')).connected, 'Swift own join');
     async function checkpoint(clients: string[], label: string) {
+      let captured: Awaited<ReturnType<Swift['view']>>[] = [];
+      let expected = tsView(creator);
       await until(async () => {
         const views = [];
         for (const client of clients) views.push(await swift.view(client));
-        return views.every(view => view.sequenceNumber === creator.deltaManager.lastSequenceNumber);
+        expected = tsView(creator);
+        captured = views;
+        return views.every(view => view.sequenceNumber === expected.sequenceNumber);
       }, label);
-      const expected = tsView(creator);
       const stored = new Map<number, string>();
       const stream = oracleStorage.fetchMessages(1, expected.sequenceNumber + 1);
       for (;;) { const batch = await stream.read(); if (batch.done) break; for (const op of batch.value) stored.set(op.sequenceNumber, JSON.stringify(op)); }
       trace.push({ label, expected });
-      for (const client of clients) {
-        const actual = await swift.view(client); trace.push({ client, actual });
+      for (const [index, client] of clients.entries()) {
+        const actual = captured[index];
+        assert(actual);
+        trace.push({ client, actual });
         assert.equal(actual.sequenceNumber, expected.sequenceNumber, `${label}: sequence`);
         for (const key of ['minimumSequenceNumber', 'members', 'proposals', 'values', 'audience'] as const) assert.deepEqual(actual[key], expected[key], `${label}: ${client} ${key}`);
         const observed = new Map(ops.map(text => [opSchema.parse(JSON.parse(text)).sequenceNumber, text]));
@@ -109,7 +115,7 @@ async function scenario(seed: number) {
         assert(actual.ops.length > 0, 'no overlapping ops compared');
         for (const [index, op] of actual.ops.entries()) {
           assert.equal(op.sequenceNumber, actual.snapshotSequenceNumber + index + 1, `${label}: log gap`);
-          const ts = actual.opSources[index] === "storage" ? stored.get(op.sequenceNumber) : observed.get(op.sequenceNumber);
+          const ts: string | undefined = actual.opSources[index] === "storage" ? stored.get(op.sequenceNumber) : observed.get(op.sequenceNumber);
           assert(ts !== undefined, `${label}: missing TS observation ${op.sequenceNumber}`);
           assert.equal(JSON.stringify(op), ts, `${label}: raw op ${op.sequenceNumber}`);
         }

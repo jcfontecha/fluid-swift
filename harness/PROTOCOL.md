@@ -703,3 +703,69 @@ The H5 target and differential results above remain separate from that moving
 whole-checkout build. The final routing regression used the existing routing
 driver copied to `/tmp/h5-routing.mts` with only imports/root and `.build/h4` ->
 `.build/h5` adjusted; its committed source was not changed.
+
+## Service mode (M2): native fluid-static SharedMap
+
+`npm run service:m2 -- --seeds 0..9` builds `FluidServicePeer` with
+`--scratch-path .build/m2`, starts an isolated tinylicious on **7074**, and disposes
+all clients, server processes and temporary storage when finished. No existing
+server or document is reused. Run from `harness/` with the installed dependencies.
+
+The creator uses the pinned 3.11.0 `TinyliciousClient` and `SharedMap` from
+`fluid-framework/legacy`, with `initialObjects: { map: SharedMap }`. Each seed:
+
+1. Creates and attaches in TS. Swift loads the original sequence-zero attach summary;
+   TS then sets a nested value and produces an acknowledged summary.
+2. Opens Swift from the document ID, resolves `rootDOId` through `.aliases`, loads
+   aqueduct's `root` directory, and follows `initial-objects-key` handles.
+3. Interleaves TS and Swift set/delete/clear operations, including nested JSON and
+   nested handles to the existing map. TS must consume Swift's real submitted ops.
+4. Summarizes again in TS and opens a second Swift client from a snapshot at least
+   as recent as the pre-summary checkpoint.
+5. Joins another TS writer; disconnects Swift; edits Swift offline while TS changes
+   the same key; reconnects and resubmits; disconnects the extra TS writer.
+
+Checkpoints require equal sequence numbers, zero pending runtime/DDS ops, deep-equal
+maps on every client, and matching native datastore/channel identities. Overlapping
+socket runtime ops are compared to the TS inbound stream as raw JSON. Handle values
+are normalized to their serialized absolute paths, not compared by process identity.
+The Swift wire is sequenced by tinylicious and consumed by TS, not translated by the
+harness. Failures preserve RPC requests/responses and checkpoint states under
+`harness/traces/service-m2-<seed>.jsonl`.
+
+`npm run service:m2 -- --seeds 0..0 --plant-divergence` deliberately corrupts a
+Swift checkpoint observation and **must exit nonzero** with a deep-equality failure.
+Without the flag the corruption is absent. Every normal seed also asserts that the
+same comparator rejects a planted extra map entry.
+
+The captured real summary fixture for focused Swift load tests is
+`Tests/FluidContainerLoaderTests/Fixtures/m2-summary.json` and `m2-attach.json`. Regenerate deliberately
+with `npm run service:m2 -- --seeds 0..0 --capture-fixture`; ordinary runs do not
+rewrite it. Tests additionally reject protocol/runtime sequence mismatch and missing
+root aliases, and cover optional blob redirects, GC snapshot and elected-summarizer
+state. Swift summary generation and detached creation remain outside M2.
+
+Native entry point:
+
+```swift
+let container = try await Container.open(endpoint: "http://localhost:7074", document: id)
+let entries = try await container.mapEntries("map")
+try await container.withMap("map") { map in
+    try map.set("hello", .string("Swift"))
+}
+await container.disconnect()
+try await container.withMap("map") { map in
+    try map.set("offline", .bool(true))
+}
+try await container.connect()
+```
+
+DDS access inside `withMap` is synchronous on the container actor. Only storage,
+socket sends and connection lifecycle suspend. `Container` owns both protocol and
+runtime state; runtime batches use DeltaManager's actual client sequence numbers,
+including intervening protocol noops/accepts, before pending-state registration.
+
+Existing service/routing/datastore farms accept `--scratch-path=.build/m2` so M2
+verification does not use or disturb another lane's build directory. Defaults are
+unchanged. M1 retains the equal-sequence checkpoint views before awaiting storage
+reads, so later ops cannot race a comparison against an older TS observation.

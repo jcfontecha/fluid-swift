@@ -1,3 +1,7 @@
+import FluidContainerRuntime
+import FluidDatastore
+import FluidMap
+import FluidStatic
 import FluidDriverBase
 import FluidDriverDefinitions
 import FluidJS
@@ -9,6 +13,13 @@ import Foundation
 /// Ports container-loader/src/container.ts. One actor owns all synchronous protocol, delta,
 /// connection and listener state. Suspension occurs only at socket/REST/timer boundaries.
 public actor Container {
+    private final class Outbound {
+        var messages: [IDocumentMessage] = []
+    }
+    private let outbound = Outbound()
+    private var runtime: ContainerRuntime?
+    private var rootDataObject: RootDataObject?
+    private let loadRuntime: Bool
     private let service: DocumentService
     private var protocolHandler: ProtocolOpHandler?
     private let deltaManager = DeltaManager()
@@ -22,7 +33,8 @@ public actor Container {
     private var noopTimer: Task<Void, Never>?
     private var fetching = false
 
-    public init(endpoint: String, document: String) {
+    public init(endpoint: String, document: String, loadRuntime: Bool = false) {
+        self.loadRuntime = loadRuntime
         service = DocumentService(
             endpoint: endpoint, document: document, tokens: InsecureTinyliciousTokenProvider())
     }
@@ -41,7 +53,32 @@ public actor Container {
 
     public func connect() async throws {
         if protocolHandler == nil {
-            let loaded = try ProtocolOpHandler(state: await service.storage.protocolSnapshot())
+            let snapshot = try await service.storage.snapshot()
+            let loaded = try ProtocolOpHandler(state: DocumentStorageService.protocolState(snapshot))
+            if loadRuntime {
+                let runtime = try ContainerRuntime(sessionId: UUID().uuidString.lowercased(), clientId: "")
+                try runtime.loadSnapshot(snapshot, factories: [
+                    ChannelFactory(SharedMap.self, snapshotFormatVersion: "0.2"),
+                    ChannelFactory(SharedDirectory.self, snapshotFormatVersion: "0.1"),
+                ])
+                runtime.referenceSequenceNumber = loaded.sequenceNumber
+                rootDataObject = try RootDataObject(runtime: runtime)
+                runtime.onSubmitBatch = { [deltaManager, outbound] messages in
+                    var last = 0
+                    for message in messages {
+                        let prepared = try deltaManager.prepareMessage(
+                            type: "op", contents: message.member("contents"),
+                            referenceSequenceNumber: message.member("referenceSequenceNumber").asInt())
+                        var fields = try prepared.json.asObject()
+                        for (key, value) in try message.asObject().entries { fields[key] = value }
+                        let wire = try IDocumentMessage(json: .object(fields))
+                        outbound.messages.append(wire)
+                        last = wire.clientSequenceNumber
+                    }
+                    return last
+                }
+                self.runtime = runtime
+            }
             loaded.quorum.events.on { [quorumEvents] in quorumEvents.emit($0) }
             loaded.audience.events.on { [audienceEvents] in audienceEvents.emit($0) }
             snapshotSequenceNumber = loaded.sequenceNumber
@@ -98,7 +135,6 @@ public actor Container {
 
     private func drain() throws -> [IDocumentMessage] {
         guard let protocolHandler else { throw JSONDecodingError("no protocol state") }
-        var outgoing: [IDocumentMessage] = []
         while let entry = try deltaManager.nextMessage(
             sequenceNumber: protocolHandler.sequenceNumber)
         {
@@ -107,10 +143,16 @@ public actor Container {
             try deltaManager.validate(
                 message, protocolHandler: protocolHandler, clientId: connectionManager.clientId)
             let result = try protocolHandler.processMessage(message)
+            let wasConnected = connectionManager.connected
             try connectionManager.receivedJoin(message)
+            if message.type == "op" { _ = try runtime?.process(message.json) }
+            runtime?.referenceSequenceNumber = message.sequenceNumber
+            if !wasConnected && connectionManager.connected, let id = connectionManager.clientId {
+                try runtime?.reconnect(clientId: id.description)
+            }
             if connectionManager.connected {
                 if result.immediateNoOp == true {
-                    outgoing.append(
+                    outbound.messages.append(
                         try deltaManager.prepareMessage(
                             type: "accept", contents: nil,
                             referenceSequenceNumber: protocolHandler.sequenceNumber))
@@ -124,12 +166,14 @@ public actor Container {
                 entry, duration: (Date().timeIntervalSince1970 - started) * 1000)
         }
         if connectionManager.connected && deltaManager.noopHeuristic.takeWantsNoop() {
-            outgoing.append(
+            outbound.messages.append(
                 try deltaManager.prepareMessage(
                     type: "noop", contents: nil,
                     referenceSequenceNumber: protocolHandler.sequenceNumber))
         }
-        return outgoing
+        let messages = outbound.messages
+        outbound.messages.removeAll(keepingCapacity: true)
+        return messages
     }
     private func catchUp(fetchUnbounded: Bool = false) async throws {
         try await sendMessages(drain())
@@ -215,11 +259,64 @@ public actor Container {
         view["opSources"] = .array(deltaManager.opSources.map { .string(JSString($0)) })
         view["signals"] = .array(signals.map(\.json))
         view["clientId"] = connectionManager.clientId.map { .string($0) } ?? .null
+        if let runtime {
+            var state = JSObject<JSONValue>()
+            state["referenceSequenceNumber"] = .number(Double(runtime.referenceSequenceNumber))
+            state["pendingMessages"] = .number(Double(runtime.pendingStateManager.pendingMessagesCount))
+            state["datastores"] = .array(try runtime.channelCollection.datastoreIds.map { id in
+                let store = try runtime.channelCollection.getDatastore(id)
+                var entry = JSObject<JSONValue>()
+                entry["id"] = .string(id)
+                entry["channels"] = .array(store.contexts.keys.sorted { $0.description < $1.description }.map(JSONValue.string))
+                entry["pendingOps"] = .number(Double(store.pendingOpCount))
+                return .object(entry)
+            })
+            view["runtime"] = .object(state)
+        }
         view["connected"] = .bool(connectionManager.connected)
         return .object(view)
     }
 
+    /// Opens an existing fluid-static container. All object edits stay on this actor.
+    public static func open(endpoint: String, document: String) async throws -> Container {
+        let container = Container(endpoint: endpoint, document: document, loadRuntime: true)
+        try await container.connect()
+        return container
+    }
+
+    public func mapEntries(_ name: JSString = "map") throws -> JSONValue {
+        if let failure { throw JSONDecodingError(failure) }
+        guard let map = rootDataObject?.initialObjects[name] as? SharedMap else {
+            throw JSONDecodingError("initialObject is not a SharedMap")
+        }
+        var values = JSObject<JSONValue>()
+        for (key, value) in map.entries() { values[key] = value ?? .null }
+        return .object(values)
+    }
+
+    public func withMap<Result: Sendable>(
+        _ name: JSString = "map", _ edit: @Sendable (SharedMap) throws -> Result
+    ) async throws -> Result {
+        if let failure { throw JSONDecodingError(failure) }
+        guard let map = rootDataObject?.initialObjects[name] as? SharedMap, let runtime else {
+            throw JSONDecodingError("initialObject is not a SharedMap")
+        }
+        let result = try edit(map)
+        try runtime.flush()
+        let messages = outbound.messages
+        outbound.messages.removeAll(keepingCapacity: true)
+        try await sendMessages(messages)
+        return result
+    }
+
     public func disconnect() async {
+        runtime?.connected = false
+        if let runtime {
+            for id in runtime.channelCollection.datastoreIds {
+                do { try runtime.channelCollection.getDatastore(id).setConnectionState(false, clientId: nil) }
+                catch { failure = String(describing: error) }
+            }
+        }
         let hadConnection = connectionManager.connection != nil
         connectionManager.connectionFailed()
         if hadConnection { deltaManager.disconnect("Client disconnect") }

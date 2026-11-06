@@ -6,9 +6,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { run } from './oracle.js';
 const root = resolve(import.meta.dirname, '../../..');
 const self = process.argv.includes('--self');
+const scratchPath = process.argv.find(arg => arg.startsWith('--scratch-path='))?.slice('--scratch-path='.length) ?? '.build/h5';
 const count = Number(process.argv.find(a => a.startsWith('--seeds='))?.split('=')[1] ?? 1000);
-if (!self) execFileSync('swift', ['build', '--scratch-path', '.build/h5', '--product', 'FluidDatastorePeer'], { cwd: root, stdio: 'inherit' });
-const child = self ? undefined : spawn(resolve(root, '.build/h5/debug/FluidDatastorePeer'), [], { stdio: ['pipe', 'pipe', 'inherit'] });
+if (!self) execFileSync('swift', ['build', '--scratch-path', scratchPath, '--product', 'FluidDatastorePeer'], { cwd: root, stdio: 'inherit' });
+const child = self ? undefined : spawn(resolve(root, scratchPath, 'debug/FluidDatastorePeer'), [], { stdio: ['pipe', 'pipe', 'inherit'] });
 const lines = child ? createInterface({ input: child.stdout })[Symbol.asyncIterator]() : undefined;
 try {
     for (let seed = 0; seed < count; seed++) {
