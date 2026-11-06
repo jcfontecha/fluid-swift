@@ -39,7 +39,7 @@ public struct PartialLengths: Sendable {
   private var clients: [JSString: Series] = [:]
   public private(set) var minimumSequence: Int
 
-  public init(segments: [Segment], minimumSequence: Int) {
+  public init(segments: [BaseSegment], minimumSequence: Int) {
     self.minimumSequence = minimumSequence
     var deltas: [Int: Int] = [:]
     var corrections: [JSString: [Int: Int]] = [:]

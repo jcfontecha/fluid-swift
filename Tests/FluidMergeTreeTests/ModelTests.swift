@@ -6,7 +6,7 @@ import Testing
 // Ported cases from textSegment.spec, perspective and partialLength tests, with
 // the overlapping-removal examples pinned by specs/merge-tree/model.md.
 @Test func splitsSurrogatePairWithoutRepair() throws {
-  var segment = Segment(text: JSString("A😀B"), insertion: Stamp(sequence: 0, client: "A"))
+  let segment = BaseSegment(text: JSString("A😀B"), insertion: Stamp(sequence: 0, client: "A"))
   let right = try segment.split(at: 2)
   #expect(Array(segment.text!.utf16) == [65, 0xd83d])
   #expect(Array(right.text!.utf16) == [0xde00, 66])
@@ -19,7 +19,7 @@ import Testing
       < Stamp(sequence: -1, client: "Z", localSequence: 2))
 }
 @Test func overlappingRemovalIsSeenByBothRemovers() {
-  let segment = Segment(
+  let segment = BaseSegment(
     text: "x", insertion: Stamp(sequence: 0, client: "origin"),
     removals: [Stamp(sequence: 20, client: "A"), Stamp(sequence: 25, client: "B")])
   #expect(Perspective.prior(sequence: 15, client: "observer").contains(segment))
@@ -32,7 +32,7 @@ import Testing
   #expect(lengths.length(sequence: 22, client: "observer") == 0)
 }
 @Test func localRemovalCannotSubtractUnseenInsertion() {
-  let segment = Segment(
+  let segment = BaseSegment(
     text: "abc", insertion: Stamp(sequence: 12, client: "remote"),
     removals: [Stamp(sequence: -1, client: "local", localSequence: 7)])
   #expect(!Perspective.reconnecting(sequence: 11, localSequence: 7).contains(segment))
@@ -41,13 +41,13 @@ import Testing
 }
 @Test func newlinePreventsTextCoalescing() {
   let stamp = Stamp(sequence: 0, client: "A")
-  #expect(!Segment(text: "a\n", insertion: stamp).canAppend(Segment(text: "b", insertion: stamp)))
-  #expect(Segment(text: "a", insertion: stamp).canAppend(Segment(text: "b", insertion: stamp)))
+  #expect(!BaseSegment(text: "a\n", insertion: stamp).canAppend(BaseSegment(text: "b", insertion: stamp)))
+  #expect(BaseSegment(text: "a", insertion: stamp).canAppend(BaseSegment(text: "b", insertion: stamp)))
 }
 @Test func partialCollapsePreservesHistoricalQueries() {
   let segments = [
-    Segment(text: "abc", insertion: Stamp(sequence: 12, client: "A")),
-    Segment(
+    BaseSegment(text: "abc", insertion: Stamp(sequence: 12, client: "A")),
+    BaseSegment(
       text: "xy", insertion: Stamp(sequence: 14, client: "B"),
       removals: [Stamp(sequence: 16, client: "C")]),
   ]

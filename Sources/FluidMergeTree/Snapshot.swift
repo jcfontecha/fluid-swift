@@ -9,7 +9,7 @@ extension MergeTreeClient {
     }
     let legacy = version == "legacy"
     var payloads: [(json: JSONValue, length: Int)] = []
-    var candidate: Segment?
+    var candidate: BaseSegment?
     var candidateOriginalIndex: Int?
     func flush() {
       if !legacy, let index = candidateOriginalIndex {
@@ -20,7 +20,7 @@ extension MergeTreeClient {
       candidateOriginalIndex = nil
     }
     for (index, original) in segments.enumerated() {
-      var segment = original
+      let segment = original.clone()
       if legacy {
         segment.properties = segment.propertyManager.getAtSeq(segment.properties)
       }
@@ -33,7 +33,7 @@ extension MergeTreeClient {
       }
       if legacy && insertion.sequence > minimumSequence { continue }
       if legacy || (insertion.sequence <= minimumSequence && removals.isEmpty) {
-        if var previous = candidate, previous.canAppend(segment),
+        if let previous = candidate, previous.canAppend(segment),
           previous.properties == segment.properties,
           var text = previous.text, let next = segment.text
         {

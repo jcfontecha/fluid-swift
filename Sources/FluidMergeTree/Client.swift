@@ -5,7 +5,7 @@ public final class MergeTreeClient {
   public let id: JSString
   public private(set) var currentSequence = 0
   public private(set) var minimumSequence = 0
-  public private(set) var segments: ContiguousArray<Segment> = []
+  public private(set) var segments: ContiguousArray<BaseSegment> = []
   private var localSequence = 0
   private var pending: [Int] = []
   private var pendingHead = 0
@@ -61,6 +61,7 @@ public final class MergeTreeClient {
     guard sequence >= currentSequence, referenceSequence >= minimumSequence,
       referenceSequence < sequence
     else { throw JSONDecodingError("invalid sequence window") }
+    var removed: [BaseSegment] = []
     if sender == id {
       guard pendingHead < pending.count else {
         throw JSONDecodingError("ack without pending operation")
@@ -78,6 +79,7 @@ public final class MergeTreeClient {
         where segments[index].removals[removal].sequence == -1
           && segments[index].removals[removal].localSequence == local
         {
+          removed.append(segments[index])
           segments[index].removals[removal] = Stamp(sequence: sequence, client: sender)
         }
         segments[index].removals.sort()
@@ -91,6 +93,7 @@ public final class MergeTreeClient {
         operation, perspective: .prior(sequence: referenceSequence, client: sender),
         stamp: Stamp(sequence: sequence, client: sender))
     }
+    slideReferences(on: removed)
     currentSequence = sequence
   }
   func normalizeSnapshotProperties(at index: Int) {
@@ -129,15 +132,15 @@ public final class MergeTreeClient {
     try splitBoundary(start, perspective: perspective)
     if type == 0 {
       let payload = try operation.member("seg")
-      let segment: Segment
+      let segment: BaseSegment
       switch payload {
-      case .string(let text): segment = Segment(text: text, insertion: stamp)
+      case .string(let text): segment = BaseSegment(text: text, insertion: stamp)
       case .object(let fields):
         let props = try fields["props"].map { try $0.asObject() }
         if let text = fields["text"] {
-          segment = Segment(text: try text.asString(), insertion: stamp, properties: props)
+          segment = BaseSegment(text: try text.asString(), insertion: stamp, properties: props)
         } else {
-          segment = Segment(
+          segment = BaseSegment(
             markerType: try payload.member("marker").member("refType").asInt(), insertion: stamp,
             properties: props)
         }
@@ -167,6 +170,7 @@ public final class MergeTreeClient {
     } else {
       let end = try operation.member("pos2").asInt()
       try splitBoundary(end, perspective: perspective)
+      var removed: [BaseSegment] = []
       var position = 0
       for index in segments.indices where perspective.contains(segments[index]) {
         let count = segments[index].length
@@ -177,12 +181,14 @@ public final class MergeTreeClient {
             segments[index].propertyManager.handleProperties(updates, properties: &properties, stamp: stamp)
             segments[index].properties = properties
           } else {
+            if stamp.sequence != -1 { removed.append(segments[index]) }
             segments[index].removals.append(stamp)
             segments[index].removals.sort()
           }
         }
         position += count
       }
+      slideReferences(on: removed)
     }
   }
 }

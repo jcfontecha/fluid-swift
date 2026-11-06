@@ -7,6 +7,7 @@ func object(_ fields: [(JSString, JSONValue)]) -> JSONValue {
   for (key, value) in fields { result[key] = value }
   return .object(result)
 }
+var references: [JSString: JSObject<LocalReference>] = [:]
 var clients: [JSString: MergeTreeClient] = [:]
 while let line = readLine() {
   var requestID: JSONValue = .null
@@ -18,9 +19,11 @@ while let line = readLine() {
     var result: JSONValue = .null
     if method == "reset" {
       clients.removeAll()
+      references.removeAll()
     } else if method == "create" {
       let id = try params.member("client").asString()
       clients[id] = MergeTreeClient(id: id)
+      references[id] = JSObject<LocalReference>()
     } else {
       let id = try params.member("client").asString()
       guard let client = clients[id] else { throw JSONDecodingError("unknown client") }
@@ -46,6 +49,16 @@ while let line = readLine() {
               ("props", edit.member("props")),
               ("type", .number(2)),
             ]))
+        case "reference":
+          let preference = try edit.asObject()["slidingPreference"].map { try $0.asInt() } ?? 1
+          guard preference == 0 || preference == 1 else {
+            throw JSONDecodingError("invalid sliding preference")
+          }
+          let ref = try client.createLocalReferencePosition(
+            at: edit.member("pos").asInt(), refType: edit.member("refType").asInt(),
+            slidingPreference: preference == 0 ? .backward : .forward)
+          let name = try edit.member("id").asString()
+          references[id]?[name] = ref
         case "remove":
           result = try client.remove(
             start: edit.member("start").asInt(), end: edit.member("end").asInt())
@@ -74,13 +87,19 @@ while let line = readLine() {
               ))
           }
         }
+        var referencePositions = JSObject<JSONValue>()
+        if let refs = references[id] {
+          for (name, ref) in refs.entries {
+            referencePositions[name] = .number(Double(client.localReferencePositionToPosition(ref)))
+          }
+        }
         result = object([
           ("text", .array(client.text.utf16.map { .number(Double($0)) })),
           ("length", .number(Double(client.length))),
           (
             "segments",
             .array(client.segments.filter { Perspective.local.contains($0) }.map { $0.toJSON() })
-          ), ("references", object([])), ("lengths", .array(lengths)),
+          ), ("references", .object(referencePositions)), ("lengths", .array(lengths)),
         ])
       default: throw JSONDecodingError("merge-tree method is not implemented: \(method)")
       }

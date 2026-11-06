@@ -94,7 +94,7 @@ for await (const line of createInterface({ input: process.stdin })) {
                             if (!found)
                                 throw Error('reference out of bounds');
                             const { segment, offset } = found;
-                            c.references.set(e.id, c.createLocalReferencePosition(segment, offset, e.refType, undefined));
+                            c.references.set(e.id, c.createLocalReferencePosition(segment, offset, e.refType, undefined, e.slidingPreference));
                             break;
                         }
                     }

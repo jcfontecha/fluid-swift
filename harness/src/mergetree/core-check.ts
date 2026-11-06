@@ -1,4 +1,4 @@
-// Focused insert/remove/annotation/snapshot differential check. This does NOT replace the full farm.
+// Focused insert/remove/annotation/reference/snapshot differential check. This does NOT replace the full farm.
 import { isDeepStrictEqual } from 'node:util';
 import { Random } from '../random.js';
 import { Peer } from './transport.js';
@@ -25,6 +25,13 @@ try {
             const messages = [];
             for (const client of ['A', 'B']) {
                 const s = stateSchema.parse(await both('state', { client }));
+                if (s.length > 0) {
+                    await both('edit', { client, edit: {
+                        kind: 'reference', pos: random.int(s.length),
+                        id: `${round}`, refType: random.pick([0, 64, 128, 256]),
+                        slidingPreference: random.pick([0, 1]),
+                    } });
+                }
                 const start = random.int(s.length + 1);
                 let edit: Edit = s.length > 0 && random.int(3) === 0 ? { kind: 'remove', start: Math.min(start, s.length - 1), end: s.length } : { kind: 'insert', pos: start, text: random.pick(['abc', '😀', '\ud800', '\udfff', '\n', 'é']) };
                 if (s.length > 0 && random.int(3) === 0)
@@ -48,7 +55,7 @@ try {
             await both('snapshot', { client, version: 'legacy' });
         }
         if ((seed + 1) % 100 === 0)
-            console.log(`focused insert/remove/annotation snapshots: ${seed + 1} seeds`);
+            console.log(`focused insert/remove/annotation/reference snapshots: ${seed + 1} seeds`);
     }
 }
 finally {
