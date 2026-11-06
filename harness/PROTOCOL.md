@@ -287,3 +287,30 @@ consensus, split copies, acknowledgements and legacy reconstruction. Remaining:
 stable identities/local references, §4 class split, incremental block-tree partial
 lengths, physical zamboni, snapshot readers, pending regeneration/rollback and
 reconnect. See `src/mergetree/README.md` for exact validation and next steps.
+
+## H2 — ID compressor
+
+`npm run fuzz:idcompressor -- --self` runs the installed 3.11.0 IdCompressor
+against independent TS twins. Without `--self`, the driver builds the native
+FluidIdCompressorPeer with `--scratch-path .build/h2` and compares 1,000 seeds.
+`--seeds=N` selects a smaller farm. Each newline request is one scenario
+`{sessions,version,commands}`; the response is the ordered command results.
+Every command compares its return value and exact base64 local/summary state.
+The entire response is also compared as raw JSON text, retaining creation-range
+property order and JS number spelling.
+The seeded scheduler queues per-session creation ranges and chooses their global
+finalization order, preserving each session's FIFO. It covers eager finals,
+cluster overflow/expansion, capacities 1 through 2^20, normalization, UUID
+carry, pending-state reload, summary reload and reconnect cursor reset.
+Frozen oracle snapshots additionally exercise V3 root/child sharding state,
+stride-based generation, version upgrade preservation and Number.MAX_SAFE_INTEGER
+allocation edges. Shard creation/synchronization/reclaim and ghost-session
+cleanup have focused Swift tests; they are not randomized by this scheduler.
+
+Test-first evidence: the TS self-check passed 1,000 seeds; the initial Swift
+API skeleton failed all five initial tests. A planted `claimed = overflow +
+requestedClusterSize + 1` failed seed 0 with `Unknown op space ID` / peer exit,
+then was reverted. Run focused tests with
+`swift test --scratch-path .build/h2 --filter FluidIdCompressorTests`.
+
+Failures retain scenarios under `traces/idcompressor/<seed>.json`.
