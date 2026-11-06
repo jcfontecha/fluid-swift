@@ -1,0 +1,16 @@
+[
+  "40",
+  "40{\"sid\":\"socket-id\"}",
+  "41",
+  "42[\"submitOp\",\"client\",[[{\"contents\":\"\\ud800\",\"sequenceNumber\":1}]]]",
+  "420[\"ping\"]",
+  "430[]",
+  "4342[{\"2\":2,\"9\":9,\"z\":1e-7,\"a\":\"💧\"}]",
+  "44{\"message\":\"denied\",\"data\":{\"code\":403}}",
+  "0{\"sid\":\"engine-id\",\"upgrades\":[],\"pingInterval\":100,\"pingTimeout\":200}",
+  "2",
+  "2probe",
+  "3probe",
+  "1",
+  "6"
+]

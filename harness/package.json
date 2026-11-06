@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "socketio-fixtures": "node src/socketio-fixtures.mjs",
+    "socketio-check": "node src/socketio-check.mjs",
     "fuzz": "tsx src/driver.ts",
     "replay": "tsx src/replay.ts",
     "peer:ts": "tsx src/peer.ts",

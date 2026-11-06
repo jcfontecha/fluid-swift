@@ -11,6 +11,9 @@ let package = Package(
     ],
     targets: [
         .target(name: "FluidJS"),
+        .target(name: "FluidSocketIO", dependencies: ["FluidJS"]),
+        .executableTarget(name: "FluidSocketIOCheck", dependencies: ["FluidSocketIO", "FluidJS"]),
+        .testTarget(name: "FluidSocketIOTests", dependencies: ["FluidSocketIO", "FluidJS"], resources: [.copy("Fixtures")]),
         .target(name: "CLZ4", publicHeadersPath: "."),
         .target(name: "FluidLZ4", dependencies: ["CLZ4"]),
         .executableTarget(name: "FluidLZ4Check", dependencies: ["FluidLZ4"]),
