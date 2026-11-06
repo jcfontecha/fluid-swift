@@ -314,3 +314,26 @@ then was reverted. Run focused tests with
 `swift test --scratch-path .build/h2 --filter FluidIdCompressorTests`.
 
 Failures retain scenarios under `traces/idcompressor/<seed>.json`.
+
+## H3 — pending-state layer (partial: duplicate detection)
+
+`npm run fuzz:pendingstate -- --self` checks independent instances of the real
+3.11.0 `DuplicateBatchDetector`; without `--self` it builds
+`FluidPendingStatePeer` with `--scratch-path .build/h3` and compares native
+results as raw JSON text. Default: 1,000 seeds; `--seeds=N` reduces the farm.
+Each newline request is `{snapshot,commands}`. Commands are `process` (with
+sequence number, MSN, client ID, starting CSN and optional explicit batch ID),
+`summary`, and `reload`. Responses retain exact result/summary property order.
+Failures are saved to `traces/pendingstate/<seed>.json`.
+
+The scheduler covers explicit/derived identities, duplicate deliveries, strict
+MSN eviction, summary round trips, and lone-surrogate identity strings. Five
+Swift Testing cases port upstream duplicate-detection cases, including telemetry
+window resets and snapshot insertion order. The TS self-check passed before the
+API skeleton's five tests failed; implementation then made them green. A planted
+`sequence <= MSN` eviction divergence was detected on seed 0, then reverted.
+
+This is **not the completed H3 runtime harness**. PendingStateManager, reconnect
+resubmission/rebase, stash application, dirty accounting, allocation-op
+regeneration, and their Outbox/RemoteMessageProcessor integration remain unported.
+The green duplicate-detection farm makes no claim about those paths.

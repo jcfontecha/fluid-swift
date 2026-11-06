@@ -5,6 +5,7 @@
   "scripts": {
     "fuzz:idcompressor": "tsx src/idcompressor/fuzz.ts",
     "fuzz:oplifecycle": "tsx src/oplifecycle/fuzz.ts",
+    "fuzz:pendingstate": "tsx src/pendingstate/fuzz.ts",
     "fuzz:mergetree": "tsx src/mergetree/driver.ts",
     "fixtures:driver-definitions": "tsx src/driver-definitions-fixtures.ts",
     "socketio-fixtures": "tsx src/socketio-fixtures.ts",
