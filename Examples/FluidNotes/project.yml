@@ -31,7 +31,7 @@ targets:
     dependencies:
       - package: MSAL
       - package: FluidSwift
-        product: FluidOdspClient
+        product: Fluid
   # Logic tests: the pure UTF-16 edit and selection code compiles into the bundle itself.
   FluidNotesTests:
     type: bundle.unit-test

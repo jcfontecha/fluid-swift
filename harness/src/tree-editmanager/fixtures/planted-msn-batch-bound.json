@@ -1,0 +1,1979 @@
+{
+  "scenario": {
+    "seed": 1,
+    "peers": 3,
+    "actions": [
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "b",
+            "index": 0,
+            "count": 3,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "noop",
+        "peer": 2
+      },
+      {
+        "type": "noop",
+        "peer": 2
+      },
+      {
+        "type": "edit",
+        "peer": 2,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "b",
+            "index": 0,
+            "count": 3,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "noop",
+        "peer": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "edit",
+        "peer": 2,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "a",
+            "index": 0,
+            "count": 3,
+            "destination": 0,
+            "metadata": 1
+          },
+          {
+            "kind": "remove",
+            "field": "a",
+            "index": 1,
+            "count": 2,
+            "destination": 0,
+            "metadata": 2
+          }
+        ]
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "edit",
+        "peer": 2,
+        "edits": [
+          {
+            "kind": "crossMove",
+            "field": "b",
+            "index": 2,
+            "count": 2,
+            "destination": 0,
+            "metadata": 2
+          }
+        ]
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "b",
+            "index": 2,
+            "count": 2,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "edit",
+        "peer": 2,
+        "edits": [
+          {
+            "kind": "nested",
+            "field": "b",
+            "index": 2,
+            "count": 3,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "a",
+            "index": 0,
+            "count": 3,
+            "destination": 0,
+            "metadata": 3
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "noop",
+        "peer": 2
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "b",
+            "index": 3,
+            "count": 1,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "remove",
+            "field": "a",
+            "index": 0,
+            "count": 2,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "edit",
+        "peer": 2,
+        "edits": [
+          {
+            "kind": "crossMove",
+            "field": "a",
+            "index": 2,
+            "count": 1,
+            "destination": 2,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "edit",
+        "peer": 2,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "a",
+            "index": 1,
+            "count": 1,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "move",
+            "field": "b",
+            "index": 0,
+            "count": 2,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "fork",
+        "peer": 2
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "crossMove",
+            "field": "a",
+            "index": 0,
+            "count": 1,
+            "destination": 3,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "noop",
+        "peer": 2
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "remove",
+            "field": "a",
+            "index": 0,
+            "count": 1,
+            "destination": 0,
+            "metadata": 0
+          },
+          {
+            "kind": "move",
+            "field": "b",
+            "index": 9,
+            "count": 1,
+            "destination": 9,
+            "metadata": 0
+          },
+          {
+            "kind": "move",
+            "field": "b",
+            "index": 6,
+            "count": 1,
+            "destination": 4,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "edit",
+        "peer": 2,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "b",
+            "index": 4,
+            "count": 3,
+            "destination": 0,
+            "metadata": 3
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "remove",
+            "field": "b",
+            "index": 0,
+            "count": 3,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "move",
+            "field": "a",
+            "index": 0,
+            "count": 1,
+            "destination": 0,
+            "metadata": 0
+          },
+          {
+            "kind": "nested",
+            "field": "a",
+            "index": 0,
+            "count": 1,
+            "destination": 0,
+            "metadata": 0
+          },
+          {
+            "kind": "insert",
+            "field": "a",
+            "index": 1,
+            "count": 3,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "crossMove",
+            "field": "b",
+            "index": 5,
+            "count": 1,
+            "destination": 1,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "join",
+        "from": 0,
+        "format": "shared"
+      },
+      {
+        "type": "edit",
+        "peer": 3,
+        "edits": [
+          {
+            "kind": "nested",
+            "field": "a",
+            "index": 1,
+            "count": 2,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 3
+      },
+      {
+        "type": "retention",
+        "peer": 0,
+        "value": 1
+      },
+      {
+        "type": "join",
+        "from": 0,
+        "format": 7
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "move",
+            "field": "b",
+            "index": 0,
+            "count": 3,
+            "destination": 4,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "fork",
+        "peer": 0
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "a",
+            "index": 5,
+            "count": 2,
+            "destination": 0,
+            "metadata": 1
+          }
+        ]
+      },
+      {
+        "type": "edit",
+        "peer": 4,
+        "edits": [
+          {
+            "kind": "move",
+            "field": "b",
+            "index": 3,
+            "count": 1,
+            "destination": 1,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 4
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "edit",
+        "peer": 2,
+        "edits": [
+          {
+            "kind": "move",
+            "field": "b",
+            "index": 2,
+            "count": 1,
+            "destination": 0,
+            "metadata": 0
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "noop",
+        "peer": 2
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 4
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 4
+      },
+      {
+        "type": "fork",
+        "peer": 4
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "edit",
+        "peer": 3,
+        "edits": [
+          {
+            "kind": "nested",
+            "field": "a",
+            "index": 1,
+            "count": 3,
+            "destination": 0,
+            "metadata": 1
+          }
+        ]
+      },
+      {
+        "type": "noop",
+        "peer": 3
+      },
+      {
+        "type": "edit",
+        "peer": 1,
+        "edits": [
+          {
+            "kind": "insert",
+            "field": "a",
+            "index": 3,
+            "count": 3,
+            "destination": 0,
+            "metadata": 1
+          }
+        ]
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 2
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 3
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 3
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 4
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "noop",
+        "peer": 0
+      },
+      {
+        "type": "noop",
+        "peer": 1
+      },
+      {
+        "type": "noop",
+        "peer": 2
+      },
+      {
+        "type": "noop",
+        "peer": 3
+      },
+      {
+        "type": "noop",
+        "peer": 4
+      },
+      {
+        "type": "sequence",
+        "peer": 0
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 1
+      },
+      {
+        "type": "sequence",
+        "peer": 2
+      },
+      {
+        "type": "sequence",
+        "peer": 3
+      },
+      {
+        "type": "sequence",
+        "peer": 4
+      },
+      {
+        "type": "sequence",
+        "peer": 4
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 0,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 1,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 2
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 2,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 3,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 1
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "deliver",
+        "peer": 4,
+        "split": 0
+      },
+      {
+        "type": "snapshot",
+        "peer": 0
+      },
+      {
+        "type": "snapshot",
+        "peer": 1
+      },
+      {
+        "type": "snapshot",
+        "peer": 2
+      },
+      {
+        "type": "snapshot",
+        "peer": 3
+      },
+      {
+        "type": "snapshot",
+        "peer": 4
+      }
+    ]
+  },
+  "row": 468,
+  "expected": [
+    "trunk",
+    "0",
+    "7",
+    "{\"maxId\":63,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":2,\"effect\":{\"moveOut\":{\"id\":0}}}]},{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8}]}]}",
+    "9",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"ModularEditBuilder.Generic\",\"change\":[[2,{\"fieldChanges\":[{\"fieldKey\":\"children\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}]]}]}",
+    "8",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":2,\"cellId\":[0,7]},{\"count\":1},{\"count\":2,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}",
+    "10",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0},{\"count\":3},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "13",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":5},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":2,\"cellId\":[0,3]}]},{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":2,\"cellId\":[0,7]}]}]}",
+    "14",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":4},{\"count\":1,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0},{\"count\":1},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "59",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":5},{\"count\":1,\"changes\":{\"fieldChanges\":[{\"fieldKey\":\"children\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "41",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3},{\"count\":2,\"cellId\":[0,7]},{\"count\":1},{\"count\":3,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}",
+    "11",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3},{\"count\":2,\"cellId\":[0,7]},{\"count\":5},{\"count\":1,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}",
+    "62",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":1},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":2},{\"count\":2,\"cellId\":[0,7]},{\"count\":7},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}}]}]}",
+    "12",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"effect\":{\"remove\":{\"id\":0}}},{\"count\":4},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "63",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":3},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":2,\"cellId\":[0,7]},{\"count\":7},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "15",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":4},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":1}}},{\"count\":6},{\"count\":1,\"cellId\":[0,62]}]},{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"cellId\":[0,12]},{\"count\":3},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "81",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":1,\"changes\":{\"fieldChanges\":[{\"fieldKey\":\"children\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}},{\"count\":5},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":6},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "23",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"cellId\":[0,12]},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":2},{\"count\":1,\"cellId\":[0,15]},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]},{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":4},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":2},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":6},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "38",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":1,\"effect\":{\"remove\":{\"id\":0}}},{\"count\":4},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":6},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "39",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":1,\"cellId\":[0,38]},{\"count\":2},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":1},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":6},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "40",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":1,\"cellId\":[0,38]},{\"count\":2},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":1,\"cellId\":[0,39]},{\"count\":1},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":3},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":3},{\"count\":1,\"cellId\":[0,62]}]}]}"
+  ],
+  "actual": [
+    "trunk",
+    "0",
+    "3",
+    "{\"maxId\":63,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":1},{\"count\":2,\"effect\":{\"remove\":{\"id\":0}}}]}]}",
+    "7",
+    "{\"maxId\":63,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":2,\"effect\":{\"moveOut\":{\"id\":0}}}]},{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8}]}]}",
+    "9",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"ModularEditBuilder.Generic\",\"change\":[[2,{\"fieldChanges\":[{\"fieldKey\":\"children\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}]]}]}",
+    "8",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":2,\"cellId\":[0,7]},{\"count\":1},{\"count\":2,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}",
+    "10",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0},{\"count\":3},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "13",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":5},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":2,\"cellId\":[0,3]}]},{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":2,\"cellId\":[0,7]}]}]}",
+    "14",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":4},{\"count\":1,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0},{\"count\":1},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "59",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":5},{\"count\":1,\"changes\":{\"fieldChanges\":[{\"fieldKey\":\"children\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "41",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3},{\"count\":2,\"cellId\":[0,7]},{\"count\":1},{\"count\":3,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}",
+    "11",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3},{\"count\":2,\"cellId\":[0,7]},{\"count\":5},{\"count\":1,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}",
+    "62",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":1},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":2},{\"count\":2,\"cellId\":[0,7]},{\"count\":7},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}}]}]}",
+    "12",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"effect\":{\"remove\":{\"id\":0}}},{\"count\":4},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "63",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":3},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":2,\"cellId\":[0,7]},{\"count\":7},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "15",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":4},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":1}}},{\"count\":6},{\"count\":1,\"cellId\":[0,62]}]},{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"cellId\":[0,12]},{\"count\":3},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]}]}",
+    "81",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":1,\"changes\":{\"fieldChanges\":[{\"fieldKey\":\"children\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":3,\"effect\":{\"insert\":{\"id\":0}},\"cellId\":0}]}]}},{\"count\":5},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":6},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "23",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2,\"cellId\":[0,12]},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":2},{\"count\":1,\"cellId\":[0,15]},{\"count\":1,\"cellId\":[0,13]},{\"count\":2,\"cellId\":[0,3]}]},{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":4},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":2},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":6},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "38",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":1,\"effect\":{\"remove\":{\"id\":0}}},{\"count\":4},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":6},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "39",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":1,\"cellId\":[0,38]},{\"count\":2},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":1},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":6},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":1,\"cellId\":[0,62]}]}]}",
+    "40",
+    "{\"maxId\":64,\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":2},{\"count\":1,\"cellId\":[0,38]},{\"count\":2},{\"count\":1,\"effect\":{\"moveIn\":{\"id\":0}},\"cellId\":8},{\"count\":1,\"cellId\":[0,39]},{\"count\":1},{\"count\":1,\"cellId\":[0,63]},{\"count\":2,\"cellId\":[0,7]},{\"count\":1,\"cellId\":[1,15]},{\"count\":3},{\"count\":1,\"effect\":{\"moveOut\":{\"id\":0}}},{\"count\":3},{\"count\":1,\"cellId\":[0,62]}]}]}"
+  ],
+  "error": "AssertionError [ERR_ASSERTION]: editmanager native mismatch seed 1, row 468\n\n468 !== -1\n"
+}

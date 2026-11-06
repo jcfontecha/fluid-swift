@@ -11,8 +11,8 @@ struct SequenceMaintenanceTests {
     let factory = MockContainerRuntimeFactory<SharedString>()
     _ = factory.createContainerRuntime(clientId: "A", channel: text)
     var order: [Int] = []
-    text.sequenceDelta = { order.append($0.deltaOperation) }
-    text.sequenceMaintenance = { event in
+    text.sequenceDelta.on { order.append($0.deltaOperation) }
+    text.sequenceMaintenance.on { event in
       order.append(event.deltaOperation)
       if event.deltaOperation == -4 {
         #expect(!event.isLocal)
@@ -29,10 +29,10 @@ struct SequenceMaintenanceTests {
     let text = SharedString(id: "text")
     try text.insertText(0, "abcd")
     var saved: SequenceDeltaEvent?
-    text.sequenceDelta = { saved = $0 }
+    let token = text.sequenceDelta.on { saved = $0 }
     try text.insertText(2, "x")
     let event = try #require(saved)
-    text.sequenceDelta = nil
+    text.sequenceDelta.off(token)
     try text.insertText(0, "prefix")
     #expect(event.first?.position == 8)
     try text.insertText(0, "more")
@@ -47,7 +47,7 @@ extension SequenceMaintenanceTests {
     try text.insertText(0, "abcd")
     try text.insertMarker(4, refType: 1)
     var positions: [Int] = []
-    text.sequenceMaintenance = { event in
+    text.sequenceMaintenance.on { event in
       if event.deltaOperation == -2 { positions = event.ranges.map(\.position) }
     }
     try text.insertText(2, "x")

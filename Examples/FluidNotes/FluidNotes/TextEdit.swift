@@ -1,8 +1,7 @@
 import Foundation
 
-/// One plain-text edit in UTF-16 code units, the unit of FluidSequence positions and of
-/// `NSString`/`UITextView` ranges. Insert text stays UTF-16 because a SharedString may hold a
-/// lone surrogate, which Swift `String` cannot represent.
+/// One plain-text edit in UTF-16 code units, the unit of SharedString positions and of
+/// `NSString`/`UITextView` ranges.
 enum TextEdit: Equatable, Sendable {
     case insert(location: Int, text: [UInt16])
     case remove(location: Int, length: Int)
@@ -23,6 +22,14 @@ enum TextEdit: Equatable, Sendable {
         var prefix = 0
         while prefix < shared - suffix, old.character(at: prefix) == new.character(at: prefix) {
             prefix += 1
+        }
+        // A SharedString edit carries a `String`, which cannot hold half a surrogate pair, so the
+        // edit never starts or ends inside one. Both texts hold the same units there.
+        if prefix > 0, UTF16.isLeadSurrogate(new.character(at: prefix - 1)) {
+            prefix -= 1
+        }
+        if suffix > 0, UTF16.isTrailSurrogate(new.character(at: newLength - suffix)) {
+            suffix -= 1
         }
         var edits: [TextEdit] = []
         let removed = oldLength - prefix - suffix

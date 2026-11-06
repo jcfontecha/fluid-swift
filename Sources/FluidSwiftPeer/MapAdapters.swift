@@ -52,10 +52,10 @@ func mapAdapter(_ runtime: MockContainerRuntime<SharedMap>) -> RuntimeClient<Sha
       }
     },
     state: { c in canonicalEntries(c.entries()) })
-  runtime.channel.valueChanged = { [weak client] changed, local in
+  runtime.channel.valueChanged.on { [weak client] changed, local in
     client?.events.append(.array([.string("valueChanged"), valueChangedJSON(changed), .bool(local)]))
   }
-  runtime.channel.clearEvent = { [weak client] local in
+  runtime.channel.clearEvent.on { [weak client] local in
     client?.events.append(.array([.string("clear"), .bool(local)]))
   }
   return client

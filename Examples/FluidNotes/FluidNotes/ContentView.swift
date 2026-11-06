@@ -1,4 +1,4 @@
-import FluidContainerDefinitions
+import Fluid
 import SwiftUI
 
 struct ContentView: View {
@@ -13,7 +13,7 @@ struct ContentView: View {
                 .toolbar {
                     if model.isSignedIn {
                         ToolbarItem(placement: .topBarLeading) {
-                            ConnectionIndicator(connection: model.connection)
+                            ConnectionIndicator(status: model.isOpening ? .connecting : model.container?.status)
                         }
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Open", systemImage: "doc") {
@@ -33,6 +33,11 @@ struct ContentView: View {
             .presentationDetents([.height(88)])
         }
         .alert(model.failure ?? "", isPresented: hasFailure) {}
+        .onChange(of: model.closeFailure) {
+            if let closeFailure = model.closeFailure {
+                model.failure = closeFailure
+            }
+        }
         .onChange(of: model.isSignedIn, initial: true) {
             if model.isSignedIn && model.note == nil {
                 isEnteringItem = true
@@ -64,17 +69,17 @@ struct ContentView: View {
 }
 
 private struct ConnectionIndicator: View {
-    let connection: ConnectionState?
+    let status: ContainerStatus?
 
     var body: some View {
-        switch connection {
-        case .establishingConnection, .catchingUp:
+        switch status {
+        case .connecting:
             ProgressView()
         case .connected:
             Image(systemName: "circle.fill")
                 .imageScale(.small)
                 .accessibilityLabel("Connected")
-        case .disconnected:
+        case .disconnected, .closed:
             Image(systemName: "circle")
                 .imageScale(.small)
                 .accessibilityLabel("Disconnected")

@@ -7,8 +7,8 @@ func initialSummaryMetadata(minVersionForCollab: String, runtimeOptions: JSONVal
     var runtime = JSObject<JSONValue>()
     runtime["explicitSchemaControl"] = .bool(true)
     runtime["compressionLz4"] = .bool(true)
-    runtime["opGroupingEnabled"] = try runtimeOptions.flatMap { try field($0, "enableGroupedBatching") } ?? .bool(true)
     runtime["idCompressorMode"] = try runtimeOptions.flatMap { try field($0, "enableRuntimeIdCompressor") }
+    runtime["opGroupingEnabled"] = try runtimeOptions.flatMap { try field($0, "enableGroupedBatching") } ?? .bool(true)
     let schema = object([("version", number(1)), ("refSeq", number(0)), ("info", object([("minVersionForCollab", string(minVersionForCollab))])), ("runtime", .object(runtime))])
     return object([
         ("createContainerRuntimeVersion", string("3.11.0")),

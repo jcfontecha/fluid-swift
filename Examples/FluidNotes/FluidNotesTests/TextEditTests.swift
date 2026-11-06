@@ -134,6 +134,14 @@ private func units(_ text: String) -> [UInt16] {
         #expect(TextEdit.changes(from: "ab", to: "a😀b", caret: 3) == [.insert(location: 1, text: units("😀"))])
     }
 
+    /// 😀 and 😁 share their lead unit; the edit still replaces the whole pair.
+    @Test func replacingAnEmojiKeepsItsSurrogatePairWhole() {
+        #expect(TextEdit.changes(from: "a😀b", to: "a😁b", caret: 3) == [
+            .remove(location: 1, length: 2),
+            .insert(location: 1, text: units("😁")),
+        ])
+    }
+
     @Test func noChange() {
         #expect(TextEdit.changes(from: "same", to: "same", caret: 2).isEmpty)
     }

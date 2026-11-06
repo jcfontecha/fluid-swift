@@ -13,7 +13,7 @@ let rootDataStoreId: JSString = "rootDOId"
 /// rootDataObject.ts `rootDataObjectType`: the container registry entry and package path.
 let rootDataObjectType: JSString = "rootDO"
 
-/// Ports packages/framework/fluid-static/src/rootDataObject.ts existing initialObjects resolution.
+/// Ports packages/framework/fluid-static/src/rootDataObject.ts initialObjects resolution.
 /// `initialObjects` is assigned in stored directory-entry order, as TS assigns on load completion.
 public final class RootDataObject: DataObject {
     public private(set) var initialObjects = JSObject<any Channel>()
@@ -116,19 +116,35 @@ public func createDOProviderContainerRuntimeFactory(
 /// containerRuntime.ts `loadContainerRuntime`: the runtime with the factory's options, the root
 /// data object's channel registry, and the root data object as the entry point (provideEntryPoint).
 /// Every stored property is immutable and its channel factories capture only types, so the
-/// factory is safe to share between containers. Creating a new container is not ported.
+/// factory is safe to share between containers. New containers initialize the root datastore before publishing the entry point.
 extension DOProviderContainerRuntimeFactory: IRuntimeFactory, @unchecked Sendable {
     public func instantiateRuntime(_ context: IContainerContext, existing: Bool) throws
         -> (runtime: ContainerRuntime, entryPoint: AnyObject)
     {
-        guard existing, let baseSnapshot = context.baseSnapshot else {
-            throw DatastoreError("creating a new container is not ported")
-        }
         let runtime = try ContainerRuntime(
             sessionId: UUID().uuidString.lowercased(), clientId: context.clientId?.description ?? "",
             deltaManager: context.deltaManager, quorum: context.quorum, oldestSupportedClient: oldestSupportedClient,
             runtimeOptions: .object(runtimeOptions))
-        try runtime.loadSnapshot(baseSnapshot, factories: rootDataObjectFactory.sharedObjects)
+        if existing {
+            guard let baseSnapshot = context.baseSnapshot else {
+                throw DatastoreError("existing container requires a snapshot")
+            }
+            try runtime.loadSnapshot(baseSnapshot, factories: rootDataObjectFactory.sharedObjects)
+        } else {
+            try runtime.initializeDetached()
+            let store = try runtime.createDetachedDataStore(packagePath: [rootDataObjectType], factories: rootDataObjectFactory.sharedObjects)
+            guard let root = try store.createChannel("root", type: SharedDirectory.type) as? SharedDirectory else {
+                throw DatastoreError("DataObject root must be a SharedDirectory")
+            }
+            try store.bindChannel("root")
+            let directory = try root.createSubDirectory("initial-objects-key")
+            for (name, kind) in initialObjects.entries {
+                let type = try kind.getFactory().attributes.member("type").asString()
+                let channel = try store.createChannel(type: type)
+                try directory.set(name, store.serializeHandle(channel, bindTo: "root"))
+            }
+            try runtime.setDetachedAlias(rootDataStoreId, datastoreId: store.id)
+        }
         return (runtime, try RootDataObject(runtime: runtime))
     }
 }

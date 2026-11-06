@@ -276,6 +276,13 @@ public final class FluidDataStoreRuntime: IFluidDataStoreRuntime {
         order.append(id)
     }
     /// serializer.ts bindHandles / sharedObjectHandle.ts bind: preserve graph attachment at the native DDS boundary.
+    public func serializeHandle(_ channel: any Channel, bindTo ownerId: JSString) throws -> JSONValue {
+        guard let id = order.first(where: { contexts[$0]?.instance?.channel === channel }) else {
+            throw DatastoreError("channel does not belong to this datastore")
+        }
+        return try serializeHandle(id, bindTo: ownerId)
+    }
+
     public func serializeHandle(_ id: JSString, bindTo ownerId: JSString) throws -> JSONValue {
         let owner = try context(ownerId)
         let target = try context(id)

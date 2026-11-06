@@ -23,12 +23,14 @@ public final class FluidContainer {
     private let container: any IContainer
     private let rootDataObject: RootDataObject
     private var containerListener: Int?
+    private let attachHandler: (@isolated(any) () async throws -> String)?
     public let events = ListenerList<FluidContainerEvent>()
 
     /// fluidContainer.ts constructor: forwards the container's `connected`, `closed` (as
     /// `disposed`), `disconnected`, `saved` and `dirty` events. The listener captures only the
     /// event list, so the container does not retain this object.
-    init(container: any IContainer, rootDataObject: RootDataObject) {
+    init(container: any IContainer, rootDataObject: RootDataObject, attach: (@isolated(any) () async throws -> String)? = nil) {
+        attachHandler = attach
         self.container = container
         self.rootDataObject = rootDataObject
         containerListener = container.events.on { [events] event in
@@ -66,7 +68,10 @@ public final class FluidContainer {
         if container.attachState != .detached {
             throw DatastoreError("Cannot attach container. Container is not in detached state.")
         }
-        throw DatastoreError("Cannot attach container. Attach method not provided.")
+        guard let attachHandler else {
+            throw DatastoreError("Cannot attach container. Attach method not provided.")
+        }
+        return try await attachHandler()
     }
 
     public func connect() {
@@ -91,11 +96,11 @@ public final class FluidContainer {
 /// Ports fluidContainer.ts `createFluidContainer`. The loader's entry point for a fluid-static
 /// container is the root data object (`DOProviderContainerRuntimeFactory`). Runs on the caller's
 /// isolation, which owns the container.
-public nonisolated(nonsending) func createFluidContainer(container: any IContainer) async throws -> FluidContainer {
+public nonisolated(nonsending) func createFluidContainer(container: any IContainer, attach: (@isolated(any) () async throws -> String)? = nil) async throws -> FluidContainer {
     let entryPoint = try await container.getEntryPoint()
     // fluidContainer.ts assert 0xb9e.
     guard let rootDataObject = entryPoint as? RootDataObject else {
         throw DatastoreError("0xb9e: entryPoint must be of type IStaticEntryPoint")
     }
-    return FluidContainer(container: container, rootDataObject: rootDataObject)
+    return FluidContainer(container: container, rootDataObject: rootDataObject, attach: attach)
 }

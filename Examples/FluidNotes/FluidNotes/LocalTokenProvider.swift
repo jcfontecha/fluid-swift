@@ -1,8 +1,8 @@
-import FluidOdspClient
+import Fluid
 
-/// `IOdspTokenProvider` for the local ODSP service, whose fake bearer tokens name a user:
+/// `OdspTokenProvider` for the local ODSP service, whose fake bearer tokens name a user:
 /// `storage:<user>` for SharePoint REST calls and `push:<user>` for the push socket (tokens.ts).
-struct LocalTokenProvider: IOdspTokenProvider {
+struct LocalTokenProvider: OdspTokenProvider {
     let user: String
 
     func fetchStorageToken(siteUrl: String, refresh: Bool) async throws -> TokenResponse {

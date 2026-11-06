@@ -2,8 +2,8 @@ import FluidDriverDefinitions
 import FluidJS
 import Foundation
 
-/// Ports routerlicious-driver/src/wholeSummaryUploadManager.ts and storageUtils.ts. Only the
-/// upload is ported; whole-summary storage reads (wholeSummaryDocumentStorageService.ts) are not.
+/// Ports routerlicious-driver/src/wholeSummaryUploadManager.ts and storageUtils.ts. The
+/// upload payload is shared by the factory create path and whole-summary storage.
 public struct WholeSummaryUploadManager: Sendable {
     let rest: RestClient
 

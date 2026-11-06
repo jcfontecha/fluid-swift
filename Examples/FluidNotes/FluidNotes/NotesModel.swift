@@ -1,28 +1,31 @@
-import FluidContainerDefinitions
-import FluidOdspClient
-import FluidSequence
-import FluidStatic
+import Fluid
 import Foundation
 import Observation
 
+/// The container schema: one SharedString initial object named "text".
+struct Note: ContainerSchema {
+    let text: SharedString
+
+    init(_ objects: InitialObjects) {
+        text = objects["text"]
+    }
+}
+
 /// Sign-in and the one open note. The container is owned by the main actor
 /// (`isolation: MainActor.shared`), so this model and the text view read and edit its
-/// SharedString directly, and its events arrive synchronously on main.
+/// SharedString directly, and its changes arrive synchronously on main.
 @MainActor
 @Observable
 final class NotesModel {
-    /// The container schema: one SharedString initial object named "text".
-    static let schema = ContainerSchema(initialObjects: ["text": SharedString.self])
-
     private(set) var isSignedIn: Bool
-    private(set) var connection: ConnectionState?
+    private(set) var isOpening = false
+    private(set) var container: FluidContainer<Note>?
     private(set) var note: NoteText?
     var failure: String?
 
     private let config: AppConfig
     private let msal: MSALTokenProvider?
-    private let tokenProvider: (any IOdspTokenProvider)?
-    @ObservationIgnored private var container: FluidContainer?
+    private let tokenProvider: (any OdspTokenProvider)?
 
     init(config: AppConfig) {
         self.config = config
@@ -58,66 +61,24 @@ final class NotesModel {
 
     func open(itemId: String) async {
         guard let tokenProvider else { return }
-        close()
-        connection = .establishingConnection
-        let client = OdspClient(properties: OdspClientProps(connection: OdspConnectionConfig(
-            tokenProvider: tokenProvider,
-            siteUrl: config.siteUrl,
-            driveId: config.driveId,
-            filePath: ""
-        )))
+        note = nil
+        container = nil
+        isOpening = true
+        defer { isOpening = false }
+        let client = OdspClient(siteURL: config.siteURL, driveID: config.driveId, tokenProvider: tokenProvider)
         do {
-            let (container, _) = try await client.getContainer(
-                itemId, containerSchema: Self.schema, isolation: MainActor.shared)
-            guard let text = container.initialObjects["text"] as? SharedString else {
-                container.dispose()
-                throw NotesError.missingText
-            }
-            // No await from here on: no container event or remote op can run before both
-            // listeners are installed.
+            let container = try await client.loadContainer(itemId, schema: Note.self, isolation: MainActor.shared)
+            // No await from here on: no remote op can run before the editor's handler is installed.
             self.container = container
-            note = NoteText(text: text) { [weak self] error in
-                self?.failure = error.localizedDescription
-            }
-            connection = container.connectionState
-            container.events.on { [weak self] event in
-                self?.containerChanged(event)
-            }
+            note = NoteText(text: container.initialObjects.text)
         } catch {
-            connection = nil
             failure = error.localizedDescription
         }
     }
 
-    private func close() {
-        container?.dispose()
-        container = nil
-        note = nil
-        connection = nil
-    }
-
-    private func containerChanged(_ event: FluidContainerEvent) {
-        switch event {
-        case .connected, .disconnected:
-            connection = container?.connectionState
-        case let .disposed(error):
-            connection = .disconnected
-            if let error {
-                failure = error.localizedDescription
-            }
-        case .saved, .dirty:
-            break
-        }
-    }
-}
-
-enum NotesError: LocalizedError {
-    case missingText
-
-    var errorDescription: String? {
-        switch self {
-        case .missingText:
-            "This item has no text."
-        }
+    /// The error the open container closed with.
+    var closeFailure: String? {
+        guard case let .closed(error?) = container?.status else { return nil }
+        return error.localizedDescription
     }
 }

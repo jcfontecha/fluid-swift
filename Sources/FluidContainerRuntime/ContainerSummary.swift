@@ -55,7 +55,7 @@ extension ContainerRuntime {
         return object([("gcNodes", .object(nodes))])
     }
     /// Ports containerRuntime.ts summarizeInternal/addContainerStateToSummary.
-    public func summarize(fullTree: Bool = false, trackState: Bool = true, runGC: Bool = true, timestamp: Double? = nil) throws -> SummaryTreeWithStats {
+    public func summarize(fullTree: Bool = false, trackState: Bool = true, runGC: Bool = true, timestamp: Double? = nil, attaching: Bool = false) throws -> SummaryTreeWithStats {
         try require(!closed, "runtime closed")
         let gcAllowed: Bool
         if let metadata { gcAllowed = try (field(metadata, "gcFeature")?.asInt() ?? 0) > 0 }
@@ -70,7 +70,7 @@ extension ContainerRuntime {
         for id in channelCollection.datastoreIds {
             guard let attributes = summaryState.datastoreAttributes[id] else { throw JSONDecodingError("missing datastore summary attributes") }
             let package = try JSON.parse(attributes.member("pkg").asString().description).asArray().map { try $0.asString() }
-            let store = try channelCollection.summarizeDatastore(id, packagePath: package, isRoot: attributes.member("isRootDataStore") == .bool(true))
+            let store = try channelCollection.summarizeDatastore(id, packagePath: package, isRoot: attributes.member("isRootDataStore") == .bool(true), attach: attaching)
             if gcAllowed, let state = garbageCollector.state,
                try field(state.member("gcNodes").member(JSString("/" + id.description)), "unreferencedTimestampMs") != nil {
                 var value = try store.json.asObject()

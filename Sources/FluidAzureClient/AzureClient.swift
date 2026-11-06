@@ -74,6 +74,30 @@ public final class AzureClient: Sendable {
         configProvider = ConfigProviderWithDefaults(original: properties.configProvider, defaults: azureClientFeatureGates)
     }
 
+    /// AzureClient.ts createContainer: create locally, then let attach persist the graph.
+    public func createContainer(
+        _ containerSchema: ContainerSchema,
+        oldestSupportedClient: String,
+        isolation owner: isolated any Actor
+    ) async throws -> (container: FluidContainer, services: AzureContainerServices) {
+        let props = try getLoaderProps(containerSchema, oldestSupportedClient: oldestSupportedClient, request: IRequest(url: ""))
+        let container = try await createDetachedContainer(ICreateDetachedContainerProps(
+            urlResolver: props.urlResolver, documentServiceFactory: props.documentServiceFactory,
+            runtimeFactory: props.runtimeFactory,
+            codeDetails: JSON.parse(#"{"package":"no-dynamic-package","config":{}}"#),
+            configProvider: props.configProvider), isolation: owner)
+        let request = try createAzureCreateNewRequest(endpointUrl: endpoint, tenantId: tenantId)
+        let fluidContainer = try await createFluidContainer(container: container, attach: {
+            _ = owner
+            try await container.attach(request)
+            guard let resolved = container.resolvedUrl else {
+                throw JSONDecodingError("Resolved Url not available on attached container")
+            }
+            return resolved.id.description
+        })
+        return (fluidContainer, try getContainerServices(container))
+    }
+
     /// AzureClient.ts `getContainer`: loads the container `id`, owned by `owner`.
     /// `oldestSupportedClient` is the oldest Fluid Framework client version that must be able to
     /// open and process documents this client writes (TS `OldestSupportedClientVersion`).

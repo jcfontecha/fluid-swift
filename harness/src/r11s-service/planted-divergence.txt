@@ -1,0 +1,142 @@
+Command: npm run fuzz:r11s-service -- --seeds=1 --plant
+Observed exit: 1
+Injected: one additional HTTP trace entry; comparator rejects wire seed 0.
+
+Building for debugging...
+[1 / 17] FluidDriverDefinitions
+Build complete! (0.52 sec)
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: wire seed 0
++ actual - expected
+... Skipped lines
+
+  {
+    http: [
+      {
+        body: 'method=POST&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+token&body=%7B%22summary%22%3A%7B%22type%22%3A%22tree%22%2C%22entries%22%3A%5B%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22create-0%22%2C%22encoding%22%3A%22utf-8%22%7D%2C%22path%22%3A%22data%22%2C%22type%22%3A%22blob%22%7D%2C%7B%22value%22%3A%7B%22type%22%3A%22tree%22%2C%22entries%22%3A%5B%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22ADkl%22%2C%22encoding%22%3A%22base64%22%7D%2C%22path%22%3A%22binary%22%2C%22type%22%3A%22blob%22%7D%2C%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22%7B%5C%22seed%5C%22%3A0%2C%5C%22value%5C%22%3A2007157716%2C%5C%22text%5C%22%3A%5C%22%F0%9F%99%82%5C%5Cn%5C%5C%5C%22%26%3D%5C%22%7D%22%2C%22encoding%22%3A%22utf-8%22%7D%2C%22path%22%3A%22text%22%2C%22type%22%3A%22blob%22%7D%5D%7D%2C%22unreferenced%22%3Atrue%2C%22path%22%3A%22nested%2520space%252F%25F0%259F%2599%2582%22%2C%22type%22%3A%22tree%22%7D%5D%7D%2C%22sequenceNumber%22%3A0%2C%22values%22%3A%5B%5D%2C%22enableDiscovery%22%3Atrue%2C%22generateToken%22%3Atrue%2C%22isEphemeralContainer%22%3Atrue%2C%22enableAnyBinaryBlobOnFirstSummary%22%3Atrue%7D',
+        headers: {
+...
+      },
++     {
++       planted: true
++     }
+    ],
+    socket: [
+      '["connect_document",{"client":{"mode":"write","details":{"capabilities":{"interactive":true},"environment":"harness"},"permission":[],"user":{"id":"user"},"scopes":[]},"id":"doc-0","mode":"write","tenantId":"tenant","token":"token","versions":["^0.4.0","^0.3.0","^0.2.0","^0.1.0"],"relayUserAgent":"harness; driverVersion:3.11.0","supportedFeatures":{"submit_signals_v2":true}}]',
+      '["out","connect_document_success",{"claims":{"documentId":"doc-0","tenantId":"tenant","scopes":["doc:read","doc:write"],"user":{"id":"user"},"iat":1700000000,"exp":1800000000,"ver":"1.0"},"clientId":"client","existing":true,"maxMessageSize":16384,"initialMessages":[],"initialSignals":[],"initialClients":[],"version":"^0.4.0","supportedVersions":["^0.4.0"],"serviceConfiguration":{"maxMessageSize":16384,"blockSize":65436,"noopTimeFrequency":2000,"noopCountFrequency":50},"mode":"write","checkpointSequenceNumber":2,"supportedFeatures":{}}]',
+      '["ping",null]',
+
+    at <anonymous> (/Users/juan/.t3/scratch/2026-11-06-https-github-com-microsoft-fluidframework-c98490f3/harness/src/r11s-service/fuzz.ts:167:20) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: {
+    http: [
+      {
+        method: 'POST',
+        url: '/documents/tenant',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=POST&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+token&body=%7B%22summary%22%3A%7B%22type%22%3A%22tree%22%2C%22entries%22%3A%5B%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22create-0%22%2C%22encoding%22%3A%22utf-8%22%7D%2C%22path%22%3A%22data%22%2C%22type%22%3A%22blob%22%7D%2C%7B%22value%22%3A%7B%22type%22%3A%22tree%22%2C%22entries%22%3A%5B%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22ADkl%22%2C%22encoding%22%3A%22base64%22%7D%2C%22path%22%3A%22binary%22%2C%22type%22%3A%22blob%22%7D%2C%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22%7B%5C%22seed%5C%22%3A0%2C%5C%22value%5C%22%3A2007157716%2C%5C%22text%5C%22%3A%5C%22%F0%9F%99%82%5C%5Cn%5C%5C%5C%22%26%3D%5C%22%7D%22%2C%22encoding%22%3A%22utf-8%22%7D%2C%22path%22%3A%22text%22%2C%22type%22%3A%22blob%22%7D%5D%7D%2C%22unreferenced%22%3Atrue%2C%22path%22%3A%22nested%2520space%252F%25F0%259F%2599%2582%22%2C%22type%22%3A%22tree%22%7D%5D%7D%2C%22sequenceNumber%22%3A0%2C%22values%22%3A%5B%5D%2C%22enableDiscovery%22%3Atrue%2C%22generateToken%22%3Atrue%2C%22isEphemeralContainer%22%3Atrue%2C%22enableAnyBinaryBlobOnFirstSummary%22%3Atrue%7D'
+      },
+      {
+        method: 'POST',
+        url: '/documents/tenant/session/doc-0',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=GET&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+token'
+      },
+      {
+        method: 'POST',
+        url: '/repos/tenant/git/summaries/latest?disableCache=true',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=GET&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+dGVuYW50OnRva2Vu'
+      },
+      {
+        method: 'POST',
+        url: '/deltas/tenant/doc-0?from=0&to=3&fetchReason=',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=GET&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+token'
+      },
+      {
+        method: 'POST',
+        url: '/repos/tenant/git/summaries?initial=false',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=POST&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+dGVuYW50OnRva2Vu&body=%7B%22entries%22%3A%5B%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22upload-0%22%2C%22encoding%22%3A%22utf-8%22%7D%2C%22path%22%3A%22data%22%2C%22type%22%3A%22blob%22%7D%5D%2C%22message%22%3A%22%22%2C%22sequenceNumber%22%3A0%2C%22type%22%3A%22channel%22%7D'
+      },
+      { planted: true }
+    ],
+    socket: [
+      '["connect_document",{"client":{"mode":"write","details":{"capabilities":{"interactive":true},"environment":"harness"},"permission":[],"user":{"id":"user"},"scopes":[]},"id":"doc-0","mode":"write","tenantId":"tenant","token":"token","versions":["^0.4.0","^0.3.0","^0.2.0","^0.1.0"],"relayUserAgent":"harness; driverVersion:3.11.0","supportedFeatures":{"submit_signals_v2":true}}]',
+      '["out","connect_document_success",{"claims":{"documentId":"doc-0","tenantId":"tenant","scopes":["doc:read","doc:write"],"user":{"id":"user"},"iat":1700000000,"exp":1800000000,"ver":"1.0"},"clientId":"client","existing":true,"maxMessageSize":16384,"initialMessages":[],"initialSignals":[],"initialClients":[],"version":"^0.4.0","supportedVersions":["^0.4.0"],"serviceConfiguration":{"maxMessageSize":16384,"blockSize":65436,"noopTimeFrequency":2000,"noopCountFrequency":50},"mode":"write","checkpointSequenceNumber":2,"supportedFeatures":{}}]',
+      '["ping",null]',
+      '["submitOp","client",[[{"clientSequenceNumber":1,"referenceSequenceNumber":2,"type":"op","contents":{"seed":0},"traces":[]}]]]',
+      '["out","op","doc-0",[{"clientSequenceNumber":1,"referenceSequenceNumber":2,"type":"op","contents":{"seed":0},"traces":[],"sequenceNumber":3,"minimumSequenceNumber":0,"clientId":"client","timestamp":1700000000003}]]'
+    ]
+  },
+  expected: {
+    http: [
+      {
+        method: 'POST',
+        url: '/documents/tenant',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=POST&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+token&body=%7B%22summary%22%3A%7B%22type%22%3A%22tree%22%2C%22entries%22%3A%5B%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22create-0%22%2C%22encoding%22%3A%22utf-8%22%7D%2C%22path%22%3A%22data%22%2C%22type%22%3A%22blob%22%7D%2C%7B%22value%22%3A%7B%22type%22%3A%22tree%22%2C%22entries%22%3A%5B%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22ADkl%22%2C%22encoding%22%3A%22base64%22%7D%2C%22path%22%3A%22binary%22%2C%22type%22%3A%22blob%22%7D%2C%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22%7B%5C%22seed%5C%22%3A0%2C%5C%22value%5C%22%3A2007157716%2C%5C%22text%5C%22%3A%5C%22%F0%9F%99%82%5C%5Cn%5C%5C%5C%22%26%3D%5C%22%7D%22%2C%22encoding%22%3A%22utf-8%22%7D%2C%22path%22%3A%22text%22%2C%22type%22%3A%22blob%22%7D%5D%7D%2C%22unreferenced%22%3Atrue%2C%22path%22%3A%22nested%2520space%252F%25F0%259F%2599%2582%22%2C%22type%22%3A%22tree%22%7D%5D%7D%2C%22sequenceNumber%22%3A0%2C%22values%22%3A%5B%5D%2C%22enableDiscovery%22%3Atrue%2C%22generateToken%22%3Atrue%2C%22isEphemeralContainer%22%3Atrue%2C%22enableAnyBinaryBlobOnFirstSummary%22%3Atrue%7D'
+      },
+      {
+        method: 'POST',
+        url: '/documents/tenant/session/doc-0',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=GET&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+token'
+      },
+      {
+        method: 'POST',
+        url: '/repos/tenant/git/summaries/latest?disableCache=true',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=GET&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+dGVuYW50OnRva2Vu'
+      },
+      {
+        method: 'POST',
+        url: '/deltas/tenant/doc-0?from=0&to=3&fetchReason=',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=GET&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+token'
+      },
+      {
+        method: 'POST',
+        url: '/repos/tenant/git/summaries?initial=false',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;restless'
+        },
+        body: 'method=POST&header=x-driver-version%3A+3.11.0&header=Authorization%3A+Basic+dGVuYW50OnRva2Vu&body=%7B%22entries%22%3A%5B%7B%22value%22%3A%7B%22type%22%3A%22blob%22%2C%22content%22%3A%22upload-0%22%2C%22encoding%22%3A%22utf-8%22%7D%2C%22path%22%3A%22data%22%2C%22type%22%3A%22blob%22%7D%5D%2C%22message%22%3A%22%22%2C%22sequenceNumber%22%3A0%2C%22type%22%3A%22channel%22%7D'
+      }
+    ],
+    socket: [
+      '["connect_document",{"client":{"mode":"write","details":{"capabilities":{"interactive":true},"environment":"harness"},"permission":[],"user":{"id":"user"},"scopes":[]},"id":"doc-0","mode":"write","tenantId":"tenant","token":"token","versions":["^0.4.0","^0.3.0","^0.2.0","^0.1.0"],"relayUserAgent":"harness; driverVersion:3.11.0","supportedFeatures":{"submit_signals_v2":true}}]',
+      '["out","connect_document_success",{"claims":{"documentId":"doc-0","tenantId":"tenant","scopes":["doc:read","doc:write"],"user":{"id":"user"},"iat":1700000000,"exp":1800000000,"ver":"1.0"},"clientId":"client","existing":true,"maxMessageSize":16384,"initialMessages":[],"initialSignals":[],"initialClients":[],"version":"^0.4.0","supportedVersions":["^0.4.0"],"serviceConfiguration":{"maxMessageSize":16384,"blockSize":65436,"noopTimeFrequency":2000,"noopCountFrequency":50},"mode":"write","checkpointSequenceNumber":2,"supportedFeatures":{}}]',
+      '["ping",null]',
+      '["submitOp","client",[[{"clientSequenceNumber":1,"referenceSequenceNumber":2,"type":"op","contents":{"seed":0},"traces":[]}]]]',
+      '["out","op","doc-0",[{"clientSequenceNumber":1,"referenceSequenceNumber":2,"type":"op","contents":{"seed":0},"traces":[],"sequenceNumber":3,"minimumSequenceNumber":0,"clientId":"client","timestamp":1700000000003}]]'
+    ]
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.3

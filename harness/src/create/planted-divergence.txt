@@ -1,0 +1,6 @@
+Command: node harness/src/create/check.mjs --skip-build --plant-divergence
+Exit: 1 (expected)
+Mutation: Swift subject alone performs map.set("planted", true) before attach.
+First mismatch: seed 0, JSON.stringify(actual.json) != JSON.stringify(expected).
+All 10 seeds failed; the extra Plain boolean is present in /A/_E/header.
+The normal command exited 0 with all 10 byte-exact comparisons passing.

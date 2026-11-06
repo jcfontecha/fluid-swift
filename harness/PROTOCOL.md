@@ -1561,3 +1561,108 @@ all four live clients by a few single characters. The fresh client loaded the su
 It did not recur in 730 later 4-client seeds. Its trace is `harness/traces/service-m4-ts-ts-ts-ts-8.jsonl`
 (local, not committed); a recurrence now writes the `.odsp.json` dump for `replay.ts`, which
 separates a wrong summary from a wrong op log.
+
+## R11s 2 — routerlicious service
+
+`npm run fuzz:r11s-service` builds `FluidR11sServicePeer` with `--scratch-path .build/l10`
+and compares the installed 3.11.0 `RouterliciousDocumentServiceFactory` with the Swift factory.
+The scripted fake AFR endpoint is HTTP and websocket-only Socket.IO on 127.0.0.1:7089.
+Both factories use Azure remote policies (`enableDiscovery` and `enableWholeSummaryUpload`).
+`--seeds=N` defaults to 300. Mulberry32 varies create-summary binary bytes and text; the seed
+also selects create/load, create callback, ephemeral marker, legacy string/create-session response,
+and a one-shot 401, 429, 500 or 502 at create, discovery, snapshot, delta or summary upload.
+Create and load alternate in 24-seed blocks so both exercise each fault status.
+
+Each script creates or loads, reads `getVersions(null,1)` and the whole snapshot tree, reads a
+snapshot blob from cache, fetches deltas [1,3), connects, submits and waits for the op echo, then
+uploads a channel summary and disposes. The create summary contains `.app` and `.protocol`,
+a nested unreferenced tree, escaped paths, UTF-8 text and a binary blob. Create rewrites the
+returned id in both the resolved URL and delta-storage URL; a returned session skips discovery.
+
+Compared per seed: every outcome and token-provider call (including refresh and post-create
+callback); raw HTTP method, URL, protocol headers and body; and application Socket.IO frames
+in both directions, including handshake, ping, submit and echo. Only UUIDs are normalized in
+socket text. HTTP transport-managed headers are outside the comparison; Authorization,
+Content-Type and x-driver-version are compared, including their RestLess form encoding.
+No HTTP bodies or query strings are normalized. Failures save scenario, outcomes and traces to
+`harness/traces/r11s-service/<seed>.json`.
+
+The 300-seed gate passed. `--seeds=1 --plant` injects one extra HTTP trace entry and fails
+`wire seed 0`; the exact output is retained in `src/r11s-service/planted-divergence.txt`.
+Unit coverage also checks binary snapshot decoding, discovered-host/path rewriting and the
+HTTP endpoint-reached 60-second cap versus the disconnected socket's 8-second cap.
+
+Limitations: this gate does not advance the five-minute discovery clock, reuse a factory for
+multiple loads, exercise cache/network races, downloadSummary/createBlob, or fault a socket
+handshake. The session manager and request resolvers implement refresh, but expiration and a
+changed endpoint after reconnect remain unproven by this differential gate. Whole-summary reads
+use the fake AFR endpoint, not Tinylicious 7 (which returns 404 for them). Prefetch and request
+concurrency limits remain unimplemented, as before this lane.
+
+Regression checkpoint: `service` 10/10 seeds (0–9), `service:m2` 10/10 (0–9),
+`service:m3` 10/10 (0–9), `service:presence` 5/5 (0–4). These scripts hard-code
+7073, 7074, 7075 and 7076 respectively, not a port flag; each ran when its port was free.
+The initial m2 run failed at seed 5 on a reference-sequence mismatch and m3 failed at seed 0
+on an old-summary assertion; both complete reruns passed without changing those scripts.
+The requested `swift test --filter` build was attempted but shared-lane `FluidTests/Support.swift`
+failed Sendable checking; skip-build also encountered missing unrelated test bundles. Building
+and executing the four relevant bundles individually with Xcode's framework/library paths passed:
+loader 45 tests, Azure 10, Tinylicious 2, new Routerlicious 3. All builds used `.build/l10`.
+`npm run check` still reports the unrelated `src/odsp-net/fuzz.ts:317` optional-Bool error;
+there are no r11s-service TypeScript diagnostics at this checkpoint.
+
+## T3 — EditManager
+
+`npm run fuzz:tree-editmanager -- --seeds=N` builds `FluidTreeEditManagerPeer` (release,
+`--scratch-path .build/tree-em`) and compares it with the real 3.11.0 `EditManager`;
+`--self` replays each scenario on fresh TS EditManagers. Both use T1's `ModularChangeFamily`.
+The Swift port covers `editManager.ts` (trunk, peer local branches, local branch,
+`addSequencedChanges`, msn/fork/retention trimming, summary data) and `branch.ts`. It also covers
+`core/rebase/utils.ts` `rebaseBranch`/`findAncestor`/`findCommonAncestor`, and the EditManager
+codecs v3/v4/v6/v7/`shared-branches|v0.2` (change formats 3/4/5/5/4).
+
+Each scenario has 2–4 initial peers (peer 0 never edits) plus up to 2 peers that join from a
+summary. Peers edit their local branches (insert, remove, move, cross-field move, nested insert,
+custom metadata) and submit bunches of 1–3 commits. Each bunch carries refSeq = the peer's last
+processed seq. A lockstep sequencer assigns seqs and computes msn = max(msn, min client refSeq),
+fed by noops. Peers process messages at independent lags. A multi-commit batch is sometimes
+delivered in two bunches with the same seq. Changes travel as modular-v5 bytes, decoded per
+receiver. Scenarios also include `setHistoryRetention`, local-branch forks (rebased or disposed),
+and joins: a new EditManager loads a peer's summary in a random format and continues from its seq.
+The generator runs the TS EditManagers, so every edit is valid in its peer's view. All sessions
+share one ID compressor; each minted revision is finalized at once.
+
+After every action the touched peer records:
+
+- latest seq and longest branch length;
+- every trunk commit (revision plus modular-v5 bytes), the local head and every local commit;
+- every fork head;
+- when summarizable, `getSummaryData` encoded in all five formats.
+
+Wire, sequencer and join rows record submitted edit bytes, seq/msn/refSeq and the loaded summary
+bytes. Comparison is exact string equality per row. A failure writes the scenario, first divergent
+row and both record arrays to `traces/tree-editmanager/`.
+
+Results:
+
+- Native: 1,000 seeds from 0 passed. That is 238,927 actions, 807,569 rows, 81,002 summary rows
+  in 5 formats and 1,364 summary joins.
+- `--self`: 300 seeds passed.
+- After the planted-divergence revert: 300 native seeds passed again.
+- `FluidTreeTests`: 86 tests in 7 suites pass, including `EditManagerTests`. Its fixture
+  `Fixtures/edit-manager.json` comes from `src/tree-editmanager/fixtures.ts`.
+
+Planted divergence: the Swift msn trimming bound was changed from `{msn, indexInBatch: +Infinity}`
+to `{msn}`, so it no longer meant "last commit of the msn's batch". The harness failed at seed 1,
+row 468: the observer's trunk kept 19 commits, while TS kept 18. The source was restored from a
+pre-mutation copy (`cmp` identical). Evidence:
+`src/tree-editmanager/fixtures/planted-msn-batch-bound.{txt,json}`.
+
+Not covered by T3:
+
+- Shared (non-main) branches: `addNewBranch` and `sequenceBranchCreation` are ported but not
+  driven, so vSharedBranches `branches` and branch ids are only exercised empty.
+- Edits on forks, `removeAfter`, transactions and the rebase-telemetry batcher.
+- The summarizer's blob/metadata layout (`EditManagerSummarizer`, `VersionedSummarizer`).
+- Version-dispatching codec selection.
+- The outer SharedTree message codec.

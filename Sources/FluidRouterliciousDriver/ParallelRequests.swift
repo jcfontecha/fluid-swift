@@ -6,7 +6,7 @@ import FluidJS
 private let missingFetchDelayInMs = 50.0
 
 /// runWithRetry.ts MaxReconnectDelayInMsWhenEndpointIsNotReachable. Driver errors here never
-/// carry `endpointReached`, so the 60000 ms cap for a reachable endpoint does not apply.
+/// carry `endpointReached`; HTTP errors use the reachable-endpoint cap of 60000 ms.
 private let maxReconnectDelayInMs = 8000.0
 
 private func check(_ condition: Bool, _ message: String) throws {
@@ -194,8 +194,7 @@ private func getSingleOpBatch(
             guard let driverError = error as? DriverError, driverError.canRetry else { throw error }
         }
         // runWithRetry.ts calculateMaxWaitTime.
-        let retryAfterMs = (lastError as? DriverError)?.retryAfterSeconds.map { $0 * 1000 } ?? 0
-        waitTime = min(max(retryAfterMs, waitTime * 2), maxReconnectDelayInMs)
+        waitTime = calculateMaxWaitTime(waitTime, error: lastError as? DriverError)
         do {
             try await Task.sleep(for: .milliseconds(waitTime))
         } catch {
@@ -248,4 +247,11 @@ public func requestOps(
     }
     continuation.onTermination = { _ in task.cancel() }
     return stream
+}
+
+/// Ports driver-utils/runWithRetry.ts: HTTP responses mark endpointReached; socket failures don't.
+func calculateMaxWaitTime(_ delayMs: Double, error: DriverError?) -> Double {
+    let retryDelay = error?.retryAfterSeconds.map { $0 * 1000 } ?? 0
+    let endpointReached = (try? error?.payload.asObject()["endpointReached"]) == .bool(true)
+    return min(max(retryDelay, delayMs * 2), endpointReached ? 60000 : maxReconnectDelayInMs)
 }

@@ -8,34 +8,38 @@ clients in one session and compares their state, events and summaries.
 
 ## Status
 
-This is a prototype. It works for opening an existing document and editing it alongside TS
-clients, on a local test service.
+This is a prototype. A Swift app can create a document, open one, and edit it alongside TS
+clients, on a local test service (tinylicious or the local ODSP service in `harness/`).
 
 What works today:
 
-- Loading an existing container with `OdspClient.getContainer`, `AzureClient.getContainer` (local
-  mode, against tinylicious) or `TinyliciousClient.getContainer`, or through the loader with the
-  ODSP, Routerlicious and tinylicious drivers.
+- Creating a container (`createContainer` on `OdspClient`, `AzureClient` and
+  `TinyliciousClient`, or `createDetachedContainer` and `attach` on the loader). The uploaded
+  attach summary matches TS byte for byte, and TS clients load what Swift creates.
+- Loading an existing container with `getContainer` on the same three clients, or through the
+  loader with the ODSP, Routerlicious and tinylicious drivers.
 - These DDSes, each checked against TS: SharedMap and SharedDirectory, SharedString (with
   intervals), SharedMatrix, SharedCounter, SharedCell, ConsensusRegisterCollection,
   SharedSummaryBlock, PactMap, TaskManager, ConsensusQueue, SharedArray and SharedSignal.
 - Presence, resubmit of pending edits when a connection is re-established, and acting as the
   summarizing client.
+- `Fluid`, a Swift-native layer over the port: `String` text, typed `Codable` map values,
+  `@Observable` objects and typed schemas (see `specs/design/swift-native-api.md`). It covers
+  SharedString and SharedMap and only loads existing containers so far.
 
 What doesn't:
 
-- Swift cannot create containers yet. A TS client has to create and attach the file first;
-  Swift can then open it. `FluidContainer.create` and `uploadBlob` are not ported either.
-- There is no SharedTree DDS. The SharedTree change family and forest storage formats are ported
-  (`FluidTree`), but the DDS is not.
+- There is no SharedTree DDS. The SharedTree change family, forest storage formats and
+  EditManager are ported (`FluidTree`), but the DDS and its API are not.
 - The container does not reconnect on its own. After a dropped socket or a nack, the app calls
-  `connect()` again. Storage requests are not retried on transient errors either.
-- AzureClient's remote mode (Azure Fluid Relay) cannot load yet: the Routerlicious driver does not
-  port service discovery or whole-summary upload.
+  `connect()` again. Storage requests are not retried on transient errors either. `Fluid` has no
+  `connect()` yet, so a dropped connection cannot be recovered through it.
 - It has not been run against a production service. The ODSP driver matches the TS driver byte
-  for byte against a local ODSP service, but it has never talked to real SharePoint.
-- The public API mirrors the TS names and types (`IOdspTokenProvider`, `JSString`,
-  `JSObject`). A Swift-native layer will be added on top, so expect the API to change.
+  for byte against a local ODSP service, and the Routerlicious driver (including AzureClient's
+  remote mode: discovery and whole-summary storage) matches TS against a scripted fake service.
+  Neither has talked to real SharePoint or Azure Fluid Relay.
+- The lower-level API mirrors the TS names and types (`IOdspTokenProvider`, `JSString`,
+  `JSObject`). Prefer `Fluid` where it covers what you need.
 
 Early performance numbers (macOS and the iOS Simulator, not a physical device) are in
 [Benchmarks/RESULTS.md](Benchmarks/RESULTS.md).
@@ -115,7 +119,7 @@ func openNote(itemId: String) async throws -> FluidContainer {
         container.dispose()
         throw MissingText()
     }
-    text.sequenceDelta = { [weak text] event in
+    text.sequenceDelta.on { [weak text] event in
         guard let text, !event.isLocal else { return }
         print("Remote edit. Text is now:", text.getText().description)
     }
@@ -171,7 +175,8 @@ Embedded.
    npm run odsp-service
    ```
 
-2. Create a file with a TS client, since Swift cannot create one. This script creates a
+2. Create a file with a TS client. FluidNotes has no "new note" action yet, because `Fluid` only
+   loads containers so far. This script creates a
    `{ text: SharedString }` container, types "TS: hello", prints `{"itemId": ...}` and keeps the
    document open until you press Ctrl-D:
 

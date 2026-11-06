@@ -103,8 +103,8 @@ public final class MapKernel {
   private let submitMessage: (JSONValue, PendingLocalOpMetadata) throws -> Void
   private let isAttached: () -> Bool
   /// The SharedMap's "valueChanged" and "clear" events.
-  var valueChanged: ((IValueChanged, Bool) -> Void)?
-  var clearEvent: ((Bool) -> Void)?
+  let valueChanged = EventEmitter<(IValueChanged, Bool)>()
+  let clearEvent = EventEmitter<Bool>()
 
   /// Sequenced values in JS Map insertion order.
   private var sequencedData = JSMap<JSString, ILocalValue>()
@@ -192,8 +192,8 @@ public final class MapKernel {
     // If we are not attached, don't submit the op.
     if !isAttached() {
       sequencedData.set(key, localValue)
-      valueChanged?(
-        IValueChanged(key: key, previousValue: previousOptimisticLocalValue?.value), true)
+      valueChanged.emit((
+        IValueChanged(key: key, previousValue: previousOptimisticLocalValue?.value), true))
       return
     }
 
@@ -213,8 +213,8 @@ public final class MapKernel {
     op[typeMember] = .string(setOpType)
     op[valueMember] = serializableValue(localValue.value)
     try submitMessage(.object(op), .set(pendingKeySet))
-    valueChanged?(
-      IValueChanged(key: key, previousValue: previousOptimisticLocalValue?.value), true)
+    valueChanged.emit((
+      IValueChanged(key: key, previousValue: previousOptimisticLocalValue?.value), true))
   }
 
   @discardableResult
@@ -224,7 +224,7 @@ public final class MapKernel {
     if !isAttached() {
       let successfullyRemoved = sequencedData.delete(key)
       if let previousOptimisticLocalValue {
-        valueChanged?(IValueChanged(key: key, previousValue: previousOptimisticLocalValue.value), true)
+        valueChanged.emit((IValueChanged(key: key, previousValue: previousOptimisticLocalValue.value), true))
       }
       return successfullyRemoved
     }
@@ -238,7 +238,7 @@ public final class MapKernel {
     try submitMessage(.object(op), .delete(pendingKeyDelete))
     // Speculative deletes submit even when nothing is visible, but only emit when something was.
     if let previousOptimisticLocalValue {
-      valueChanged?(IValueChanged(key: key, previousValue: previousOptimisticLocalValue.value), true)
+      valueChanged.emit((IValueChanged(key: key, previousValue: previousOptimisticLocalValue.value), true))
     }
     return true
   }
@@ -249,9 +249,9 @@ public final class MapKernel {
         IValueChanged(key: $0.key, previousValue: $0.value.value)
       }
       sequencedData.clear()
-      clearEvent?(true)
+      clearEvent.emit(true)
       for changed in keysToDelete {
-        valueChanged?(changed, true)
+        valueChanged.emit((changed, true))
       }
       return
     }
@@ -265,9 +265,9 @@ public final class MapKernel {
     var op = JSObject<JSONValue>()
     op[typeMember] = .string(clearOpType)
     try submitMessage(.object(op), .clear(pendingClear))
-    clearEvent?(true)
+    clearEvent.emit(true)
     for changed in keysToDelete {
-      valueChanged?(changed, true)
+      valueChanged.emit((changed, true))
     }
   }
 
@@ -317,7 +317,7 @@ public final class MapKernel {
         throw SharedObjectError("0xbf2: Unexpected clear rollback")
       }
       for (key, _) in internalIterator() {
-        valueChanged?(IValueChanged(key: key, previousValue: nil), true)
+        valueChanged.emit((IValueChanged(key: key, previousValue: nil), true))
       }
       return
     }
@@ -334,7 +334,7 @@ public final class MapKernel {
       }
       pendingData.remove(at: pendingEntryIndex)
       if getOptimisticLocalValue(key) != nil {
-        valueChanged?(IValueChanged(key: key, previousValue: nil), true)
+        valueChanged.emit((IValueChanged(key: key, previousValue: nil), true))
       }
     case .lifetime(let lifetime):
       guard let pendingKeySet = lifetime.keySets.popLast(),
@@ -345,7 +345,7 @@ public final class MapKernel {
       if lifetime.keySets.isEmpty {
         pendingData.remove(at: pendingEntryIndex)
       }
-      valueChanged?(IValueChanged(key: key, previousValue: pendingKeySet.value.value), true)
+      valueChanged.emit((IValueChanged(key: key, previousValue: pendingKeySet.value.value), true))
     case .clear:
       throw SharedObjectError("0xbf3: Unexpected pending data for set/delete op")
     }
@@ -390,9 +390,9 @@ public final class MapKernel {
     sequencedData.clear()
     // A pending local clear supersedes this one optimistically.
     if !pendingData.contains(where: { $0.isClear }) {
-      clearEvent?(local)
+      clearEvent.emit(local)
       for changed in keysToDelete {
-        valueChanged?(changed, local)
+        valueChanged.emit((changed, local))
       }
     }
   }
@@ -412,11 +412,11 @@ public final class MapKernel {
       sequencedData.delete(key)
       return
     }
-    let previousValue = valueChanged == nil ? nil : sequencedData.get(key)?.value
+    let previousValue = valueChanged.isEmpty ? nil : sequencedData.get(key)?.value
     sequencedData.delete(key)
     // Suppress the event if local changes would hide the incoming change optimistically.
     if !pendingData.contains(where: { $0.isClearOrKey(key) }) {
-      valueChanged?(IValueChanged(key: key, previousValue: previousValue), local)
+      valueChanged.emit((IValueChanged(key: key, previousValue: previousValue), local))
     }
   }
 
@@ -443,11 +443,11 @@ public final class MapKernel {
       return
     }
     let localValue = ILocalValue(value: try parseSerializableValue(op.member(valueMember)))
-    let previousValue = valueChanged == nil ? nil : sequencedData.get(key)?.value
+    let previousValue = valueChanged.isEmpty ? nil : sequencedData.get(key)?.value
     sequencedData.set(key, localValue)
     // Suppress the event if local changes would hide the incoming change optimistically.
     if !pendingData.contains(where: { $0.isClearOrKey(key) }) {
-      valueChanged?(IValueChanged(key: key, previousValue: previousValue), local)
+      valueChanged.emit((IValueChanged(key: key, previousValue: previousValue), local))
     }
   }
 }

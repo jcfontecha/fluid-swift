@@ -19,15 +19,9 @@ public final class SharedMap: SharedObject<PendingLocalOpMetadata> {
     isAttached: { [unowned self] in isAttached })
 
   /// "valueChanged" (changed, local).
-  public var valueChanged: ((IValueChanged, Bool) -> Void)? {
-    get { kernel.valueChanged }
-    set { kernel.valueChanged = newValue }
-  }
+  public var valueChanged: EventEmitter<(IValueChanged, Bool)> { kernel.valueChanged }
   /// "clear" (local).
-  public var clearEvent: ((Bool) -> Void)? {
-    get { kernel.clearEvent }
-    set { kernel.clearEvent = newValue }
-  }
+  public var clearEvent: EventEmitter<Bool> { kernel.clearEvent }
 
   public var size: Int { kernel.size }
 

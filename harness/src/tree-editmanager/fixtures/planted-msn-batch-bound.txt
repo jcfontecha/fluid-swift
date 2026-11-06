@@ -1,0 +1,18 @@
+T3 planted divergence (Swift only, reverted).
+
+Mutation, Sources/FluidTree/EditManager.swift getUpperTrimmingBoundForMinimumSequenceNumber:
+-        SequenceId(sequenceNumber: minimumSequenceNumber, indexInBatch: .infinity)
++        SequenceId(sequenceNumber: minimumSequenceNumber)
+
+TS treats the msn as the last commit of its batch; the mutant bounds trimming at the first one,
+so the trunk keeps the later commits of the msn's batch.
+
+Command: npm run fuzz:tree-editmanager -- --seeds=100 (release build, .build/tree-em)
+Result: exit 1, "editmanager native mismatch seed 1, row 468"
+Row 468 is ['trunk', '0', ...]: the observer's trunk. TS has 18 commits (first revision 7);
+the mutant keeps 19 (first revision 3, a commit TS had already trimmed).
+Seed 0 passed under the mutant: the batch case first appears at seed 1.
+
+The source was restored from a copy taken before the mutation (cmp: identical) and rebuilt.
+The gate then passed again (see PROTOCOL.md T3).
+Full trace: planted-msn-batch-bound.json (scenario, row, expected/actual row, error).

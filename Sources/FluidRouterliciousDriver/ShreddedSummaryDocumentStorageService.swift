@@ -19,7 +19,7 @@ final class BlobsShaCache: Sendable {
 /// Ports shreddedSummaryDocumentStorageService.ts: git storage read and written piece by piece,
 /// through the historian REST API (historian.ts) under the resolved URL's storage endpoint.
 /// It has no getSnapshot.
-final class ShreddedSummaryDocumentStorageService: Sendable {
+final class ShreddedSummaryDocumentStorageService: RouterliciousStorage {
     let id: String
     private let rest: RestClient
     private let blobCache: InMemoryCache<[UInt8]>?
@@ -55,7 +55,7 @@ final class ShreddedSummaryDocumentStorageService: Sendable {
         }
     }
 
-    func getSnapshotTree(_ version: IVersion?) async throws -> ISnapshotTreeEx? {
+    func getSnapshotTree(_ version: IVersion?) async throws -> ISnapshotTree? {
         var requestVersion = version
         if requestVersion == nil {
             let versions = try await getVersions(JSString(id), count: 1)
@@ -66,14 +66,14 @@ final class ShreddedSummaryDocumentStorageService: Sendable {
             throw JSONDecodingError("routerlicious version without a tree id")
         }
         if let cached = snapshotTreeCache?.get(cacheKey(treeId)) {
-            return cached.snapshotTree
+            return try ISnapshotTree(json: cached.snapshotTree.json)
         }
         let rawTree = try Git.ITree(json: await rest.get("/git/trees/\(encodeURIComponent(treeId.description))?recursive=1"))
         let tree = try blobsShaCache.shas.withLock { shas in
             try buildGitTreeHierarchy(rawTree, blobsShaToPathCache: &shas, removeAppTreePrefix: true)
         }
         snapshotTreeCache?.put(cacheKey(tree.id), ISnapshotTreeVersion(id: requestVersion.id, snapshotTree: tree))
-        return tree
+        return try ISnapshotTree(json: tree.json)
     }
 
     func readBlob(_ blobId: JSString) async throws -> [UInt8] {
@@ -115,7 +115,7 @@ final class ShreddedSummaryDocumentStorageService: Sendable {
         guard !parentHandle.description.isEmpty else { return nil }
         let versions = try await getVersions(parentHandle, count: 1)
         blobsShaCache.shas.withLock { $0.removeAll() }
-        return try await getSnapshotTree(versions.first)
+        return try await getSnapshotTree(versions.first).map { try ISnapshotTreeEx(json: $0.json) }
     }
 
     private func cacheKey(_ blobId: JSString) -> String {

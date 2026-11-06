@@ -1,11 +1,11 @@
-import FluidOdspClient
+import Fluid
 import MSAL
 import UIKit
 
-/// `IOdspTokenProvider` backed by MSAL: silent acquisition from MSAL's cache, interactive when
+/// `OdspTokenProvider` backed by MSAL: silent acquisition from MSAL's cache, interactive when
 /// MSAL reports that interaction is required.
 @MainActor
-final class MSALTokenProvider: IOdspTokenProvider {
+final class MSALTokenProvider: OdspTokenProvider {
     // Scopes match the official odsp-client sample token provider:
     // https://github.com/microsoft/FluidFramework/blob/main/examples/service-clients/odsp-client/shared-tree-demo/src/tokenProvider.ts
     // That sample also lists `offline_access` with the push scope. MSAL for iOS always adds

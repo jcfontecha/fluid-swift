@@ -1,5 +1,4 @@
-import FluidJS
-import FluidSequence
+import Fluid
 import SwiftUI
 import UIKit
 
@@ -22,12 +21,12 @@ struct NoteEditor: UIViewRepresentable {
 
 /// Binds a text view to a SharedString on the main actor, which owns the container. User edits
 /// go to the SharedString inside the delegate callback; remote edits patch the text storage
-/// inside the SharedString's `sequenceDelta` listener, while the selection stays on the same
+/// inside the SharedString's `onChange` handler, while the selection stays on the same
 /// characters.
 @MainActor
 final class NoteText: NSObject, UITextViewDelegate {
     private let sharedString: SharedString
-    private let failed: (any Error) -> Void
+    private var subscription: Subscription?
     /// The SharedString's text as of the last applied edit, which local diffs are taken against.
     /// It differs from the text view only while marked (IME) text is being composed.
     private var text: NSString
@@ -38,15 +37,13 @@ final class NoteText: NSObject, UITextViewDelegate {
     /// for that change are not taken as user edits.
     private var updatingView = false
 
-    init(text sharedString: SharedString, failed: @escaping (any Error) -> Void) {
+    init(text sharedString: SharedString) {
         self.sharedString = sharedString
-        self.failed = failed
-        text = Self.string(sharedString.getText())
+        text = sharedString.string as NSString
         super.init()
-        sharedString.sequenceDelta = { [weak self] event in
-            guard let self, !event.isLocal else { return }
-            // Ranges resolve against live segments, so they are read inside the event.
-            receive(Self.edits(of: event))
+        subscription = sharedString.onChange { [weak self] change in
+            guard let self, !change.isLocal else { return }
+            receive(change.edits.map(TextEdit.init))
         }
     }
 
@@ -76,32 +73,19 @@ final class NoteText: NSObject, UITextViewDelegate {
         submit(view)
     }
 
-    /// Applies the user's change to the SharedString. A replacement is a remove and an insert;
-    /// if either throws, the SharedString may hold only part of the change, so the text view is
-    /// reset to the SharedString's text, which is what every client converges on.
+    /// Applies the user's change to the SharedString. A replacement is a remove and an insert.
     private func submit(_ view: UITextView) {
         let current = view.textStorage.mutableString.copy() as! NSString
         let edits = TextEdit.changes(from: text, to: current, caret: NSMaxRange(view.selectedRange))
-        do {
-            for edit in edits {
-                switch edit {
-                case let .insert(location, units):
-                    try sharedString.insertText(location, JSString(utf16: ContiguousArray(units)))
-                case let .remove(location, length):
-                    try sharedString.removeText(location, location + length)
-                }
+        for edit in edits {
+            switch edit {
+            case let .insert(location, units):
+                sharedString.insert(String(decoding: units, as: UTF16.self), at: location)
+            case let .remove(location, length):
+                sharedString.remove(location..<(location + length))
             }
-            text = current
-        } catch {
-            text = Self.string(sharedString.getText())
-            updatingView = true
-            let selection = view.selectedRange
-            replaceAll(in: view, with: text)
-            view.selectedRange = NSRange(location: min(selection.location, text.length), length: 0)
-            view.undoManager?.removeAllActions()
-            updatingView = false
-            failed(error)
         }
+        text = current
     }
 
     /// Applies a remote op's edits to the text and the text view.
@@ -153,35 +137,25 @@ final class NoteText: NSObject, UITextViewDelegate {
         storage.endEditing()
     }
 
-    /// The text edits for one remote delta, in ascending position. Each range position is in the
-    /// post-op text, so applying them in order reproduces the op.
-    /// `deltaOperation` is merge-tree `MergeTreeDeltaType`: 0 insert, 1 remove, 2 annotate.
-    private static func edits(of event: SequenceDeltaEvent) -> [TextEdit] {
-        switch event.deltaOperation {
-        case 0:
-            return event.ranges.compactMap { range in
-                range.segment.text.map { .insert(location: range.position, text: Array($0.utf16)) }
-            }
-        case 1:
-            return event.ranges.map { .remove(location: $0.position, length: $0.segment.length) }
-        default:
-            return []
-        }
-    }
-
-    /// CoreFoundation keeps the UTF-16 exactly, including a lone surrogate, which a round trip
-    /// through Swift `String` would replace.
-    private static func string(_ text: JSString) -> NSString {
-        let units = Array(text.utf16)
-        return CFStringCreateWithCharacters(nil, units, units.count)! as NSString
-    }
-
     private static func apply(_ edit: TextEdit, to string: NSMutableString) {
         switch edit {
         case let .insert(location, units):
-            CFStringInsert(string, location, CFStringCreateWithCharacters(nil, units, units.count))
+            string.insert(String(decoding: units, as: UTF16.self), at: location)
         case let .remove(location, length):
             string.deleteCharacters(in: NSRange(location: location, length: length))
+        }
+    }
+}
+
+private extension TextEdit {
+    /// One edit of a remote change. Each position is in the post-op text, so applying the edits
+    /// in order reproduces the op.
+    init(_ edit: TextChange.Edit) {
+        switch edit {
+        case let .insert(text, location):
+            self = .insert(location: location, text: Array(text.utf16))
+        case let .remove(range):
+            self = .remove(location: range.lowerBound, length: range.count)
         }
     }
 }

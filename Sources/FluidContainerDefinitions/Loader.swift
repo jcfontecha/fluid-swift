@@ -19,6 +19,8 @@ public enum AttachState: String, Sendable {
 
 /// Ports loader.ts IContainerEvents.
 public enum ContainerEvent {
+    case attaching
+    case attached
     case connected(clientId: JSString)
     case disconnected
     case closed(error: (any Error)?)

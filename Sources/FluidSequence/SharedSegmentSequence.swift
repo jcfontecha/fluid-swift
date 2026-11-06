@@ -9,10 +9,13 @@ open class SharedSegmentSequence: SharedObject<SequenceLocalOpMetadata> {
   public override class var type: JSString { "https://graph.microsoft.com/types/mergeTree" }
   public private(set) var client: Client
   public private(set) var intervalCollections: IntervalCollectionMap
-  public var createIntervalCollection: ((JSString) -> Void)?
-  public var sequenceMaintenance: ((SequenceMaintenanceEvent) -> Void)?
+  /// "createIntervalCollection" (label).
+  public let createIntervalCollection = EventEmitter<JSString>()
+  /// "maintenance" (event).
+  public let sequenceMaintenance = EventEmitter<SequenceMaintenanceEvent>()
   private var processingMessage: SequencedMessage?
-  public var sequenceDelta: ((SequenceDeltaEvent) -> Void)?
+  /// "sequenceDelta" (event).
+  public let sequenceDelta = EventEmitter<SequenceDeltaEvent>()
 
   public var intervalSerializationFormat: IntervalSerializationFormat = .v2
   public var intervalStickinessEnabled = false {
@@ -44,9 +47,9 @@ open class SharedSegmentSequence: SharedObject<SequenceLocalOpMetadata> {
 
   private func installDeltaHandler() {
     client.maintenance = { [weak self] type, segments, operation in
-      guard let self else { return }
+      guard let self, !self.sequenceMaintenance.isEmpty else { return }
       let args = operation.map { SequenceOperationArgs(operation: $0, sequencedMessage: self.processingMessage, rollback: false) }
-      self.sequenceMaintenance?(SequenceMaintenanceEvent(client: self.client, operation: type.rawValue, segments: segments,
+      self.sequenceMaintenance.emit(SequenceMaintenanceEvent(client: self.client, operation: type.rawValue, segments: segments,
         local: operation == nil, opArgs: args))
     }
     client.delta = { [weak self] operation, segments, local in
@@ -55,7 +58,7 @@ open class SharedSegmentSequence: SharedObject<SequenceLocalOpMetadata> {
         try self.submitSequenceMessage(operation, .segment(localSequence: self.client.latestLocalSequence))
       }
       let event = SequenceDeltaEvent(client: self.client, operation: try operation.member("type").asInt(), segments: segments, local: local, opArgs: SequenceOperationArgs(operation: operation, sequencedMessage: local ? nil : self.processingMessage, rollback: self.client.rollingBack))
-      self.sequenceDelta?(event)
+      self.sequenceDelta.emit(event)
       if self.transformed != nil { self.transformed?.append(contentsOf: try event.createOps()) }
     }
   }
@@ -76,7 +79,7 @@ open class SharedSegmentSequence: SharedObject<SequenceLocalOpMetadata> {
     intervalCollections.created = { [weak self] collection in
       guard let self else { return }
       self.connectCollection(collection)
-      self.createIntervalCollection?(collection.label)
+      self.createIntervalCollection.emit(collection.label)
     }
     for label in intervalCollections.labels { connectCollection(intervalCollections.get(label)) }
   }

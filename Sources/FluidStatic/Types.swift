@@ -18,6 +18,15 @@ public struct ContainerSchema: Sendable {
         self.initialObjects = objects
         self.dynamicObjectTypes = dynamicObjectTypes
     }
+
+    /// The same schema from initial objects built at run time, which `KeyValuePairs` cannot be.
+    public init(
+        initialObjects: JSObject<any SharedObjectKind.Type>,
+        dynamicObjectTypes: [any SharedObjectKind.Type]? = nil
+    ) {
+        self.initialObjects = initialObjects
+        self.dynamicObjectTypes = dynamicObjectTypes
+    }
 }
 
 /// Ports types.ts `IConnection`.

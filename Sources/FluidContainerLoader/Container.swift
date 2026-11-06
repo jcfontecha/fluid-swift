@@ -95,7 +95,7 @@ public final class Container: IContainer {
     private var summaryActive = false
     private var summaryCompletionWaiters: [CheckedContinuation<Void, Never>] = []
     private var summaryFailure: String?
-    private let resolvedUrl: IResolvedUrl
+    public private(set) var resolvedUrl: IResolvedUrl?
     private let urlResolver: any IUrlResolver
     private let serviceFactory: any IDocumentServiceFactory
     private let runtimeFactory: any IRuntimeFactory<ContainerRuntime>
@@ -140,7 +140,7 @@ public final class Container: IContainer {
     /// container.ts `setupClient`: the interactive write client, with the request's client
     /// details override spread over its details.
     init(
-        resolvedUrl: IResolvedUrl, urlResolver: any IUrlResolver, documentServiceFactory: any IDocumentServiceFactory,
+        resolvedUrl: IResolvedUrl?, urlResolver: any IUrlResolver, documentServiceFactory: any IDocumentServiceFactory,
         runtimeFactory: any IRuntimeFactory<ContainerRuntime>, configProvider: (any IConfigProviderBase)?,
         specifiedVersion: JSString?, clientDetailsOverride: JSONValue?, loadRuntime: Bool, summaryMode: SummaryManager.Mode
     ) throws {
@@ -202,6 +202,108 @@ public final class Container: IContainer {
         try await connectToDeltaStream(attempt)
     }
 
+    /// container.ts createDetached: seed the code quorum, then instantiate a new runtime.
+    func createDetached(codeDetails: JSONValue) throws {
+        attachState = .detached
+        dirty = true
+        var proposal = JSObject<JSONValue>()
+        proposal["key"] = .string("code")
+        proposal["value"] = codeDetails
+        proposal["approvalSequenceNumber"] = .number(0)
+        proposal["commitSequenceNumber"] = .number(0)
+        proposal["sequenceNumber"] = .number(0)
+        var state = JSObject<JSONValue>()
+        state["sequenceNumber"] = .number(0)
+        state["minimumSequenceNumber"] = .number(0)
+        state["members"] = .array([])
+        state["proposals"] = .array([])
+        state["values"] = .array([.array([.string("code"), .object(proposal)])])
+        let handler = try ProtocolOpHandler(state: IProtocolState(json: .object(state)), audience: protocolAudience)
+        protocolHandler = handler
+        handler.quorum.events.on { [quorumEvents] in quorumEvents.emit($0) }
+        handler.audience.events.on { [audienceEvents] in audienceEvents.emit($0) }
+        let context = IContainerContext(clientId: nil, clientDetails: client.details, baseSnapshot: nil,
+            deltaManager: deltaManager, quorum: QuorumClientsView(handler.quorum.clients), attachState: .detached)
+        let (runtime, entryPoint) = try runtimeFactory.instantiateRuntime(context, existing: false)
+        installRuntime(runtime, entryPoint: entryPoint)
+        election = try SummarizerClientElection(members: [], sequenceNumber: 0, initialState: runtime.electedSummarizerData)
+        summaryGenerator = SummaryGenerator(ackHandle: nil)
+    }
+
+    /// container.ts / attachment.ts: the same graph becomes globally visible, then connects.
+    public nonisolated(nonsending) func attach(_ request: IRequest) async throws {
+        guard !closed, attachState == .detached, !attaching, let runtime, let protocolHandler else {
+            throw JSONDecodingError("The Container is not in a valid state for attach")
+        }
+        attaching = true
+        defer { attaching = false }
+        do {
+            var summary: SummaryTree?
+            if detachedBlobStorage.size == 0 {
+                guard case .tree(let app) = try runtime.createSummary() else { throw JSONDecodingError("invalid attach summary") }
+                summary = .tree(try combineAppAndProtocolSummary(app, captureProtocolSummary(protocolHandler)))
+                try transitionAttachState(.attaching)
+            }
+            guard let resolved = try await urlResolver.resolve(request) else {
+                throw JSONDecodingError("0x2c4: create request did not resolve")
+            }
+            let service = try await serviceFactory.createContainer(summary, resolvedUrl: resolved, clientIsSummarizer: false)
+            self.service = service
+            resolvedUrl = service.resolvedUrl
+            let storage = try await service.connectToStorage()
+            self.storage = storage
+            guard !closed else { throw JSONDecodingError("container closed during attach") }
+            if summary == nil {
+                var redirects: [(JSString, JSString)] = []
+                // New uploads can arrive while awaiting storage, as in attachment.ts.
+                while redirects.count < detachedBlobStorage.size {
+                    for id in detachedBlobStorage.getBlobIds() where !redirects.contains(where: { $0.0 == id }) {
+                        let response = try await storage.createBlob(detachedBlobStorage.readBlob(id))
+                        redirects.append((id, response.id))
+                    }
+                }
+                guard case .tree(let app) = try runtime.createSummary(blobRedirectTable: redirects) else {
+                    throw JSONDecodingError("invalid attach summary")
+                }
+                let combined = SummaryTree.tree(try combineAppAndProtocolSummary(app, captureProtocolSummary(protocolHandler)))
+                try transitionAttachState(.attaching)
+                _ = try await storage.uploadSummaryWithContext(combined,
+                    context: ISummaryContext(json: JSON.parse(#"{"referenceSequenceNumber":0}"#)))
+            }
+            guard !closed else { throw JSONDecodingError("container closed during attach") }
+            try transitionAttachState(.attached)
+            detachedBlobStorage.dispose()
+            connect()
+        } catch {
+            close(error)
+            throw error
+        }
+    }
+
+    private func transitionAttachState(_ state: FluidContainerDefinitions.AttachState) throws {
+        attachState = state
+        try runtime?.setAttachState(state == .attaching ? .attaching : .attached)
+        updateDirtyContainerState()
+        events.emit(state == .attaching ? .attaching : .attached)
+    }
+
+    public nonisolated(nonsending) func uploadBlob(_ bytes: [UInt8]) async throws -> BlobHandle {
+        guard let runtime, !closed else { throw JSONDecodingError("container is closed") }
+        var uploaded: BlobHandle?
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            do {
+                try runtime.uploadBlob(bytes) { handle in
+                    uploaded = handle
+                    continuation.resume()
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+        guard let uploaded else { throw JSONDecodingError("blob upload returned no handle") }
+        return uploaded
+    }
+
     /// Adopts the container on `owner` and starts its event loop there. Adoption is once-only.
     /// `owner` is a non-optional isolated parameter (ARCHITECTURE.md section 2): capturing it
     /// isolates the loop task to the owner, and `for await` stays on it (SE-0421), so no job ever
@@ -210,6 +312,40 @@ public final class Container: IContainer {
         precondition(loop == nil, "Container.start(on:) adopts a container once")
         let scheduler = DeltaScheduler(inboundLength: { [deltaManager] in deltaManager.pending.count })
         deltaScheduler = scheduler
+        runtime?.blobManager.upload = { [weak self] bytes, completion in
+            guard let self else { throw JSONDecodingError("container disposed") }
+            if self.attachState == .detached {
+                let id = self.detachedBlobStorage.createBlob(bytes)
+                try completion(.success(.init(id: id)))
+            } else {
+                Task {
+                    _ = owner
+                    let result: Result<BlobManager.UploadResponse, any Error>
+                    do {
+                        guard let storage = self.storage else { throw JSONDecodingError("storage unavailable") }
+                        let response = try await storage.createBlob(bytes)
+                        result = .success(.init(id: response.id))
+                    } catch {
+                        result = .failure(error)
+                    }
+                    do { try completion(result) } catch { self.close(error) }
+                }
+            }
+        }
+        runtime?.blobManager.read = { [weak self] id, completion in
+            guard let self else { throw JSONDecodingError("container disposed") }
+            Task {
+                _ = owner
+                let result: Result<[UInt8], any Error>
+                do {
+                    guard let storage = self.storage else { throw JSONDecodingError("storage unavailable") }
+                    result = .success(try await storage.readBlob(id))
+                } catch {
+                    result = .failure(error)
+                }
+                do { try completion(result) } catch { self.close(error) }
+            }
+        }
         runtime?.onEvent = { name, _ in
             if name == "batchBegin" {
                 scheduler.batchBegin()
@@ -328,6 +464,7 @@ public final class Container: IContainer {
     /// The awaited half runs on the owner's loop; `connected` reports the result.
     public func connect() {
         precondition(!closed, "The Container is closed and cannot be connected")
+        guard attachState == .attached else { return }
         guard !connectionManager.connected, let attempt = connectionManager.beginConnection() else { return }
         establishing = true
         jobSink.yield(.connect(attempt: attempt))
@@ -336,6 +473,7 @@ public final class Container: IContainer {
     /// The load half of container.ts `load`: document service, storage, snapshot, protocol state,
     /// then the runtime from the runtime factory.
     private nonisolated(nonsending) func load() async throws {
+        guard let resolvedUrl else { throw JSONDecodingError("missing resolved URL") }
         let service = try await serviceFactory.createDocumentService(
             resolvedUrl, clientIsSummarizer: client.details.type == summarizerClientType)
         self.service = service
@@ -356,35 +494,7 @@ public final class Container: IContainer {
                 deltaManager: deltaManager, quorum: QuorumClientsView(loaded.quorum.clients), attachState: .attached)
             let (runtime, entryPoint) = try runtimeFactory.instantiateRuntime(context, existing: true)
             runtime.referenceSequenceNumber = loaded.sequenceNumber
-            self.entryPoint = entryPoint
-            runtime.onSubmitSignal = { [connectionManager] envelope, target in
-                try connectionManager.submitSignal(JSON.stringify(envelope), targetClientId: target?.description)
-            }
-            runtime.onRuntimeDispatch = { [presence] name, arguments in
-                guard name == "extension", let manager = presence.manager else { return }
-                let parts = try arguments.asArray()
-                guard parts.count == 3 else { throw JSONDecodingError("invalid extension dispatch") }
-                try manager.processSignal(
-                    addressChain: parts[0].asArray().map { try $0.asString() },
-                    message: InboundExtensionMessage(json: parts[1]), local: parts[2] == .bool(true))
-            }
-            // container.ts submitBatch: CSNs are assigned and the batch is enqueued on the
-            // connection in one synchronous step, so wire order is CSN order.
-            runtime.onSubmitBatch = { [deltaManager, connectionManager] messages in
-                var batch: [IDocumentMessage] = []
-                for message in messages {
-                    let prepared = try deltaManager.prepareMessage(
-                        type: "op", contents: message.member("contents"),
-                        referenceSequenceNumber: message.member("referenceSequenceNumber").asInt())
-                    var fields = try prepared.json.asObject()
-                    for (key, value) in try message.asObject().entries { fields[key] = value }
-                    batch.append(try IDocumentMessage(json: .object(fields)))
-                }
-                try connectionManager.sendMessages(batch)
-                return batch.last?.clientSequenceNumber ?? 0
-            }
-            runtime.onScheduleFlush = { [jobSink] in jobSink.yield(.flush) }
-            self.runtime = runtime
+            installRuntime(runtime, entryPoint: entryPoint)
             election = try SummarizerClientElection(members: loaded.quorum.getMembers(), sequenceNumber: loaded.sequenceNumber, initialState: runtime.electedSummarizerData)
             summaryGenerator = SummaryGenerator(ackHandle: version?.id)
             if let summarizerParentId {
@@ -397,6 +507,38 @@ public final class Container: IContainer {
         snapshotSequenceNumber = loaded.sequenceNumber
         deltaManager.lastSequenceNumber = loaded.sequenceNumber
         protocolHandler = loaded
+    }
+
+    private func installRuntime(_ runtime: ContainerRuntime, entryPoint: AnyObject) {
+        self.entryPoint = entryPoint
+        runtime.onSubmitSignal = { [connectionManager] envelope, target in
+            try connectionManager.submitSignal(JSON.stringify(envelope), targetClientId: target?.description)
+        }
+        runtime.onRuntimeDispatch = { [presence] name, arguments in
+            guard name == "extension", let manager = presence.manager else { return }
+            let parts = try arguments.asArray()
+            guard parts.count == 3 else { throw JSONDecodingError("invalid extension dispatch") }
+            try manager.processSignal(
+                addressChain: parts[0].asArray().map { try $0.asString() },
+                message: InboundExtensionMessage(json: parts[1]), local: parts[2] == .bool(true))
+        }
+        // container.ts submitBatch: CSNs are assigned and the batch is enqueued on the
+        // connection in one synchronous step, so wire order is CSN order.
+        runtime.onSubmitBatch = { [deltaManager, connectionManager] messages in
+            var batch: [IDocumentMessage] = []
+            for message in messages {
+                let prepared = try deltaManager.prepareMessage(
+                    type: "op", contents: message.member("contents"),
+                    referenceSequenceNumber: message.member("referenceSequenceNumber").asInt())
+                var fields = try prepared.json.asObject()
+                for (key, value) in try message.asObject().entries { fields[key] = value }
+                batch.append(try IDocumentMessage(json: .object(fields)))
+            }
+            try connectionManager.sendMessages(batch)
+            return batch.last?.clientSequenceNumber ?? 0
+        }
+        runtime.onScheduleFlush = { [jobSink] in jobSink.yield(.flush) }
+        self.runtime = runtime
     }
 
     /// telemetry-utils config `getBoolean`: a boolean, or the string form of one.
@@ -704,7 +846,7 @@ public final class Container: IContainer {
     /// container.ts `updateDirtyContainerState`, from the runtime's pending messages: emits
     /// `dirty` or `saved` on a change.
     private func updateDirtyContainerState() {
-        let dirty = (runtime?.pendingStateManager.pendingMessagesCount ?? 0) > 0
+        let dirty = attachState != .attached || (runtime?.pendingStateManager.pendingMessagesCount ?? 0) > 0
         guard self.dirty != dirty else { return }
         self.dirty = dirty
         events.emit(dirty ? .dirty : .saved)
@@ -845,7 +987,9 @@ public final class Container: IContainer {
 
     public var isDirty: Bool { dirty }
 
-    public var attachState: AttachState { .attached }
+    public private(set) var attachState: FluidContainerDefinitions.AttachState = .attached
+    private var attaching = false
+    private let detachedBlobStorage = MemoryDetachedBlobStorage()
 
     /// container.ts `clientId`: the audience's self, set once this client's join is processed.
     public var clientId: JSString? { protocolAudience.getSelf()?.clientId }

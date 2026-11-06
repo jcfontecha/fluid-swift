@@ -84,3 +84,40 @@ func prepareContainer(_ props: ILoadExistingContainerProps) async throws -> send
     }
     return container
 }
+
+/// createAndLoadContainerUtils.ts ICreateDetachedContainerProps. Code details seed the quorum.
+public struct ICreateDetachedContainerProps: Sendable {
+    public let urlResolver: any IUrlResolver
+    public let documentServiceFactory: any IDocumentServiceFactory
+    public let runtimeFactory: any IRuntimeFactory<ContainerRuntime>
+    public let codeDetails: JSONValue
+    public let configProvider: (any IConfigProviderBase)?
+    public let summaryMode: SummaryManager.Mode
+
+    public init(urlResolver: any IUrlResolver, documentServiceFactory: any IDocumentServiceFactory,
+        runtimeFactory: any IRuntimeFactory<ContainerRuntime>, codeDetails: JSONValue,
+        configProvider: (any IConfigProviderBase)? = nil, summaryMode: SummaryManager.Mode = .enabled) {
+        self.urlResolver = urlResolver
+        self.documentServiceFactory = documentServiceFactory
+        self.runtimeFactory = runtimeFactory
+        self.codeDetails = codeDetails
+        self.configProvider = configProvider
+        self.summaryMode = summaryMode
+    }
+}
+
+public func createDetachedContainer(_ props: ICreateDetachedContainerProps, isolation owner: isolated any Actor) async throws -> Container {
+    let container = try await prepareDetachedContainer(props)
+    container.start(on: owner)
+    return container
+}
+
+@concurrent
+private func prepareDetachedContainer(_ props: ICreateDetachedContainerProps) async throws -> sending Container {
+    let container = try Container(resolvedUrl: nil, urlResolver: props.urlResolver,
+        documentServiceFactory: props.documentServiceFactory, runtimeFactory: props.runtimeFactory,
+        configProvider: props.configProvider, specifiedVersion: nil, clientDetailsOverride: nil,
+        loadRuntime: true, summaryMode: props.summaryMode)
+    try container.createDetached(codeDetails: props.codeDetails)
+    return container
+}

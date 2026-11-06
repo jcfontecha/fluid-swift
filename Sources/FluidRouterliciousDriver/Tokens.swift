@@ -14,6 +14,7 @@ public struct ITokenResponse: Sendable {
 }
 /// Ports routerlicious-driver/src/tokens.ts: ITokenProvider.
 public protocol ITokenProvider: Sendable {
+    var documentPostCreateCallback: (@Sendable (String, String) async throws -> Void)? { get }
     func fetchOrdererToken(tenantId: String, documentId: String?, refresh: Bool) async throws
         -> ITokenResponse
     func fetchStorageToken(tenantId: String, documentId: String, refresh: Bool) async throws
@@ -25,4 +26,8 @@ public func encodeURIComponent(_ text: String) -> String {
             charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()")
     )
         ?? text
+}
+
+extension ITokenProvider {
+    public var documentPostCreateCallback: (@Sendable (String, String) async throws -> Void)? { nil }
 }

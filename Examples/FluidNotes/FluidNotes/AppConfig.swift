@@ -11,7 +11,7 @@ struct AppConfig {
     }
 
     let signIn: SignIn
-    let siteUrl: String
+    let siteURL: URL
     let driveId: String
     /// SharePoint Embedded container type that owns `driveId`.
     let containerType: String
@@ -21,7 +21,7 @@ struct AppConfig {
             clientId: "<ENTRA_APP_CLIENT_ID>",
             tenantId: "<ENTRA_TENANT_ID>"
         ),
-        siteUrl: "https://<TENANT>.sharepoint.com",
+        siteURL: URL(string: "https://<TENANT>.sharepoint.com")!,
         driveId: "<SPE_DRIVE_ID>",
         containerType: "<SPE_CONTAINER_TYPE_ID>"
     )
@@ -31,7 +31,7 @@ struct AppConfig {
     /// It has no container types.
     static let local = AppConfig(
         signIn: .local(user: "notes"),
-        siteUrl: "http://localhost:7095",
+        siteURL: URL(string: "http://localhost:7095")!,
         driveId: "b!bG9jYWwtb2RzcA",
         containerType: ""
     )

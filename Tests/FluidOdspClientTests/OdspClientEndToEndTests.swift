@@ -139,7 +139,7 @@ private final class NodeProcess {
             isolation: MainActor.shared)
         let text = try #require(container.initialObjects["text"] as? SharedString)
         var remoteDeltas = 0
-        text.sequenceDelta = { event in
+        text.sequenceDelta.on { event in
             if !event.isLocal {
                 remoteDeltas += 1
             }

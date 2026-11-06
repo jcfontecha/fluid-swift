@@ -1,3 +1,5 @@
+import Foundation
+import FluidJS
 import FluidContainerLoader
 import FluidDriverDefinitions
 import FluidOdspDriver
@@ -26,7 +28,7 @@ private func getWebsocketToken(
 /// each container it returns belongs to the actor passed as `isolation` (ARCHITECTURE.md
 /// section 2).
 ///
-/// `createContainer` is not ported: the loader cannot create a detached container yet.
+/// `createContainer` returns a detached container; `attach()` persists it.
 public final class OdspClient: Sendable {
     private let documentServiceFactory: OdspDocumentServiceFactory
     private let urlResolver: OdspDriverUrlResolver
@@ -43,6 +45,29 @@ public final class OdspClient: Sendable {
                 try await getWebsocketToken(options, connectionConfig.tokenProvider)
             })
         urlResolver = OdspDriverUrlResolver()
+    }
+
+    /// OdspClient.ts createContainer: create locally, then let attach persist the graph.
+    public func createContainer(
+        _ containerSchema: ContainerSchema,
+        isolation owner: isolated any Actor
+    ) async throws -> (container: FluidContainer, services: OdspContainerServices) {
+        let props = try getLoaderProps(containerSchema, oldestSupportedClient: "2.0.0", request: IRequest(url: ""))
+        let container = try await createDetachedContainer(ICreateDetachedContainerProps(
+            urlResolver: props.urlResolver, documentServiceFactory: props.documentServiceFactory,
+            runtimeFactory: props.runtimeFactory,
+            codeDetails: JSON.parse(#"{"package":"no-dynamic-package","config":{}}"#),
+            configProvider: props.configProvider), isolation: owner)
+        let request = createOdspCreateContainerRequest(siteUrl: connectionConfig.siteUrl, driveId: connectionConfig.driveId, filePath: connectionConfig.filePath, fileName: UUID().uuidString.lowercased())
+        let fluidContainer = try await createFluidContainer(container: container, attach: {
+            _ = owner
+            try await container.attach(request)
+            guard let resolved = container.resolvedUrl else {
+                throw JSONDecodingError("Resolved Url not available on attached container")
+            }
+            return try IOdspResolvedUrl(json: resolved.json).itemId
+        })
+        return (fluidContainer, try OdspContainerServices(container: container))
     }
 
     /// odspClient.ts `getContainer`: loads the file `id` in the configured drive, owned by

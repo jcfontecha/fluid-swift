@@ -92,6 +92,19 @@ public final class BTree<Key, Value> {
         try result.editAll { key, value in .replace(try transform(value, key)) }
         return result
     }
+    /// b+tree.js minKey: the lowest key, or nil when empty.
+    public func minKey() -> Key? { root.minKey }
+    /// b+tree.js maxKey: the highest key, or nil when empty.
+    public func maxKey() -> Key? { isEmpty ? nil : root.maxKey() }
+    /// b+tree.js nextHigherKey: the lowest key strictly greater than `key`.
+    public func nextHigherKey(_ key: Key) -> Key? { getPairOrNextHigher(key, inclusive: false)?.0 }
+    /// b+tree.js getRange: pairs with `low <= key < high` (`<= high` when `includeHigh`), ascending.
+    public func getRange(_ low: Key, _ high: Key, includeHigh: Bool = false) -> [(Key, Value?)] {
+        entries.filter { entry in
+            let upper = compare(entry.0, high)
+            return compare(entry.0, low) >= 0 && (includeHigh ? upper <= 0 : upper < 0)
+        }
+    }
     public func getPairOrNextHigher(_ key: Key, inclusive: Bool = true) -> (Key, Value?)? {
         root.neighbor(key, higher: true, inclusive: inclusive, compare: compare)
     }

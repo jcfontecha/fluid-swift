@@ -1,7 +1,5 @@
-/// Ports policies.ts IRouterliciousDriverPolicies, with documentServiceFactory.ts's defaults.
-/// The Swift driver reads `enableInternalSummaryCaching` (the snapshot-tree cache). Discovery and
-/// whole-summary storage are not ported, so the factory rejects a policy that turns them on;
-/// prefetch, request limits and long-polling downgrade are not ported and have no effect.
+/// Ports policies.ts with documentServiceFactory.ts defaults.
+/// Prefetch, concurrency limits and long-polling downgrade remain unimplemented.
 public struct IRouterliciousDriverPolicies: Sendable {
     public var enablePrefetch: Bool
     public var maxConcurrentStorageRequests: Int

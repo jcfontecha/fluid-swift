@@ -110,11 +110,11 @@ func sharedStringAdapter(_ runtime: MockContainerRuntime<SharedString>) -> Runti
     }
   }
   for label in runtime.channel.getIntervalCollectionLabels() { subscribe(label) }
-  runtime.channel.createIntervalCollection = { [weak peer] label in
+  runtime.channel.createIntervalCollection.on { [weak peer] label in
     peer?.events.append(.array([.string("createIntervalCollection"), .string(label)]))
     subscribe(label)
   }
-  runtime.channel.sequenceMaintenance = { [weak peer] event in
+  runtime.channel.sequenceMaintenance.on { [weak peer] event in
     peer?.events.append(.array([
       .string("maintenance"), .number(Double(event.deltaOperation)), .bool(event.isLocal),
       .array(event.ranges.map { range in
@@ -122,7 +122,7 @@ func sharedStringAdapter(_ runtime: MockContainerRuntime<SharedString>) -> Runti
       }),
     ]))
   }
-  runtime.channel.sequenceDelta = { [weak peer] event in
+  runtime.channel.sequenceDelta.on { [weak peer] event in
     peer?.events.append(.array([
       .string("sequenceDelta"), .number(Double(event.deltaOperation)), .bool(event.isLocal),
       .array(event.ranges.map { range in

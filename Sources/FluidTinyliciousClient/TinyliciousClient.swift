@@ -19,7 +19,7 @@ private struct TinyliciousConfigProvider: IConfigProviderBase {
 /// containers from a Tinylicious service. The client itself is immutable configuration; each
 /// container it returns belongs to the actor passed as `isolation` (ARCHITECTURE.md section 2).
 ///
-/// `createContainer` is not ported: the loader cannot create a detached container yet.
+/// `createContainer` returns a detached container; `attach()` persists it.
 public final class TinyliciousClient: Sendable {
     private let documentServiceFactory: RouterliciousDocumentServiceFactory
     private let urlResolver: InsecureTinyliciousUrlResolver
@@ -32,6 +32,32 @@ public final class TinyliciousClient: Sendable {
         urlResolver = try InsecureTinyliciousUrlResolver(port: connection?.port)
         documentServiceFactory = RouterliciousDocumentServiceFactory(
             tokenProvider: connection?.tokenProvider ?? InsecureTinyliciousTokenProvider())
+    }
+
+    /// TinyliciousClient.ts createContainer: create locally, then let attach persist the graph.
+    public func createContainer(
+        _ containerSchema: ContainerSchema,
+        oldestSupportedClient: String,
+        isolation owner: isolated any Actor
+    ) async throws -> (container: FluidContainer, services: TinyliciousContainerServices) {
+        let props = try getLoaderProps(containerSchema, oldestSupportedClient: oldestSupportedClient, request: IRequest(url: ""))
+        let container = try await createDetachedContainer(ICreateDetachedContainerProps(
+            urlResolver: props.urlResolver, documentServiceFactory: props.documentServiceFactory,
+            runtimeFactory: props.runtimeFactory,
+            codeDetails: JSON.parse(#"{"package":"no-dynamic-package","config":{}}"#),
+            configProvider: props.configProvider), isolation: owner)
+        var headers = JSObject<JSONValue>()
+        headers["createNew"] = .bool(true)
+        let request = IRequest(url: "", headers: headers)
+        let fluidContainer = try await createFluidContainer(container: container, attach: {
+            _ = owner
+            try await container.attach(request)
+            guard let resolved = container.resolvedUrl else {
+                throw JSONDecodingError("Resolved Url not available on attached container")
+            }
+            return resolved.id.description
+        })
+        return (fluidContainer, try getContainerServices(container))
     }
 
     /// TinyliciousClient.ts `getContainer`: loads the container `id`, owned by `owner`.

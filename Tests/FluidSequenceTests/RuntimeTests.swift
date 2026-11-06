@@ -93,7 +93,7 @@ extension SequenceRuntimeTests {
     let runtime = MockFluidDataStoreRuntime(clientId: "A")
     var order: [String] = []
     text.connect(runtime) { _, _ in order.append("submit") }
-    text.sequenceDelta = { _ in order.append("delta") }
+    text.sequenceDelta.on { _ in order.append("delta") }
     try text.annotateRange(0, 2, JSObject())
     #expect(order == ["submit", "delta"])
     #expect(text.client.pendingOperationCount == 1)
@@ -107,7 +107,7 @@ extension SequenceRuntimeTests {
     var submitted: [(JSONValue, SequenceLocalOpMetadata)] = []
     var operations: [Int] = []
     text.connect(runtime) { submitted.append(($0, $1)) }
-    text.sequenceDelta = { operations.append($0.deltaOperation) }
+    text.sequenceDelta.on { operations.append($0.deltaOperation) }
     try text.insertText(0, "abc")
     let insertion = try #require(submitted.last)
     try text.rollback(insertion.0, localOpMetadata: insertion.1)
@@ -120,7 +120,7 @@ extension SequenceRuntimeTests {
     let runtime = MockFluidDataStoreRuntime(clientId: "A")
     text.connect(runtime) { _, _ in }
     var rejected = false
-    text.sequenceDelta = { _ in
+    text.sequenceDelta.on { _ in
       do { try text.insertText(0, "nested") }
       catch { rejected = true }
     }
