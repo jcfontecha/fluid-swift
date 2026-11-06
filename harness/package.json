@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "fuzz:oplifecycle": "tsx src/oplifecycle/fuzz.ts",
     "fixtures:driver-definitions": "tsx src/driver-definitions-fixtures.ts",
     "socketio-fixtures": "tsx src/socketio-fixtures.ts",
     "socketio-check": "tsx src/socketio-check.ts",

@@ -11,6 +11,9 @@ let package = Package(
     ],
     targets: [
         .target(name: "FluidJS"),
+        .target(name: "FluidContainerRuntime", dependencies: ["FluidJS", "FluidLZ4", "FluidDriverDefinitions"]),
+        .executableTarget(name: "FluidOpLifecyclePeer", dependencies: ["FluidContainerRuntime", "FluidJS"]),
+        .testTarget(name: "FluidContainerRuntimeTests", dependencies: ["FluidContainerRuntime", "FluidJS"]),
         .target(name: "FluidDriverBase", dependencies: ["FluidJS", "FluidSocketIO", "FluidDriverDefinitions"]),
         .target(name: "FluidRouterliciousDriver", dependencies: ["FluidJS", "FluidDriverBase", "FluidDriverDefinitions"]),
         .target(name: "FluidTinyliciousDriver", dependencies: ["FluidJS", "FluidRouterliciousDriver", "FluidDriverDefinitions"]),

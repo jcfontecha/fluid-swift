@@ -157,3 +157,61 @@ writer's outbound queue is paused, resumes it and checks commitment, sends a run
 signal, disconnects the second TS client, and disconnects/reconnects Swift across a
 TS edit. Failures write `traces/service-<seed>.jsonl` with RPC exchanges and checkpoint
 views. Service runs clean up their processes and temporary storage on success/failure.
+
+## H1 — container-runtime operation lifecycle
+
+`npm run fuzz:oplifecycle` builds `FluidOpLifecyclePeer` in release mode using
+`--scratch-path .build/h1`, then checks seeds 0–999. `--self` runs TS against TS;
+`--seeds=10` selects the first ten seeds. No package installation or service is needed.
+The peer accepts newline-delimited `{method:"outbound"|"inbound",value:...}` requests,
+returns one JSON value per line, and exits nonzero on malformed input. Requests are
+serial, with a 30-second response deadline. Failure scenarios (including seed and
+configuration) are saved to `harness/traces/oplifecycle/<seed>.json`.
+
+The oracle imports the installed 3.11.0 internal classes directly: Outbox (which
+owns the real BatchManagers), OpGroupingManager, OpCompressor, OpSplitter and
+RemoteMessageProcessor/OpDecompressor. A real PendingStateManager receives flushes.
+The deterministic Mulberry32 generator covers three flushes per seed, grouping
+on/off, singleton/multi-message/empty replay batches, explicit replay identities,
+ID creation-range envelopes, UTF-16 surrogates, quoting, threshold configurations
+(including 614400), and small through multi-chunk payloads. The Swift peer is only
+an adapter: batching, transformation and inbound state live in FluidContainerRuntime.
+
+Outbound comparison is exact for serialized uncompressed runtime contents and
+metadata. LZ4 compressed bytes intentionally differ between native liblz4 and
+lz4js: both payloads are decompressed by the **real TS OpDecompressor** before
+comparison. Chunk streams are reassembled only for this payload comparison.
+Independently, each Swift compressed payload is passed through the **real TS
+OpSplitter** at the configured chunk size; every emitted Swift chunk, envelope,
+metadata and serialized chunk-content string must match that oracle output.
+Thus differences in codec compression ratio may legitimately change chunk counts,
+but cannot hide incorrect chunk sizes, boundaries, framing or final metadata.
+
+Inbound comparison feeds the complete TS wire stream into Swift and compares every
+RemoteMessageProcessor result, including null intermediate chunks, batch starts,
+key messages, synthetic grouped CSNs and outer batch-start CSNs. The same check is
+performed on the Swift wire stream, proving the actual TS decoder accepts it.
+Streams are compared with their own sequenced envelopes: differing native compression
+ratios legitimately move the final chunk's CSN/sequence number. Missing object
+properties are compared as their JSON wire representation, not JS `undefined` keys.
+
+Focused Swift Testing cases port the upstream lifecycle invariants: singleton
+bypass, boundary markers, grouped CSNs and identity, UTF-16 splitting/extra empty
+chunk, corruption and partial-stream clearing, allocation-before-marking, staged
+send suppression, rollback LIFO, marker alternation, exact compression threshold,
+empty replay and disconnected pending registration, and synchronous rebase.
+Run `swift test --scratch-path .build/h1 --filter FluidContainerRuntimeTests`.
+
+Test-first evidence: the initial TS self-check passed; Swift's API skeleton failed
+seed 0 and both initial Swift tests. Native implementation passed 1,000 seeds in
+both directions. A planted `chunkId = i + 2` mutation failed seed 7; it was reverted.
+Pending-registration and disconnected-empty tests each exposed a separate red case
+before their fixes. These are lifecycle tests, not claims of a complete runtime.
+
+Next lanes supply the real pending-state/ack/reconnect policy, ID compressor range
+producer, document schema and compatibility configuration, summary persistence of
+partial chunks, and datastore dispatch. Outbox exposes synchronous submit, flush,
+allocation, resubmit and pending-registration hooks; RemoteMessageProcessor takes
+sequenced JSON envelopes and returns the same result shapes as TS. Loader wiring,
+legacy loader submission, historical initial-partial-stream recovery, summarizer,
+GC and datastores are not implemented by this lane. Live chunk processing is strict.
