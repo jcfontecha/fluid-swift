@@ -17,6 +17,7 @@
     "fuzz:presence": "tsx src/presence/fuzz.ts",
     "fuzz:mergetree": "tsx src/mergetree/driver.ts",
     "fixtures:driver-definitions": "tsx src/driver-definitions-fixtures.ts",
+    "fixtures:registry": "tsx src/registry/fixtures.ts ../Tests/FluidStaticTests/Fixtures/channel-factories.json",
     "socketio-fixtures": "tsx src/socketio-fixtures.ts",
     "socketio-check": "tsx src/socketio-check.ts",
     "fuzz": "tsx src/driver.ts",

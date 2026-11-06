@@ -1,0 +1,67 @@
+[
+  {
+    "name": "SharedMap",
+    "type": "https://graph.microsoft.com/types/map",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/map\",\"snapshotFormatVersion\":\"0.2\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "SharedDirectory",
+    "type": "https://graph.microsoft.com/types/directory",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/directory\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "SharedCounter",
+    "type": "https://graph.microsoft.com/types/counter",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/counter\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "SharedCell",
+    "type": "https://graph.microsoft.com/types/cell",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/cell\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "ConsensusRegisterCollection",
+    "type": "https://graph.microsoft.com/types/consensus-register-collection",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/consensus-register-collection\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "SharedSummaryBlock",
+    "type": "https://graph.microsoft.com/types/shared-summary-block",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/shared-summary-block\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "PactMap",
+    "type": "https://graph.microsoft.com/types/pact-map",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/pact-map\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "TaskManager",
+    "type": "https://graph.microsoft.com/types/task-manager",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/task-manager\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "ConsensusQueue",
+    "type": "https://graph.microsoft.com/types/consensus-queue",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/consensus-queue\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "SharedArray",
+    "type": "https://graph.microsoft.com/types/SharedArray",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/SharedArray\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "SharedSignal",
+    "type": "https://graph.microsoft.com/types/signal",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/signal\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "SharedString",
+    "type": "https://graph.microsoft.com/types/mergeTree",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/mergeTree\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  },
+  {
+    "name": "SharedMatrix",
+    "type": "https://graph.microsoft.com/types/sharedmatrix",
+    "attributes": "{\"type\":\"https://graph.microsoft.com/types/sharedmatrix\",\"snapshotFormatVersion\":\"0.1\",\"packageVersion\":\"3.11.0\"}"
+  }
+]

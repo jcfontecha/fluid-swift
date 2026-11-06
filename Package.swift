@@ -8,6 +8,7 @@ let package = Package(
     products: [
         .library(name: "FluidContainerLoader", targets: ["FluidContainerLoader"]),
         .library(name: "FluidCounter", targets: ["FluidCounter"]),
+        .library(name: "FluidOdspClient", targets: ["FluidOdspClient"]),
         .executable(name: "fluid-swift-peer", targets: ["FluidSwiftPeer"]),
     ],
     targets: [
@@ -48,7 +49,10 @@ let package = Package(
         .target(name: "FluidRouterliciousDriver", dependencies: ["FluidJS", "FluidDriverBase", "FluidDriverDefinitions"]),
         .target(name: "FluidTinyliciousDriver", dependencies: ["FluidJS", "FluidRouterliciousDriver", "FluidDriverDefinitions"]),
         .target(name: "FluidAqueduct", dependencies: ["FluidDatastore", "FluidMap", "FluidJS"]),
-        .target(name: "FluidStatic", dependencies: ["FluidDatastoreDefinitions", "FluidAqueduct", "FluidContainerRuntime", "FluidDatastore", "FluidMap", "FluidJS"]),
+        .target(name: "FluidStatic", dependencies: ["FluidDatastoreDefinitions", "FluidDriverDefinitions", "FluidAqueduct", "FluidContainerRuntime", "FluidDatastore", "FluidMap", "FluidJS", "FluidCounter", "FluidCell", "FluidRegisterCollection", "FluidSharedSummaryBlock", "FluidPactMap", "FluidTaskManager", "FluidOrderedCollection", "FluidLegacyDDS", "FluidSequence", "FluidMatrix"]),
+        .target(name: "FluidOdspClient", dependencies: ["FluidStatic", "FluidDriverDefinitions", "FluidJS"]),
+        .testTarget(name: "FluidOdspClientTests", dependencies: ["FluidOdspClient", "FluidStatic", "FluidDriverDefinitions", "FluidJS"]),
+        .testTarget(name: "FluidStaticTests", dependencies: ["FluidStatic", "FluidJS", "FluidDatastore", "FluidMap", "FluidCounter", "FluidCell", "FluidRegisterCollection", "FluidSharedSummaryBlock", "FluidPactMap", "FluidTaskManager", "FluidOrderedCollection", "FluidLegacyDDS", "FluidSequence", "FluidMatrix"], resources: [.copy("Fixtures")]),
         .target(name: "FluidContainerLoader", dependencies: ["FluidContainerRuntime", "FluidPresence", "FluidDatastore", "FluidDatastoreDefinitions", "FluidMap", "FluidStatic", "FluidJS", "FluidDriverDefinitions", "FluidSocketIO", "FluidDriverBase", "FluidRouterliciousDriver", "FluidTinyliciousDriver"]),
         .executableTarget(name: "FluidServicePeer", dependencies: ["FluidJS", "FluidContainerLoader"]),
         .testTarget(name: "FluidContainerLoaderTests", dependencies: ["FluidContainerRuntime", "FluidDatastore", "FluidTestRuntimeUtils", "FluidDatastoreDefinitions", "FluidMap", "FluidStatic", "FluidJS", "FluidContainerLoader", "FluidTinyliciousDriver", "FluidDriverDefinitions", "FluidDriverBase"], resources: [.copy("Fixtures")]),
