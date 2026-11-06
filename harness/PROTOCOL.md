@@ -176,12 +176,21 @@ Sorted means JS `<` on keys, which compares UTF-16 code units.
 | pact-map | `set{key,value,valueKind?:"undefined"}` → `set`; `delete{key}` | for keys `a,b,c,0,10,constructor`: `{key, value: get, details: getWithDetails, pending: isPending, proposal: getPending}` | `{}` | `pending key`; `accepted key` |
 | shared-summary-block | `set{key,value}`, issued to every client identically | `[key, get(key)][]` for the six keys | `{}` | none |
 | shared-array | `insert{index,value}`; `delete{index}`; `move{oldIndex,newIndex}`; `toggle{entryId}`; `toggleMove{oldEntryId,newEntryId}`; `insertBulkAfter{ref?,values}`, each applied as given | `get()` | `{length, values: get(), insertIds, deleteIds, moveIds: [old,new][]}`, the upstream fuzzUtils entry bookkeeping driven by `valueChanged` | `valueChanged op, local` |
+| matrix | `insertRows/removeRows/insertCols/removeCols{start,count}`, `setCell{row,col,value,valueKind?}`, `switchSetCellPolicy` | `{rowCount,colCount,cells}` dense grid; undefined is `{$fluid:"undefined"}`; handles use Fluid wire encoding | `{rowCount,colCount,fww}` | `rowsChanged/colsChanged start,removed,inserted`; `cellsChanged row,col,rows,cols`; `conflict row,col,current,ignored` |
 | shared-string | `insertText{position,text,props?}`; `insertMarker{position,props}` (Tile); `removeRange{start,end}`; `annotateRange{start,end,props}`; `addInterval{collection,id,start,end,props?}`; `changeInterval{collection,id,start?,end?,props?}`; `deleteInterval{collection,id}` | `{text: UTF-16 units, positions: [{properties,marker}], collections: [{label,intervals:[{id,start,end,properties}]}]}`; labels, IDs and property keys sorted by UTF-16; absent property bags mean `{}` | `{length,collections}` | `sequenceDelta`/`maintenance operation,local,ranges`; `createIntervalCollection label`; `addInterval`/`deleteInterval label,interval,local`; `changeInterval label,interval,previous,local,slide`; `propertyChanged label,interval,delta,local` |
 | shared-signal | `notify{value}` | `{persistent:false}`; notifications are checked through events, never invented as persistent state | `{}` | `notify value, local` |
 
 TaskManager and ConsensusQueue have no public read API for their global state, so their
 canonical state reads the DDS's own summary blobs. Register `keys()` order is twin-only
 (see "Oracle preconditions" below); everything else in `queries` is client-relative.
+
+Matrix follows `matrix/src/test/fuzz.ts`: insert/remove rows/columns weighted 10 each,
+set weighted 200, and the one-way FWW switch weighted 1 while eligible. Dimension
+changes are 1–3; values include numbers, short strings, native handles and undefined
+(the clearing case extends the upstream pool). No upstream-defect exclusions apply.
+The upstream model has no undo/redo. `npm run matrix:check` additionally checks
+turn-based rollback, stashed sets/vector edits and concurrent LWW/FWW writes against
+the twin; its load/summarize observer never edits.
 
 Summary trees and blob strings remain byte-exact against the twin, without normalization.
 Map/Directory state sorting does not change their authored summaries. Set edits support

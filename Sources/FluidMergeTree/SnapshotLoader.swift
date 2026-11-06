@@ -3,7 +3,8 @@ import FluidJS
 /// Ports snapshotLoader.ts and snapshotChunks.ts legacy/V1 decoding.
 /// Uses FluidJS for every snapshot byte; decoded counters remain checked integers.
 public final class SnapshotLoader {
-  public init() {}
+  private let segmentFactory: ((JSONValue, Stamp) throws -> BaseSegment)?
+  public init(segmentFactory: ((JSONValue, Stamp) throws -> BaseSegment)? = nil) { self.segmentFactory = segmentFactory }
 
   public func load(_ summary: JSONValue, id: JSString) throws -> Client {
     let blobs = try summary.member("tree").asObject()
@@ -48,6 +49,7 @@ public final class SnapshotLoader {
       throw JSONDecodingError("invalid snapshot chunks")
     }
     let client = Client(id: id)
+    client.segmentFactory = segmentFactory
     var totalLength = 0
     var totalCount = 0
     for (index, name) in names.enumerated() {
@@ -100,7 +102,9 @@ public final class SnapshotLoader {
     let sender = try wrapper?["client"].map { try $0.asString() } ?? ""
     let stamp = Stamp(sequence: sequence, client: sender)
     let segment: BaseSegment
-    if case .string(let text) = payload {
+    if let segmentFactory {
+      segment = try segmentFactory(payload, stamp)
+    } else if case .string(let text) = payload {
       segment = TextSegment(text: text, insertion: stamp)
     } else {
       let fields = try payload.asObject()

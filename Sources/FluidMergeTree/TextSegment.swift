@@ -16,7 +16,7 @@ public final class TextSegment: BaseSegment {
     units = text
     super.init(insertion: insertion, removals: removals, properties: properties)
   }
-  override func clonePayload() -> BaseSegment {
+  public override func clonePayload() -> BaseSegment {
     TextSegment(text: units, insertion: insertion, properties: properties)
   }
   public override func canAppend(_ other: BaseSegment) -> Bool {

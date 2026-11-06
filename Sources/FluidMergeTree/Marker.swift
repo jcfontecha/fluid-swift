@@ -8,7 +8,7 @@ public final class Marker: BaseSegment {
     self.refType = refType
     super.init(insertion: insertion, properties: properties)
   }
-  override func clonePayload() -> BaseSegment {
+  public override func clonePayload() -> BaseSegment {
     Marker(refType: refType, insertion: insertion, properties: properties)
   }
   public override func toJSON() -> JSONValue {

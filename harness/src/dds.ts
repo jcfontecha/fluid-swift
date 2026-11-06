@@ -1,3 +1,5 @@
+import { SharedMatrix } from "@fluidframework/matrix/internal";
+import { matrixAdapter, generateMatrix } from "./matrix.js";
 import { SharedString } from "@fluidframework/sequence/internal";
 import { sharedStringAdapter, generateSharedString } from "./sequence.js";
 import { MockHandle } from "@fluidframework/test-runtime-utils/internal";
@@ -48,6 +50,7 @@ import type { Edit, Message, Outbound } from "./protocol.js";
 import { Random } from "./random.js";
 
 export const factories = {
+  matrix: SharedMatrix.getFactory(),
   "shared-string": SharedString.getFactory(),
   counter: SharedCounter.getFactory(),
   map: SharedMap.getFactory(),
@@ -93,6 +96,8 @@ export async function createAdapter(
   const events: unknown[] = [];
   const keys = ["a", "b", "c", "0", "10", "constructor"];
   switch (name) {
+    case "matrix":
+      return matrixAdapter(await load(factories[name], store, id, services, existing));
     case "shared-string":
       return sharedStringAdapter(await load(factories[name], store, id, services, existing));
     case "counter": {
@@ -451,6 +456,7 @@ function directoryState(c: IDirectory): unknown {
 }
 /** DDSes whose generator chooses operations from the client's own `queries`. */
 export const queryDrivenGenerators: readonly DDSName[] = [
+  "matrix",
   "shared-string",
   "task-manager",
   "shared-array",
@@ -523,6 +529,7 @@ export function generate(
   const value = r.int(5) === 0 ? "x".repeat(8200) : r.int(1000);
   const p = r.int(10);
   switch (name) {
+    case "matrix": return generateMatrix(r, queries);
     case "shared-string":
       return generateSharedString(r, queries);
     case "counter":

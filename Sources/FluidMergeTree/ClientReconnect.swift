@@ -9,8 +9,9 @@ extension Client {
     }
     rollingBack = true
     defer { rollingBack = false }
+    let sequences = Set(message)
     var groups: [SegmentGroup] = []
-    while pending.count > pendingHead, pending.last?.localSequence == message {
+    while pending.count > pendingHead, let last = pending.last, sequences.contains(last.localSequence) {
       groups.append(pending.removeLast())
     }
     var removed: [BaseSegment] = []
@@ -129,8 +130,8 @@ extension Client {
       }
       result[group.localSequence, default: []].append(contentsOf: operations)
     }
-    return pendingMessages.map { sequence in
-      let operations = result[sequence, default: []]
+    return pendingMessages.map { sequences in
+      let operations = sequences.flatMap { result[$0, default: []] }
       return operations.count == 1
         ? operations[0] : object([("ops", .array(operations)), ("type", .number(3))])
     }

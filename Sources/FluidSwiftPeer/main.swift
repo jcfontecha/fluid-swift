@@ -5,6 +5,7 @@ import FluidDriverDefinitions
 import FluidJS
 import FluidLegacyDDS
 import FluidMap
+import FluidMatrix
 import FluidOrderedCollection
 import FluidPactMap
 import FluidRegisterCollection
@@ -77,7 +78,7 @@ final class RuntimeClient<C: Channel>: PeerClient {
 final class Peer {
   private var clients: [JSString: any PeerClient] = [:]
   private let ddsTypes: [JSString] = [
-    SharedString.type, SharedCounter.type, SharedMap.type,
+    SharedMatrix.type, SharedString.type, SharedCounter.type, SharedMap.type,
     SharedDirectory.type, "https://graph.microsoft.com/types/cell",
     "https://graph.microsoft.com/types/task-manager",
     "https://graph.microsoft.com/types/consensus-register-collection",
@@ -138,6 +139,11 @@ final class Peer {
           client?.events.append(.array([.string("incremented"), .number(amount), .number(value)]))
         }
         clients[id] = client
+      } else if type == SharedMatrix.type {
+        let channel = summary == .null ? SharedMatrix(id: channelId)
+          : try SharedMatrix.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = matrixAdapter(MockContainerRuntime(clientId: id, channel: channel,
+          lastSequenceNumber: seq, flushMode: mode))
       } else if type == SharedString.type {
         let channel = summary == .null ? SharedString(id: channelId)
           : try SharedString.load(id: channelId, summary: SummaryTree(json: summary))

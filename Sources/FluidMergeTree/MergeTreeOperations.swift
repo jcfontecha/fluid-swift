@@ -3,7 +3,7 @@ import FluidJS
 // Ports mergeTree.ts segment mutation. Client supplies operation stamps and
 // translates messages; the tree owns splitting, ordering and range mutation.
 extension MergeTree {
-  private func splitBoundary(_ position: Int, perspective: Perspective) throws {
+  func splitBoundary(_ position: Int, perspective: Perspective) throws {
     guard let (segment, offset) = containing(position, perspective: perspective), offset > 0 else {
       return
     }
@@ -17,7 +17,7 @@ extension MergeTree {
   }
   func apply(
     _ operation: JSONValue, perspective: Perspective, stamp: Stamp, group: SegmentGroup?,
-    minimumSequence: Int, currentSequence: Int, delta: (([MergeTreeDeltaSegment]) throws -> Void)? = nil,
+    minimumSequence: Int, currentSequence: Int, segmentFactory: ((JSONValue, Stamp) throws -> BaseSegment)? = nil, delta: (([MergeTreeDeltaSegment]) throws -> Void)? = nil,
     slideBeforeDelta: (([BaseSegment]) -> Void)? = nil
   ) throws -> [BaseSegment] {
     let type = try operation.member("type").asInt()
@@ -32,18 +32,22 @@ extension MergeTree {
     if type == 0 {
       let payload = try operation.member("seg")
       let segment: BaseSegment
-      switch payload {
-      case .string(let text): segment = TextSegment(text: text, insertion: stamp)
-      case .object(let fields):
-        let props = try fields["props"].map { try $0.asObject() }
-        if let text = fields["text"] {
-          segment = TextSegment(text: try text.asString(), insertion: stamp, properties: props)
-        } else {
-          segment = Marker(
-            refType: try payload.member("marker").member("refType").asInt(), insertion: stamp,
-            properties: props)
+      if let segmentFactory {
+        segment = try segmentFactory(payload, stamp)
+      } else {
+        switch payload {
+        case .string(let text): segment = TextSegment(text: text, insertion: stamp)
+        case .object(let fields):
+          let props = try fields["props"].map { try $0.asObject() }
+          if let text = fields["text"] {
+            segment = TextSegment(text: try text.asString(), insertion: stamp, properties: props)
+          } else {
+            segment = Marker(
+              refType: try payload.member("marker").member("refType").asInt(), insertion: stamp,
+              properties: props)
+          }
+        default: throw JSONDecodingError("invalid segment payload")
         }
-      default: throw JSONDecodingError("invalid segment payload")
       }
       if segment.length == 0 { return [] }
       let next = insertionTarget(

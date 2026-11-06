@@ -374,11 +374,10 @@ public final class MergeTree {
       } else if segment.insertion.sequence != -1, segment.insertion.sequence <= minimum {
         if let left = previous, left.canAppend(segment),
           matchProperties(left.properties, segment.properties),
-          left.trackingCollection.matches(segment.trackingCollection),
-          let lhs = left.text, let rhs = segment.text
+          left.trackingCollection.matches(segment.trackingCollection)
         {
           left.localRefs.append(segment.localRefs)
-          left.text = JSString(utf16: lhs.utf16 + rhs.utf16)
+          left.appendPayload(segment)
           maintenance?(.append, [MergeTreeDeltaSegment(segment: left), MergeTreeDeltaSegment(segment: segment)])
           segment.trackingCollection.unlinkAll(segment)
           segment.localRefs.detachOwner()

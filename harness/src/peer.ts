@@ -131,8 +131,9 @@ async function handle(request: Request): Promise<unknown> {
         minimumSequenceNumber: p.sequenceNumber,
       },
     );
-    if (p.ddsType === factories["shared-string"].type && p.summary !== null) {
-      const content = p.summary.tree.content;
+    if ((p.ddsType === factories["shared-string"].type || p.ddsType === factories.matrix.type) && p.summary !== null) {
+      const vector = p.summary.tree.rows;
+      const content = p.ddsType === factories.matrix.type && vector?.type === 1 ? vector.tree.segments : p.summary.tree.content;
       const header = content?.type === 1 ? content.tree.header : undefined;
       if (header?.type !== 2) throw new Error("Missing sequence content header");
       const metadata = z.object({
@@ -149,7 +150,7 @@ async function handle(request: Request): Promise<unknown> {
         : MockSharedObjectServices.createFromSummary(p.summary);
     // MockObjectStorageService.list returns full paths; sequence's scoped loader needs
     // child-relative names, supplied by the upstream tree-backed MockStorage.
-    const channelServices = p.ddsType === factories["shared-string"].type && p.summary !== null
+    const channelServices = (p.ddsType === factories["shared-string"].type || p.ddsType === factories.matrix.type) && p.summary !== null
       ? { objectStorage: MockStorage.createFromSummary(p.summary), deltaConnection: store.createDeltaConnection() }
       : services;
     if (channelServices === services) services.deltaConnection = store.createDeltaConnection();

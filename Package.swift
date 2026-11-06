@@ -26,6 +26,8 @@ let package = Package(
         .executableTarget(name: "FluidMergeTreePeer", dependencies: ["FluidMergeTree", "FluidJS"]),
         .testTarget(name: "FluidMergeTreeTests", dependencies: ["FluidMergeTree", "FluidJS"]),
         .target(name: "FluidJS"),
+        .target(name: "FluidMatrix", dependencies: ["FluidJS", "FluidMergeTree", "FluidSharedObjectBase", "FluidDriverDefinitions"]),
+        .testTarget(name: "FluidMatrixTests", dependencies: ["FluidMatrix", "FluidJS"]),
         .executableTarget(name: "FluidOdspNetPeer", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"]),
         .target(name: "FluidOdspDriver", dependencies: ["FluidJS", "FluidDriverDefinitions"]),
         .testTarget(name: "FluidOdspDriverTests", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"]),
@@ -77,7 +79,7 @@ let package = Package(
         .testTarget(name: "FluidLegacyDDSTests", dependencies: ["FluidLegacyDDS", "FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions", "FluidSharedObjectBase", "FluidTestRuntimeUtils"]),
         .executableTarget(
             name: "FluidSwiftPeer",
-            dependencies: ["FluidMergeTree", "FluidSequence", "FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions", "FluidCounter", "FluidCell", "FluidMap", "FluidSharedObjectBase", "FluidSharedSummaryBlock", "FluidRegisterCollection", "FluidPactMap", "FluidTaskManager", "FluidOrderedCollection", "FluidLegacyDDS", "FluidTestRuntimeUtils"]
+            dependencies: ["FluidMatrix", "FluidMergeTree", "FluidSequence", "FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions", "FluidCounter", "FluidCell", "FluidMap", "FluidSharedObjectBase", "FluidSharedSummaryBlock", "FluidRegisterCollection", "FluidPactMap", "FluidTaskManager", "FluidOrderedCollection", "FluidLegacyDDS", "FluidTestRuntimeUtils"]
         ),
         .testTarget(name: "FluidDriverDefinitionsTests", dependencies: ["FluidDriverDefinitions", "FluidJS"], resources: [.copy("Fixtures")]),
         .testTarget(name: "FluidJSTests", dependencies: ["FluidJS"]),

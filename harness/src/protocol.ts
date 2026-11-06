@@ -32,6 +32,9 @@ const sequencePlace = z.union([
   z.object({ pos: z.number().int().nonnegative(), side: z.union([z.literal(0), z.literal(1)]) }),
 ]);
 export const editSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.enum(["insertRows", "removeRows", "insertCols", "removeCols"]), start: z.number().int().nonnegative(), count: z.number().int().nonnegative() }),
+  z.object({ kind: z.literal("setCell"), row: z.number().int().nonnegative(), col: z.number().int().nonnegative(), value: z.json(), valueKind: z.enum(["undefined", "handle"]).optional() }),
+  z.object({ kind: z.literal("switchSetCellPolicy") }),
   z.object({ kind: z.literal("insertText"), position: z.number().int().nonnegative(), text: z.string(), props: z.record(z.string(), z.json()).optional() }),
   z.object({ kind: z.literal("insertMarker"), position: z.number().int().nonnegative(), props: z.record(z.string(), z.json()) }),
   z.object({ kind: z.literal("removeRange"), start: z.number().int().nonnegative(), end: z.number().int().nonnegative() }),

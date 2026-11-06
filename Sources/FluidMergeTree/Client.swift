@@ -18,6 +18,7 @@ public final class Client {
   public internal(set) var rollingBack = false
   public var maintenance: ((MergeTreeMaintenanceType, [MergeTreeDeltaSegment], JSONValue?) -> Void)?
   public var delta: ((JSONValue, [MergeTreeDeltaSegment], Bool) throws -> Void)?
+  public var segmentFactory: ((JSONValue, Stamp) throws -> BaseSegment)?
   let mergeTree = MergeTree()
   let startOfTree = Marker(refType: 0, insertion: Stamp(sequence: 0, client: ""))
   let endOfTree = Marker(refType: 0, insertion: Stamp(sequence: 0, client: ""))
@@ -26,7 +27,7 @@ public final class Client {
   var lastNormalization: (sequence: Int, localSequence: Int, squash: Bool)?
   var pending: [SegmentGroup] = []
   var pendingHead = 0
-  var pendingMessages: [Int] = []
+  var pendingMessages: [[Int]] = []
 
   public init(id: JSString, referencesCanSlideToEndpoint: Bool = false, collaborating: Bool = true) {
     self.id = id
@@ -89,6 +90,21 @@ public final class Client {
     mergeTree.position(of: segment, perspective: .local)
   }
 
+  public func getContainingSegment(_ position: Int, perspective: Perspective = .local) -> (segment: BaseSegment, offset: Int)? {
+    guard let found = mergeTree.containing(position, perspective: perspective) else { return nil }
+    return (found.0, found.1)
+  }
+  public func isolateSegment(_ position: Int, perspective: Perspective = .local) throws -> BaseSegment {
+    try mergeTree.splitBoundary(position, perspective: perspective)
+    try mergeTree.splitBoundary(position + 1, perspective: perspective)
+    guard let found = mergeTree.containing(position, perspective: perspective) else {
+      throw JSONDecodingError("segment position out of bounds")
+    }
+    return found.0
+  }
+  public func position(_ segment: BaseSegment, perspective: Perspective) -> Int {
+    mergeTree.position(of: segment, perspective: perspective)
+  }
   public var length: Int {
     mergeTree.root.localLength
   }
@@ -135,9 +151,23 @@ public final class Client {
     let stamp = Stamp(sequence: -1, client: id, localSequence: localSequence)
     let group = SegmentGroup(localSequence: localSequence, operation: operation)
     pending.append(group)
-    pendingMessages.append(localSequence)
+    pendingMessages.append([localSequence])
     try apply(operation, perspective: .local, stamp: stamp, group: group)
     return operation
+  }
+  /// Ports client.ts applyStashedOp: a GROUP keeps distinct local sequences but one wire acknowledgement.
+  public func applyStashedOp(_ operation: JSONValue) throws {
+    guard try operation.member("type").asInt() == 3 else {
+      _ = try edit(operation)
+      return
+    }
+    let start = pendingMessages.count
+    for child in try operation.member("ops").asArray() { try applyStashedOp(child) }
+    if collaborating {
+      let sequences = pendingMessages[start...].flatMap { $0 }
+      pendingMessages.removeSubrange(start...)
+      pendingMessages.append(sequences)
+    }
   }
   public func process(
     _ operation: JSONValue, sender: JSString, sequence: Int, referenceSequence: Int
@@ -228,7 +258,7 @@ public final class Client {
   ) throws {
     let removed = try mergeTree.apply(
       operation, perspective: perspective, stamp: stamp, group: group,
-      minimumSequence: minimumSequence, currentSequence: currentSequence,
+      minimumSequence: minimumSequence, currentSequence: currentSequence, segmentFactory: segmentFactory,
       delta: { [self] segments in
         try delta?(operation, segments, stamp.sequence == -1 || !collaborating)
       }, slideBeforeDelta: { [self] segments in slideReferences(on: segments) })
