@@ -315,25 +315,45 @@ then was reverted. Run focused tests with
 
 Failures retain scenarios under `traces/idcompressor/<seed>.json`.
 
-## H3 — pending-state layer (partial: duplicate detection)
+## H3 — pending state, reconnect, stash and allocation integration
 
-`npm run fuzz:pendingstate -- --self` checks independent instances of the real
-3.11.0 `DuplicateBatchDetector`; without `--self` it builds
-`FluidPendingStatePeer` with `--scratch-path .build/h3` and compares native
-results as raw JSON text. Default: 1,000 seeds; `--seeds=N` reduces the farm.
-Each newline request is `{snapshot,commands}`. Commands are `process` (with
-sequence number, MSN, client ID, starting CSN and optional explicit batch ID),
-`summary`, and `reload`. Responses retain exact result/summary property order.
-Failures are saved to `traces/pendingstate/<seed>.json`.
+`npm run fuzz:pendingstate -- --self` checks independent real 3.11.0 TS instances;
+without `--self`, it builds `FluidPendingStatePeer` with `--scratch-path .build/h3`
+and compares the complete response as raw JSON text. Every seed runs both the
+original duplicate-detector scenario and a three-client runtime scenario.
+Default: 1,000 seeds; `--seeds=N` reduces the farm. Failures retain their input in
+`traces/pendingstate/<seed>.json`.
 
-The scheduler covers explicit/derived identities, duplicate deliveries, strict
-MSN eviction, summary round trips, and lone-surrogate identity strings. Five
-Swift Testing cases port upstream duplicate-detection cases, including telemetry
-window resets and snapshot insertion order. The TS self-check passed before the
-API skeleton's five tests failed; implementation then made them green. A planted
-`sequence <= MSN` eviction divergence was detected on seed 0, then reverted.
+The original `{snapshot,commands}` protocol remains supported: `process`,
+`summary`, and `reload` exercise explicit/derived batch identities, duplicate
+windows, strict MSN eviction, summary round trips, and lone-surrogate identities.
 
-This is **not the completed H3 runtime harness**. PendingStateManager, reconnect
-resubmission/rebase, stash application, dirty accounting, allocation-op
-regeneration, and their Outbox/RemoteMessageProcessor integration remain unported.
-The green duplicate-detection farm makes no claim about those paths.
+Runtime requests are `{runtime:true,seed,uuids,commands}`. Commands carry
+`{kind,client,count,ids,rebase}`; kinds are `submit`, `disconnect`, `connect`,
+`deliver`, `drop`, `duplicate`, and `reload`. The driver owns the ordered wire
+queue and sequence numbers. Three clients use the real Outbox, PendingStateManager,
+RemoteMessageProcessor, DuplicateBatchDetector and IdCompressor. Native glue lives
+in `ContainerRuntime`, not the peer. Datastore contents are opaque; the resubmit
+callback either preserves them or replaces their inner content deterministically.
+
+Each seed covers sent-but-unacked batches, disconnected submissions, changed
+connection IDs, resubmission, fresh-instance stash application, acknowledgments
+before and after reconnect, duplicate delivery, and interleaved ID allocations.
+Comparisons include every outbound batch, inbound local/remote/duplicate
+classification and correlated metadata, pending count and dirty state, serialized
+pending records, complete stash captures, generated IDs and stable IDs, and the
+session-inclusive compressor serialization after every command. UUID entropy is
+an explicit input shared with Swift, not normalized out of the output.
+
+Reconnect resets the compressor cursor and drops old allocation messages during
+resubmit; Outbox generates the replacement allocation. The planted opposite
+behavior failed seed 0 with `Ranges finalized out of order`; the mutation was
+reverted. Evidence: `src/pendingstate/fixtures/allocation-replay-divergence.txt`.
+The TS self-check and Swift differential both pass 1,000 seeds. This certifies
+the named pending-state integration slice, not the full ContainerRuntime:
+staging commit/discard, schema/blob/GC services, loader connection arbitration,
+and aggregate blob/host dirty-event reentrancy are outside this farm.
+
+Regression commands can share the isolated H3 build directory:
+`npm run fuzz:oplifecycle -- --scratch-path=.build/h3` and
+`npm run fuzz:idcompressor -- --scratch-path=.build/h3`.

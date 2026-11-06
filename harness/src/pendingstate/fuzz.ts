@@ -4,6 +4,8 @@ import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { Random } from '../random.js';
+import { checkStateCheckpoints } from './state-oracle.js';
+import { runRuntime, entropy, type RuntimeScenario } from './runtime-oracle.js';
 import { run, type Scenario } from './oracle.js';
 const root = resolve(import.meta.dirname, '../../..');
 function generate(seed: number): Scenario {
@@ -30,6 +32,7 @@ function generate(seed: number): Scenario {
     scenario.commands.push({ kind: 'summary' });
     return scenario;
 }
+await checkStateCheckpoints();
 const self = process.argv.includes('--self');
 const count = Number(process.argv.find(arg => arg.startsWith('--seeds='))?.split('=')[1] ?? 1000);
 if (!self) {
@@ -37,15 +40,41 @@ if (!self) {
 }
 const child = self ? undefined : spawn(resolve(root, '.build/h3/release/FluidPendingStatePeer'), [], { stdio: ['pipe', 'pipe', 'inherit'] });
 const lines = child ? createInterface({ input: child.stdout })[Symbol.asyncIterator]() : undefined;
-let scenario: Scenario | undefined;
+function generateRuntime(seed: number): RuntimeScenario {
+    const random = new Random(seed);
+    const scenario: RuntimeScenario = { runtime: true, seed, uuids: entropy(seed), commands: [] };
+    const add = (kind: RuntimeScenario['commands'][number]['kind'], client: number, count = 0, ids = 0, rebase = 0) => {
+        scenario.commands.push({ kind, client, count, ids, rebase });
+    };
+    for (let round = 0; round < 8; round++) {
+        const client = random.int(3);
+        add('submit', client, 1 + random.int(3), 1 + random.int(5));
+        add('disconnect', client);
+        if (random.int(3) === 0) {
+            if (random.int(2) === 0) add('reload', client);
+            add('deliver', client);
+        } else {
+            add('drop', client);
+        }
+        add('submit', client, 1 + random.int(3), 1 + random.int(4));
+        if (random.int(2) === 0) add('reload', client);
+        add('connect', client, 0, 0, random.int(2) === 0 ? 0 : 100 + round);
+        add('submit', (client + 1) % 3, 1 + random.int(2), random.int(4));
+        add('deliver', client);
+        add('duplicate', client);
+    }
+    return scenario;
+}
+let scenario: Scenario | RuntimeScenario | undefined;
 let seed = 0;
 try {
     for (; seed < count; seed++) {
-        scenario = generate(seed);
-        const expected = run(scenario);
+        for (const candidate of [generate(seed), generateRuntime(seed)]) {
+        scenario = candidate;
+        const expected = 'runtime' in scenario ? await runRuntime(scenario) : run(scenario);
         let actual: string;
         if (self) {
-            actual = run(scenario);
+            actual = 'runtime' in scenario ? await runRuntime(scenario) : run(scenario);
         } else {
             assert(child && lines);
             child.stdin.write(JSON.stringify(scenario) + '\n');
@@ -60,8 +89,9 @@ try {
             actual = line.value;
         }
         assert.equal(actual, expected, `seed ${seed}`);
+        }
     }
-    console.log(`DuplicateBatchDetector ${self ? 'TS self-check' : 'Swift differential'}: ${count} seeds passed`);
+    console.log(`Pending-state scenario farm ${self ? 'TS self-check' : 'Swift differential'}: ${count} seeds passed`);
 } catch (error) {
     mkdirSync(resolve(root, 'harness/traces/pendingstate'), { recursive: true });
     writeFileSync(resolve(root, `harness/traces/pendingstate/${seed}.json`), JSON.stringify({ seed, scenario, error: String(error) }, null, 2));

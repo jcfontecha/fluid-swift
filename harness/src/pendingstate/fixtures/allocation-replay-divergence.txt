@@ -1,0 +1,27 @@
+Building for production...
+[11 / 25] FluidLZ4
+[12 / 24] FluidJS
+[20 / 30] FluidIdCompressor
+[21 / 31] FluidIdCompressor
+[22 / 30] FluidDriverDefinitions
+[29 / 35] FluidContainerRuntime
+[33 / 33] FluidPendingStatePeer-product
+[34 / 35] FluidPendingStatePeer-product
+Build complete! (6.36 sec)
+Ranges finalized out of order
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: peer exited
+    at <anonymous> (/Users/juan/.t3/scratch/2026-11-06-https-github-com-microsoft-fluidframework-c98490f3/harness/src/pendingstate/fuzz.ts:86:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v22.22.3

@@ -5,6 +5,11 @@ import Foundation
 while let line = readLine() {
   do {
     let scenario = try JSON.parse(line)
+    if try scenario.asObject()["runtime"] == .bool(true) {
+      let result = try runRuntime(scenario)
+      FileHandle.standardOutput.write(Data((JSON.stringify(result) + "\n").utf8))
+      continue
+    }
     var detector = try DuplicateBatchDetector(batchIdsFromSnapshot: scenario.member("snapshot"))
     var results: [JSONValue] = []
     for command in try scenario.member("commands").asArray() {
