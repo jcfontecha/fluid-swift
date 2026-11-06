@@ -122,38 +122,161 @@ private final class FakeStorage: IDocumentStorageService {
     }
 }
 
+/// Delta storage: what the ordering service sequenced in [from, to), or nothing without one.
 private final class FakeDeltaStorage: IDocumentDeltaStorageService {
     let log: CallLog
+    let ordering: Ordering?
 
-    init(log: CallLog) { self.log = log }
+    init(log: CallLog, ordering: Ordering?) {
+        self.log = log
+        self.ordering = ordering
+    }
 
     func fetchMessages(_ from: Int, to: Int?, cachedOnly: Bool, fetchReason: String?)
         -> AsyncThrowingStream<[ISequencedDocumentMessage], any Error>
     {
         log.append("fetchMessages(\(from),\(to.map(String.init) ?? "nil"))")
-        return AsyncThrowingStream { $0.finish() }
+        let (stream, continuation) = AsyncThrowingStream<[ISequencedDocumentMessage], any Error>.makeStream()
+        Task { [ordering] in
+            let messages = await ordering?.log.filter { $0.sequenceNumber >= from && $0.sequenceNumber < (to ?? Int.max) } ?? []
+            if !messages.isEmpty { continuation.yield(messages) }
+            continuation.finish()
+        }
+        return stream
     }
 }
 
+/// An in-process ordering service with deli's client sequence number rule (lambdas/src/deli/lambda.ts
+/// `checkOrder`): the expected CSN is sequenced, a higher one is a gap and is nacked. It sequences a
+/// join when a client connects and a leave when it disconnects, and broadcasts every sequenced
+/// message to every connected client.
+private actor Ordering {
+    private(set) var sequenceNumber: Int
+    private var clients: [String: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.Continuation] = [:]
+    private var expected: [String: Int] = [:]
+    /// Clients whose deliveries are held, with what they have not received yet.
+    private var held: [String: [ISequencedDocumentMessage]] = [:]
+    private(set) var nacks: [String] = []
+    /// Every message the service sequenced, in order.
+    private(set) var log: [ISequencedDocumentMessage] = []
+    /// `submit` calls, counted synchronously on the client's side of the socket.
+    nonisolated let submitCalls = Mutex(0)
+
+    init(sequenceNumber: Int) {
+        self.sequenceNumber = sequenceNumber
+    }
+
+    func join(_ clientId: String, _ events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.Continuation) throws {
+        clients[clientId] = events
+        expected[clientId] = 1
+        let data = JSON.stringify(.object(try JSON.parse(#"{"clientId":"\#(clientId)","detail":\#(interactiveClient)}"#).asObject()))
+        try sequence(system: "join", data: data)
+    }
+
+    func leave(_ clientId: String) throws {
+        guard clients.removeValue(forKey: clientId) != nil else { return }
+        try sequence(system: "leave", data: JSON.stringify(.string(JSString(clientId))))
+    }
+
+    func receive(_ clientId: String, _ messages: [IDocumentMessage]) throws {
+        for message in messages {
+            guard let next = expected[clientId] else { return }
+            guard message.clientSequenceNumber == next else {
+                nacks.append("\(clientId): expected CSN \(next), got \(message.clientSequenceNumber)")
+                return
+            }
+            expected[clientId] = next + 1
+            var fields = try message.json.asObject()
+            fields["clientId"] = .string(JSString(clientId))
+            try broadcast(fields)
+        }
+    }
+
+    /// Holds `clientId`'s deliveries until `release`, which hands them over as one socket event.
+    func hold(_ clientId: String) {
+        held[clientId] = []
+    }
+
+    func release(_ clientId: String) {
+        guard let messages = held.removeValue(forKey: clientId), !messages.isEmpty else { return }
+        clients[clientId]?.yield(.op(documentId: "doc", messages: messages))
+    }
+
+    private func sequence(system type: String, data: String) throws {
+        var fields = JSObject<JSONValue>()
+        fields["clientId"] = .null
+        fields["clientSequenceNumber"] = .number(-1)
+        fields["contents"] = .null
+        fields["data"] = .string(JSString(data))
+        fields["referenceSequenceNumber"] = .number(-1)
+        fields["type"] = .string(JSString(type))
+        try broadcast(fields)
+    }
+
+    private func broadcast(_ message: JSObject<JSONValue>) throws {
+        sequenceNumber += 1
+        var fields = message
+        fields["sequenceNumber"] = .number(Double(sequenceNumber))
+        fields["minimumSequenceNumber"] = .number(0)
+        fields["timestamp"] = .number(0)
+        let sequenced = try ISequencedDocumentMessage(json: .object(fields))
+        log.append(sequenced)
+        for (clientId, events) in clients {
+            if held[clientId] != nil {
+                held[clientId]?.append(sequenced)
+            } else {
+                events.yield(.op(documentId: "doc", messages: [sequenced]))
+            }
+        }
+    }
+}
+
+/// A delta connection with the drivers' outbound shape: `submit` enqueues synchronously onto one
+/// FIFO, and one writer hands each batch to the service's actor in order.
 private final class FakeDeltaConnection: IDocumentDeltaConnection {
     let details: IConnected
     let events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>
     private let continuation: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.Continuation
+    private let ordering: Ordering?
+    private let clientId: String
+    private let writes: AsyncStream<[IDocumentMessage]>.Continuation
+    private let writer: Task<Void, Never>
 
-    init(clientId: String) throws {
+    init(clientId: String, ordering: Ordering?) throws {
+        self.clientId = clientId
+        self.ordering = ordering
         details = try IConnected(json: JSON.parse("""
             {"claims":{"documentId":"doc","scopes":["doc:read","doc:write"],"tenantId":"fake","user":{"id":"u"},"iat":0,"exp":0,"ver":"1.0"},\
             "clientId":"\(clientId)","existing":true,"maxMessageSize":16384,"initialMessages":[],"initialSignals":[],"initialClients":[],\
             "version":"^0.4.0","supportedVersions":["^0.4.0"],"serviceConfiguration":{"maxMessageSize":16384,"blockSize":65436},"mode":"write"}
             """))
         (events, continuation) = AsyncThrowingStream.makeStream()
+        let (pending, writes) = AsyncStream<[IDocumentMessage]>.makeStream()
+        self.writes = writes
+        writer = Task {
+            for await batch in pending {
+                do { try await ordering?.receive(clientId, batch) } catch { Issue.record(error) }
+            }
+        }
     }
 
-    func submit(_ messages: [IDocumentMessage]) async throws {}
+    func join() async throws {
+        try await ordering?.join(clientId, continuation)
+    }
 
-    func submitSignal(_ content: String, targetClientId: String?) async throws {}
+    func submit(_ messages: [IDocumentMessage]) {
+        ordering?.submitCalls.withLock { $0 += 1 }
+        writes.yield(messages)
+    }
 
-    func dispose() async { continuation.finish() }
+    func submitSignal(_ content: String, targetClientId: String?) throws {}
+
+    func dispose() async {
+        writes.finish()
+        await writer.value
+        do { try await ordering?.leave(clientId) } catch { Issue.record(error) }
+        continuation.finish()
+    }
 }
 
 private final class FakeService: IDocumentService {
@@ -162,13 +285,16 @@ private final class FakeService: IDocumentService {
     let log: CallLog
     let captured: CapturedSnapshot
     let clientId: String
+    let ordering: Ordering?
+    private let connections = Mutex(0)
 
-    init(resolvedUrl: IResolvedUrl, policies: IDocumentServicePolicies?, log: CallLog, captured: CapturedSnapshot, clientId: String) {
+    init(resolvedUrl: IResolvedUrl, policies: IDocumentServicePolicies?, log: CallLog, captured: CapturedSnapshot, clientId: String, ordering: Ordering?) {
         self.resolvedUrl = resolvedUrl
         self.policies = policies
         self.log = log
         self.captured = captured
         self.clientId = clientId
+        self.ordering = ordering
     }
 
     func connectToStorage() async throws -> any IDocumentStorageService {
@@ -178,12 +304,19 @@ private final class FakeService: IDocumentService {
 
     func connectToDeltaStorage() async throws -> any IDocumentDeltaStorageService {
         log.append("connectToDeltaStorage")
-        return FakeDeltaStorage(log: log)
+        return FakeDeltaStorage(log: log, ordering: ordering)
     }
 
+    /// Each connection gets a new client id, as the service gives one.
     func connectToDeltaStream(_ client: IClient) async throws -> any IDocumentDeltaConnection {
         log.append("connectToDeltaStream(\(JSON.stringify(client.json)))")
-        return try FakeDeltaConnection(clientId: clientId)
+        let index = connections.withLock { count in
+            count += 1
+            return count
+        }
+        let connection = try FakeDeltaConnection(clientId: "\(clientId)-\(index)", ordering: ordering)
+        try await connection.join()
+        return connection
     }
 
     func dispose(_ error: (any Error)?) {}
@@ -193,12 +326,14 @@ private final class FakeFactory: IDocumentServiceFactory {
     let policies: IDocumentServicePolicies?
     let log: CallLog
     let captured: CapturedSnapshot
+    let ordering: Ordering?
     private let services = Mutex(0)
 
-    init(policies: IDocumentServicePolicies?, log: CallLog, captured: CapturedSnapshot) {
+    init(policies: IDocumentServicePolicies?, log: CallLog, captured: CapturedSnapshot, ordering: Ordering? = nil) {
         self.policies = policies
         self.log = log
         self.captured = captured
+        self.ordering = ordering
     }
 
     func createDocumentService(_ resolvedUrl: IResolvedUrl, clientIsSummarizer: Bool) async throws -> any IDocumentService {
@@ -207,7 +342,7 @@ private final class FakeFactory: IDocumentServiceFactory {
             count += 1
             return count
         }
-        return FakeService(resolvedUrl: resolvedUrl, policies: policies, log: log, captured: captured, clientId: "client-\(index)")
+        return FakeService(resolvedUrl: resolvedUrl, policies: policies, log: log, captured: captured, clientId: "client-\(index)", ordering: ordering)
     }
 
     func createContainer(_ createNewSummary: SummaryTree?, resolvedUrl: IResolvedUrl, clientIsSummarizer: Bool) async throws
@@ -254,27 +389,51 @@ private func props(_ factory: FakeFactory, _ log: CallLog, gates: Set<String> = 
         configProvider: Gates(names: gates), summaryMode: .disabled)
 }
 
-/// The fluid-static entry point's "map" entries.
-private func mapEntries(_ container: Container) async throws -> JSONValue {
-    try await container.withEntryPoint { entryPoint in
-        guard let root = entryPoint as? RootDataObject, let map = root.initialObjects["map"] as? SharedMap else {
-            throw JSONDecodingError("initialObject is not a SharedMap")
-        }
-        var values = JSObject<JSONValue>()
-        for (key, value) in map.entries() { values[key] = value ?? .null }
-        return .object(values)
+/// fluid-static: the root data object's "map".
+private func initialMap(_ entryPoint: AnyObject) throws -> SharedMap {
+    guard let root = entryPoint as? RootDataObject, let map = root.initialObjects["map"] as? SharedMap else {
+        throw JSONDecodingError("initialObject is not a SharedMap")
     }
+    return map
+}
+
+/// The fluid-static entry point's "map" entries.
+@MainActor
+private func mapEntries(_ container: Container) async throws -> JSONValue {
+    var values = JSObject<JSONValue>()
+    for (key, value) in try initialMap(await container.getEntryPoint()).entries() { values[key] = value ?? .null }
+    return .object(values)
+}
+
+private func pendingMessages(_ container: Container) throws -> Int {
+    try container.view().member("runtime").member("pendingMessages").asInt()
+}
+
+private func sequenceNumber(_ container: Container) throws -> Int {
+    try container.view().member("sequenceNumber").asInt()
+}
+
+/// Gives the owner's turns away until `condition` holds; the container's loop, its drivers and the
+/// ordering service make progress meanwhile. A barrier, not a sleep.
+@MainActor
+private func until(_ label: String, _ condition: () async throws -> Bool) async throws {
+    let deadline = ContinuousClock.now + .seconds(30)
+    while ContinuousClock.now < deadline {
+        if try await condition() { return }
+        await Task.yield()
+    }
+    throw JSONDecodingError("timed out: \(label)")
 }
 
 private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
 
-@Suite("loadExistingContainer") struct LoadExistingContainerTests {
+@Suite("loadExistingContainer") @MainActor struct LoadExistingContainerTests {
     /// serializedStateManager.ts fetchISnapshotTree: without supportGetSnapshotApi the loader asks for
     /// the latest version, then its tree, and reads every blob through storage.
     @Test func loadsThroughVersionsAndSnapshotTreeWithoutGetSnapshotSupport() async throws {
         let log = CallLog()
         let captured = try CapturedSnapshot()
-        let container = try await loadExistingContainer(props(FakeFactory(policies: nil, log: log, captured: captured), log))
+        let container = try await loadExistingContainer(props(FakeFactory(policies: nil, log: log, captured: captured), log), isolation: MainActor.shared)
         #expect(try await mapEntries(container) == JSON.parse("{\"captured\":\(capturedValue)}"))
         let calls = log.all
         #expect(Array(calls.prefix(5)) == [
@@ -290,7 +449,7 @@ private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
         let fetch = try #require(calls.firstIndex(of: "fetchMessages(\(captured.sequenceNumber),nil)"))
         #expect(connect < fetch)
         #expect(calls.contains("connectToDeltaStorage"))
-        await container.disconnect()
+        container.disconnect()
     }
 
     /// container.ts supportGetSnapshotApi also needs the UseLoadingGroupIdForSnapshotFetch2 gate:
@@ -299,11 +458,11 @@ private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
         let log = CallLog()
         let captured = try CapturedSnapshot()
         let factory = FakeFactory(policies: IDocumentServicePolicies(supportGetSnapshotApi: true), log: log, captured: captured)
-        let container = try await loadExistingContainer(props(factory, log))
+        let container = try await loadExistingContainer(props(factory, log), isolation: MainActor.shared)
         let calls = log.all
         #expect(calls.contains("getVersions(nil,1)"))
         #expect(!calls.contains { $0.hasPrefix("getSnapshot(") })
-        await container.disconnect()
+        container.disconnect()
     }
 
     /// serializedStateManager.ts fetchISnapshot: with supportGetSnapshotApi and its gate the loader
@@ -312,7 +471,7 @@ private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
         let log = CallLog()
         let captured = try CapturedSnapshot()
         let factory = FakeFactory(policies: IDocumentServicePolicies(supportGetSnapshotApi: true), log: log, captured: captured)
-        let container = try await loadExistingContainer(props(factory, log, gates: [snapshotFetchGate]))
+        let container = try await loadExistingContainer(props(factory, log, gates: [snapshotFetchGate]), isolation: MainActor.shared)
         #expect(try await mapEntries(container) == JSON.parse("{\"captured\":\(capturedValue)}"))
         let calls = log.all
         #expect(calls.contains("getSnapshot(nil)"))
@@ -324,7 +483,7 @@ private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
             "readBlob(\(protocolTree.blobs[JSString(name)]?.description ?? ""))"
         }
         #expect(calls.filter { $0.hasPrefix("readBlob") } == protocolReads)
-        await container.disconnect()
+        container.disconnect()
     }
 
     /// loader.ts RelativeLoader + container.ts clone: the summarizer reuses the resolved URL and the
@@ -332,7 +491,7 @@ private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
     @Test func summarizerChildReusesTheResolvedUrlAndFactory() async throws {
         let log = CallLog()
         let captured = try CapturedSnapshot()
-        let container = try await loadExistingContainer(props(FakeFactory(policies: nil, log: log, captured: captured), log))
+        let container = try await loadExistingContainer(props(FakeFactory(policies: nil, log: log, captured: captured), log), isolation: MainActor.shared)
         await #expect(throws: (any Error).self) { _ = try await container.summarize() }
         let calls = log.all
         #expect(calls.filter { $0.hasPrefix("resolve(") }.count == 1)
@@ -341,7 +500,7 @@ private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
             "createDocumentService(\(resolvedJSON),true)",
         ])
         #expect(calls.contains("connectToDeltaStream(\(summarizerClient))"))
-        await container.disconnect()
+        container.disconnect()
     }
 
     /// Swift-only bridge to the synchronous runtime: each node projects its blobs, then its trees,
@@ -394,6 +553,213 @@ private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
         #expect(parsed.version == "abc")
         #expect(tryParseCompatibleResolvedUrl("not a url") == nil)
         #expect(tryParseCompatibleResolvedUrl("http://localhost/") == nil)
+    }
+}
+
+/// Records the thread each runtime instantiation ran on, around the fluid-static factory.
+private final class RecordingRuntimeFactory: IRuntimeFactory, Sendable {
+    let inner: DOProviderContainerRuntimeFactory
+    let ranOnMainThread = Mutex<[Bool]>([])
+
+    init() throws {
+        inner = try createDOProviderContainerRuntimeFactory(
+            schema: ContainerSchema(initialObjects: ["map": SharedMap.self]), oldestSupportedClient: "2.0.0")
+    }
+
+    func instantiateRuntime(_ context: IContainerContext, existing: Bool) throws
+        -> (runtime: ContainerRuntime, entryPoint: AnyObject)
+    {
+        ranOnMainThread.withLock { $0.append(Thread.isMainThread) }
+        return try inner.instantiateRuntime(context, existing: existing)
+    }
+}
+
+/// A private owner that makes one edit per call, as the service peer handles one request per turn.
+private actor EditorHost {
+    private var container: Container?
+    private var map: SharedMap?
+
+    func open(_ factory: FakeFactory, _ log: CallLog) async throws {
+        let container = try await loadExistingContainer(props(factory, log), isolation: self)
+        map = try initialMap(await container.getEntryPoint())
+        self.container = container
+    }
+
+    func connected() -> Bool {
+        container?.connectionState == .connected
+    }
+
+    func pending() throws -> Int {
+        guard let container else { throw JSONDecodingError("not open") }
+        return try pendingMessages(container)
+    }
+
+    func edit(_ index: Int) async throws {
+        try map?.set(JSString("turn-\(index)"), .number(Double(index)))
+        await container?.endTurn()
+    }
+
+    func dispose() {
+        container?.dispose(nil)
+    }
+}
+
+/// The owner model (ARCHITECTURE.md section 2) against an in-process ordering service: edits on the
+/// owner, the turn-based flush, the synchronous socket edge and catch-up scheduling.
+@Suite("Container owner") @MainActor struct ContainerOwnerTests {
+    /// A host that ends each turn with `endTurn` sends each turn's edits as their own batch, even
+    /// when another task starts the next turn at once, as a TS client's microtask flush runs before
+    /// its next macrotask. Without it the actor runs the caller's next call before the loop's
+    /// flush, and the turns share batches: 50 turns left as 2 batches with the barrier removed.
+    @Test func eachHostTurnLeavesAsItsOwnBatch() async throws {
+        let captured = try CapturedSnapshot()
+        let ordering = Ordering(sequenceNumber: captured.sequenceNumber)
+        let log = CallLog()
+        let host = EditorHost()
+        try await host.open(FakeFactory(policies: nil, log: log, captured: captured, ordering: ordering), log)
+        try await until("own join") { await host.connected() }
+        // Back-to-back calls from off the owner, as the peer's request loop makes them.
+        try await Task.detached {
+            for index in 0..<50 {
+                try await host.edit(index)
+            }
+        }.value
+        try await until("every turn acknowledged") { try await host.pending() == 0 }
+        let ops = await ordering.log.filter { $0.clientId == "client-1-1" && $0.type == "op" }
+        #expect(ops.count == 50)
+        await host.dispose()
+    }
+
+    /// ARCHITECTURE.md section 2, "Loading is off-owner": the snapshot is hydrated into a runtime
+    /// on the cooperative pool even when the owner is MainActor, and the owner adopts the result.
+    @Test func loadingRunsOffTheOwner() async throws {
+        let captured = try CapturedSnapshot()
+        let log = CallLog()
+        let runtimeFactory = try RecordingRuntimeFactory()
+        let container = try await loadExistingContainer(ILoadExistingContainerProps(
+            request: IRequest(url: "doc"), urlResolver: FakeResolver(log: log),
+            documentServiceFactory: FakeFactory(policies: nil, log: log, captured: captured),
+            runtimeFactory: runtimeFactory, summaryMode: .disabled), isolation: MainActor.shared)
+        #expect(runtimeFactory.ranOnMainThread.withLock { $0 } == [false])
+        #expect(try await mapEntries(container) == JSON.parse("{\"captured\":\(capturedValue)}"))
+        container.dispose(nil)
+    }
+
+    private func load(_ factory: FakeFactory, _ log: CallLog) async throws -> (Container, SharedMap) {
+        let container = try await loadExistingContainer(props(factory, log), isolation: MainActor.shared)
+        let map = try initialMap(await container.getEntryPoint())
+        try await until("own join") { container.connectionState == .connected }
+        return (container, map)
+    }
+
+    /// driver-definitions `submit(messages): void` and deli `checkOrder`: client sequence numbers
+    /// reach the service in the order they were assigned. Offline edits stay pending; the next
+    /// connection's own join resubmits them, one message per batch, while new edits flush around
+    /// it. With the awaiting submit this replaced, the resubmitted batches were overtaken by new
+    /// edits in 50 of 50 trials, as CSNs [1, 5, 6, 7, 8, 2, 3, 4], which deli nacks as a gap.
+    @Test func clientSequenceNumbersReachTheServiceInOrder() async throws {
+        let captured = try CapturedSnapshot()
+        for _ in 0..<20 {
+            let ordering = Ordering(sequenceNumber: captured.sequenceNumber)
+            let log = CallLog()
+            let (container, map) = try await load(FakeFactory(policies: nil, log: log, captured: captured, ordering: ordering), log)
+            container.disconnect()
+            for index in 0..<4 {
+                try map.set(JSString("offline-\(index)"), .number(Double(index)))
+                try await until("offline batch \(index) pending") { try pendingMessages(container) == index + 1 }
+            }
+            container.connect()
+            // connectionManager.ts connectCore: one attempt in flight.
+            container.connect()
+            for index in 0..<4 {
+                try map.set(JSString("online-\(index)"), .number(Double(index)))
+                await Task.yield()
+            }
+            try await until("every edit acknowledged") {
+                try container.connectionState == .connected && pendingMessages(container) == 0
+            }
+            #expect(log.all.filter { $0.hasPrefix("connectToDeltaStream(") }.count == 2)
+            #expect(await ordering.nacks == [])
+            let sent = await ordering.log.filter { $0.clientId == "client-1-2" }.map(\.clientSequenceNumber)
+            #expect(sent.count >= 5)
+            #expect(sent == Array(1...max(1, sent.count)))
+            container.dispose(nil)
+        }
+    }
+
+    /// containerRuntime.ts scheduleFlush, TurnBased: edits made in one turn on the owner send
+    /// nothing during the turn and leave as one batch after it, with no flush call.
+    @Test func editsInOneTurnLeaveAsOneBatchAfterTheTurn() async throws {
+        let captured = try CapturedSnapshot()
+        let ordering = Ordering(sequenceNumber: captured.sequenceNumber)
+        let log = CallLog()
+        let (container, map) = try await load(FakeFactory(policies: nil, log: log, captured: captured, ordering: ordering), log)
+        let before = ordering.submitCalls.withLock { $0 }
+        try map.set("a", .number(1))
+        try map.set("b", .number(2))
+        try map.set("c", .number(3))
+        #expect(ordering.submitCalls.withLock { $0 } == before)
+        try await until("edits acknowledged") {
+            try ordering.submitCalls.withLock { $0 } > before && pendingMessages(container) == 0
+        }
+        let ops = await ordering.log.filter { $0.clientId == "client-1-1" && $0.type == "op" }
+        // One grouped batch: the three ops share one message and one reference sequence number.
+        #expect(ops.count == 1)
+        #expect(try await mapEntries(container).member("c") == .number(3))
+        container.dispose(nil)
+    }
+
+    /// deltaScheduler.ts: a long catch-up on the owner pauses only at a runtime batch end, once its
+    /// 4 ms slice is spent, and the owner's other work runs in the gap. An edit made there carries
+    /// that batch end as its reference sequence number: the open batch is flushed before the next
+    /// inbound op applies (containerRuntime.ts process).
+    @Test func catchUpYieldsToTheOwnerOnlyAtBatchEnds() async throws {
+        final class Probe {
+            var seen: Int?
+        }
+        let captured = try CapturedSnapshot()
+        let ordering = Ordering(sequenceNumber: captured.sequenceNumber)
+        let log = CallLog()
+        let factory = FakeFactory(policies: nil, log: log, captured: captured, ordering: ordering)
+        let (reader, readerMap) = try await load(factory, log)
+        let (writer, writerMap) = try await load(factory, log)
+        try await until("reader saw the writer join") { (try sequenceNumber(reader)) == (await ordering.sequenceNumber) }
+        await ordering.hold("client-1-1")
+        let start = await ordering.sequenceNumber
+        let text = JSString(String(repeating: "catch-up ", count: 40))
+        for turn in 0..<60 {
+            for index in 0..<10 { try writerMap.set(JSString("key-\(index)"), .string(text)) }
+            try await until("writer batch \(turn) sequenced") { (await ordering.sequenceNumber) > start + turn }
+        }
+        try await until("writer acknowledged") { (try pendingMessages(writer)) == 0 }
+        let end = await ordering.sequenceNumber
+        let probe = Probe()
+        reader.onDelta { event in
+            guard case .op(let message, _) = event, message.sequenceNumber == start + 1 else { return }
+            // Runs on the owner at its next opportunity: inside the catch-up only if the catch-up yields.
+            Task {
+                do {
+                    probe.seen = try sequenceNumber(reader)
+                    try readerMap.set("probe", .number(1))
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
+        await ordering.release("client-1-1")
+        try await until("reader caught up") {
+            try sequenceNumber(reader) >= end && pendingMessages(reader) == 0
+        }
+        try await until("writer saw the probe") { (try sequenceNumber(writer)) == (try sequenceNumber(reader)) }
+        // The probe exists from op start + 1 on; it ran before the catch-up ended.
+        let seen = try #require(probe.seen)
+        #expect(seen < end)
+        let probeOp = await ordering.log.first { $0.clientId == "client-1-1" && $0.type == "op" }
+        #expect(probeOp?.referenceSequenceNumber == seen)
+        let writerEntries = try await mapEntries(writer)
+        #expect(try await mapEntries(reader) == writerEntries)
+        reader.dispose(nil)
+        writer.dispose(nil)
     }
 }
 

@@ -1,0 +1,57 @@
+name: FluidNotes
+options:
+  bundleIdPrefix: studio.fontecha
+  deploymentTarget:
+    iOS: "18.0"
+packages:
+  FluidSwift:
+    path: ../..
+  MSAL:
+    url: https://github.com/AzureAD/microsoft-authentication-library-for-objc
+    exactVersion: 2.17.1
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+targets:
+  FluidNotes:
+    type: application
+    platform: iOS
+    sources:
+      - path: FluidNotes
+        excludes:
+          - Info.plist
+          - FluidNotes.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: studio.fontecha.FluidNotes
+        INFOPLIST_FILE: FluidNotes/Info.plist
+        CODE_SIGN_ENTITLEMENTS: FluidNotes/FluidNotes.entitlements
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - package: MSAL
+      - package: FluidSwift
+        product: FluidOdspClient
+  # Logic tests: the pure UTF-16 edit and selection code compiles into the bundle itself.
+  FluidNotesTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - FluidNotesTests
+      - FluidNotes/TextEdit.swift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: studio.fontecha.FluidNotesTests
+schemes:
+  FluidNotes:
+    build:
+      targets:
+        FluidNotes: all
+  FluidNotesTests:
+    build:
+      targets:
+        FluidNotesTests: [test]
+    test:
+      targets:
+        - FluidNotesTests

@@ -9,6 +9,9 @@ public final class ChannelCollection {
   var datastores: [JSString: FluidDataStoreRuntime] = [:]
   var datastoreOrder: [JSString] = []
   public var onSubmitDatastoreSignal: (JSString, JSString, JSONValue, JSString?) throws -> Void = { _, _, _, _ in }
+  /// A datastore queued an op for the next flush (containerRuntime.ts submitDataStoreOp, which
+  /// schedules that flush).
+  public var onSubmitDatastoreMessage: () -> Void = {}
   public var onDatastoreChannelDirty: (JSString, JSString) -> Void = { _, _ in }
   var datastoreOutbound: [(JSString, DatastoreMessage)] = []
   var datastoreMetadata: [Int: any ChannelOpMetadata] = [:]

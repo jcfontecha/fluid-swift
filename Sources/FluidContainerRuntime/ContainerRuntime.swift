@@ -33,6 +33,11 @@ public final class ContainerRuntime: IFluidParentContext {
   public var referenceSequenceNumber = 0
   public private(set) var clientSequenceNumber = 0
   public var onSubmitBatch: (([JSONValue]) throws -> Int)?
+  /// containerRuntime.ts scheduleFlush, FlushMode.TurnBased: `Promise.resolve().then(() => this.flush())`.
+  /// The owning container posts one flush to the end of the current turn of its event loop. Hosts
+  /// that drive the runtime directly (the lockstep harness peers) leave it empty and flush explicitly.
+  public var onScheduleFlush: () -> Void = {}
+  private var flushScheduled = false
   public var onSubmit: ([JSONValue], String, Int) throws -> Void = { _, _, _ in }
   public var reSubmit: (JSONValue) throws -> JSONValue = { $0 }
   public var applyStashedOp: (String) throws -> JSONValue? = { _ in nil }
@@ -62,6 +67,11 @@ public final class ContainerRuntime: IFluidParentContext {
     let version = oldestSupportedClient ?? minVersionForCollab ?? "2.0.0"
     try validateMinimumVersionForCollab(version)
     if let runtimeOptions { try validateRuntimeOptions(version, options: runtimeOptions) }
+    // containerRuntime.ts defaults flushMode to TurnBased. FlushMode.Immediate is deprecated in TS
+    // and not ported.
+    if let flushMode = try runtimeOptions.flatMap({ try field($0, "flushMode") }) {
+      try require(flushMode == number(1), "only FlushMode.TurnBased (1) is ported")
+    }
     metadata = try initialSummaryMetadata(minVersionForCollab: version, runtimeOptions: runtimeOptions)
     self.oldestSupportedClient = version
     createBlobPayloadPending = try runtimeOptions.flatMap { try field($0, "createBlobPayloadPending") } == .bool(true)
@@ -83,6 +93,7 @@ public final class ContainerRuntime: IFluidParentContext {
       self.summaryState.node(store).recordChange()
       self.summaryState.node(JSString(store.description + "/" + channel.description)).recordChange()
     }
+    channelCollection.onSubmitDatastoreMessage = { [weak self] in self?.scheduleFlush() }
     channelCollection.onSubmitDatastoreSignal = { [weak self] id, type, content, target in
       guard let self else { throw JSONDecodingError("container host released") }
       try self.submitSignal(type: type, content: content, address: id, targetClientId: target)
@@ -103,11 +114,21 @@ public final class ContainerRuntime: IFluidParentContext {
     try require(!pendingStateManager.isApplyingStashedOps, "cannot submit while applying stash")
     try recordSummaryChange(runtimeOp)
     try outbox.submit(.init(runtimeOp: runtimeOp, referenceSequenceNumber: referenceSequenceNumber, metadata: metadata, localOpMetadata: localOpMetadata), blobAttach: runtimeOp.member("type") == string("blobAttach"))
+    scheduleFlush()
+  }
+  /// containerRuntime.ts scheduleFlush, TurnBased: one flush per turn, however many ops the turn
+  /// submits. Staging mode, which suppresses it below a threshold, is not ported.
+  func scheduleFlush() {
+    guard !flushScheduled else { return }
+    flushScheduled = true
+    onScheduleFlush()
   }
   public func flush(batchId: String? = nil, staged: Bool = false) throws {
     try channelCollection.drainDatastoreMessages { op, metadata in
       try self.submit(op, localOpMetadata: metadata)
     }
+    // After the datastores' queued ops join the outbox: they belong to this flush, not a new turn.
+    flushScheduled = false
     outbox.shouldSend = connected
     try outbox.flush(batchId: batchId, referenceSequenceNumber: referenceSequenceNumber, staged: staged)
   }
@@ -159,6 +180,9 @@ public final class ContainerRuntime: IFluidParentContext {
     }
   }
   public func process(_ message: JSONValue) throws -> JSONValue? {
+    // containerRuntime.ts process: the reference sequence number may be about to change, and it
+    // must be the same across a batch, so the open local batch is flushed first.
+    try flush()
     try recordSummaryMessage(message)
     referenceSequenceNumber = max(referenceSequenceNumber, try message.member("sequenceNumber").asInt())
     guard let inbound = try remoteMessageProcessor.process(message) else { return nil }

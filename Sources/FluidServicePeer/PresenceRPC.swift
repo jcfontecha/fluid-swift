@@ -5,7 +5,7 @@ import Synchronization
 
 /// The service harness's presence scenario (harness/src/service-presence.ts): one `latest` state,
 /// one `latestMap` state and one notification, on the real container stack. Every workspace is
-/// reached through `Container.withPresence`, the native `getPresence`.
+/// reached through `Container.getPresence`, the native fluid-static `getPresence`.
 
 private let statesAddress: JSString = "app:cursors"
 private let eventsAddress: JSString = "app:events"
@@ -17,8 +17,8 @@ struct ReceivedNotification: Sendable {
     let args: [JSONValue]
 }
 
-/// Notifications a client received. The listener appends on the container's executor; the
-/// harness view reads on it too, and the mutex keeps the type honestly `Sendable`.
+/// Notifications a client received. The listener appends on the container's owner; the harness
+/// view reads on it too, and the mutex keeps the type honestly `Sendable`.
 final class PresenceLog: Sendable {
     private let received = Mutex<[ReceivedNotification]>([])
 
@@ -121,48 +121,37 @@ private func view(_ presence: any Presence, _ clock: any PresenceClock, _ log: P
     ])
 }
 
-/// Handles the `presence*` RPCs. Returns `nil` for any other method.
+/// Handles the `presence*` RPCs, on the container's owner. Returns `nil` for any other method.
 func presenceMethod(
     _ method: String, _ params: JSONValue, _ key: String, _ container: Container, _ logs: inout [String: PresenceLog]
-) async throws -> JSONValue? {
+) throws -> JSONValue? {
+    guard method.hasPrefix("presence") else { return nil }
+    let (presence, clock) = try container.getPresence()
     if method == "presenceJoin" {
         let log = PresenceLog()
         logs[key] = log
-        return try await container.withPresence { presence, clock in
-            _ = try workspaces(presence, clock, log)
-            return .string(presence.attendees.getMyself().attendeeId)
-        }
+        _ = try workspaces(presence, clock, log)
+        return .string(presence.attendees.getMyself().attendeeId)
     }
-    guard method.hasPrefix("presence") else { return nil }
     guard let log = logs[key] else { throw JSONDecodingError("presence not joined") }
     switch method {
     case "presenceSet":
-        let value = try params.member("value")
-        return try await container.withPresence { presence, clock in
-            try workspaces(presence, clock, log).states.latest("cursor").setLocal(value)
-            return .null
-        }
+        try workspaces(presence, clock, log).states.latest("cursor").setLocal(params.member("value"))
+        return .null
     case "presenceMapSet":
         let itemKey = try params.member("key").asString()
-        let value = try params.member("value")
-        return try await container.withPresence { presence, clock in
-            try workspaces(presence, clock, log).states.latestMap("items").local.set(itemKey, value)
-            return .null
-        }
+        try workspaces(presence, clock, log).states.latestMap("items").local.set(itemKey, params.member("value"))
+        return .null
     case "presenceMapDelete":
         let itemKey = try params.member("key").asString()
-        return try await container.withPresence { presence, clock in
-            .bool(try workspaces(presence, clock, log).states.latestMap("items").local.delete(itemKey))
-        }
+        return .bool(try workspaces(presence, clock, log).states.latestMap("items").local.delete(itemKey))
     case "presenceNotify":
         let name = try params.member("name").asString()
         let args = try params.member("args").asArray()
-        return try await container.withPresence { presence, clock in
-            try workspaces(presence, clock, log).events.notifications("ping").emit.broadcast(name, args)
-            return .null
-        }
+        try workspaces(presence, clock, log).events.notifications("ping").emit.broadcast(name, args)
+        return .null
     case "presenceView":
-        return try await container.withPresence { presence, clock in try view(presence, clock, log) }
+        return try view(presence, clock, log)
     default: throw JSONDecodingError("unknown presence method")
     }
 }

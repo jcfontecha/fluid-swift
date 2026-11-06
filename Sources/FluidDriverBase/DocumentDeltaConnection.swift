@@ -9,15 +9,22 @@ import Synchronization
 /// buffers from the start of the handshake until the consumer drains it, so ops and signals that
 /// arrive before the consumer attaches keep their order (the TS early op/signal handlers). It ends
 /// with one `disconnect` event. No per-event tasks reorder I/O.
+///
+/// `submit` and `submitSignal` are synchronous, as in TS: they enqueue onto one FIFO that a single
+/// writer drains into the socket, so emits leave in call order (socket.io's own send buffer).
 public actor DocumentDeltaConnection: IDocumentDeltaConnection {
     public nonisolated let events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>
     private nonisolated let continuation: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.Continuation
     private nonisolated let connected = Mutex<IConnected?>(nil)
+    /// The outbound FIFO: socket event names and arguments, in submit order.
+    private nonisolated let writes: AsyncStream<(name: String, arguments: [JSONValue])>.Continuation
+    private let pendingWrites: AsyncStream<(name: String, arguments: [JSONValue])>
     private let socket = SocketIOClient()
     private var handshake: CheckedContinuation<IConnected, any Error>?
     private var request: IConnect?
     private var deadline: Task<Void, Never>?
     private var pingLoop: Task<Void, Never>?
+    private var writer: Task<Void, Never>?
     private var disposed = false
 
     /// documentDeltaConnection.ts `errorMessageForClientDisposeWithoutError`.
@@ -25,6 +32,7 @@ public actor DocumentDeltaConnection: IDocumentDeltaConnection {
 
     public init() {
         (events, continuation) = AsyncThrowingStream.makeStream()
+        (pendingWrites, writes) = AsyncStream.makeStream()
     }
 
     /// documentDeltaConnection.ts `details`: reading it before the handshake completes is an internal error.
@@ -71,6 +79,7 @@ public actor DocumentDeltaConnection: IDocumentDeltaConnection {
                     }
                 }
             }
+            startWriter()
             startPingLoop()
         } catch {
             await disconnect(error)
@@ -128,6 +137,22 @@ public actor DocumentDeltaConnection: IDocumentDeltaConnection {
         handshake = nil
     }
 
+    /// The single writer: emits each queued write in order. A failed emit disconnects, as a socket
+    /// error does; writes after disposal are dropped (documentDeltaConnection.ts emitMessages).
+    private func startWriter() {
+        writer = Task {
+            for await write in pendingWrites {
+                guard !disposed else { return }
+                do {
+                    try await socket.emit(write.name, arguments: write.arguments)
+                } catch {
+                    await disconnect(error)
+                    return
+                }
+            }
+        }
+    }
+
     /// documentDeltaConnection.ts: the container's pong listener starts a volatile `ping` with an
     /// acknowledgement; each ack reports the latency and schedules the next ping a minute later.
     private func startPingLoop() {
@@ -159,6 +184,7 @@ public actor DocumentDeltaConnection: IDocumentDeltaConnection {
     private func disconnect(_ error: any Error) async {
         guard !disposed else { return }
         disposed = true
+        writes.finish()
         deadline?.cancel()
         pingLoop?.cancel()
         handshake?.resume(throwing: error)
@@ -168,17 +194,14 @@ public actor DocumentDeltaConnection: IDocumentDeltaConnection {
         continuation.finish()
     }
 
-    public func submit(_ messages: [IDocumentMessage]) async throws {
-        guard !disposed else { throw DriverError("submit", .string("disconnected")) }
-        try await socket.emit(
-            "submitOp",
-            arguments: [.string(details.clientId), .array([.array(messages.map(\.json))])])
+    /// documentDeltaConnection.ts `submit`: one `submitOp` emit carrying the batch.
+    public nonisolated func submit(_ messages: [IDocumentMessage]) {
+        writes.yield(("submitOp", [.string(details.clientId), .array([.array(messages.map(\.json))])]))
     }
 
     /// documentDeltaConnection.ts `submitSignal`: v2 signal objects when the service supports
     /// them; a targeted signal without v2 is a usage error.
-    public func submitSignal(_ content: String, targetClientId: String?) async throws {
-        guard !disposed else { throw DriverError("signal", .string("disconnected")) }
+    public nonisolated func submitSignal(_ content: String, targetClientId: String?) throws {
         let features = details.supportedFeatures
         let signals: JSONValue
         if features?["submit_signals_v2"] == .bool(true) {
@@ -192,11 +215,14 @@ public actor DocumentDeltaConnection: IDocumentDeltaConnection {
             }
             signals = .array([.array([.string(JSString(content))])])
         }
-        try await socket.emit("submitSignal", arguments: [.string(details.clientId), signals])
+        writes.yield(("submitSignal", [.string(details.clientId), signals]))
     }
 
-    /// documentDeltaConnection.ts `dispose()` without an error.
+    /// documentDeltaConnection.ts `dispose()` without an error. Writes queued before it leave
+    /// first, as socket.io sends its buffer before the disconnect.
     public func dispose() async {
+        writes.finish()
+        await writer?.value
         await disconnect(DriverError("dispose", .string(JSString(Self.errorMessageForClientDisposeWithoutError))))
     }
 }

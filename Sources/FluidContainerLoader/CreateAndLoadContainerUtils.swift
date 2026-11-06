@@ -42,7 +42,23 @@ public struct ILoadExistingContainerProps: Sendable {
 /// resolve the request, take the version from the URL's query or the request header, then load
 /// and connect the container. Fails when the resolver does not resolve the request or the resolved
 /// URL is not `protocol://host/tenant/document...`.
-public func loadExistingContainer(_ props: ILoadExistingContainerProps) async throws -> Container {
+///
+/// `owner` is the actor the container belongs to (ARCHITECTURE.md section 2): `MainActor.shared`
+/// in an app, a private actor for headless clients. Loading runs off the owner; the owner then
+/// adopts the container, and only code isolated to it can use the result.
+public func loadExistingContainer(
+    _ props: ILoadExistingContainerProps, isolation owner: isolated any Actor
+) async throws -> Container {
+    let container = try await prepareContainer(props)
+    container.start(on: owner)
+    return container
+}
+
+/// The off-owner half of `loadExistingContainer`: resolve, load the snapshot, connect and apply
+/// what storage has after it, on the cooperative pool. The graph is one disconnected region, so it
+/// goes to the owner as `sending`. Socket ops that arrive meanwhile wait in its job queue.
+@concurrent
+func prepareContainer(_ props: ILoadExistingContainerProps) async throws -> sending Container {
     guard let resolvedUrl = try await props.urlResolver.resolve(props.request) else {
         throw JSONDecodingError("Object is not a IResolveUrl.")
     }
@@ -59,6 +75,12 @@ public func loadExistingContainer(_ props: ILoadExistingContainerProps) async th
         runtimeFactory: props.runtimeFactory, configProvider: props.configProvider, specifiedVersion: version,
         clientDetailsOverride: headers?[LoaderHeader.clientDetails], loadRuntime: props.loadRuntime,
         summaryMode: props.summaryMode)
-    try await container.connect()
+    do {
+        try await container.open()
+    } catch {
+        // A failed load closes the connection and the service it opened.
+        container.dispose(error)
+        throw error
+    }
     return container
 }

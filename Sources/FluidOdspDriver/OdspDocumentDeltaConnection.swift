@@ -216,19 +216,43 @@ public final class OdspDocumentDeltaConnectionState {
 
 /// odspDocumentDeltaConnection.ts OdspDocumentDeltaConnection as the loader sees it: the
 /// IDocumentDeltaConnection surface of driver-base DocumentDeltaConnection plus requestOps/flush.
-/// The protocol state is OdspDocumentDeltaConnectionState on the factory's socket actor; every
-/// call hops there, so socket frames keep their synchronous TS order.
+/// The protocol state is OdspDocumentDeltaConnectionState on the factory's socket actor.
+/// `submit` and `submitSignal` are synchronous, as in TS: they enqueue onto one FIFO whose single
+/// writer hands each write to that actor in call order, so ops and signals reach the socket in
+/// call order. `requestOps` and `flush` hop to the actor directly.
 public final class OdspDocumentDeltaConnection: IDocumentDeltaConnection {
+    private enum Write: Sendable {
+        case ops([JSONValue])
+        case signals([JSONValue])
+    }
     public let details: IConnected
     public let events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>
     private let factory: OdspSocketIOFactory
     private let id: UUID
+    private let writes: AsyncStream<Write>.Continuation
+    private let writer: Task<Void, Never>
 
     init(factory: OdspSocketIOFactory, id: UUID, details: IConnected, events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>) {
         self.factory = factory
         self.id = id
         self.details = details
         self.events = events
+        let (pending, writes) = AsyncStream<Write>.makeStream()
+        self.writes = writes
+        // A write the factory rejects (a released handle, a closed socket) ends the event stream
+        // with that error, the way a teardown assertion surfaces.
+        writer = Task {
+            for await write in pending {
+                do {
+                    switch write {
+                    case .ops(let messages): try await factory.submit(id, messages: messages)
+                    case .signals(let signals): try await factory.submitSignal(id, signals: signals)
+                    }
+                } catch {
+                    await factory.failEvents(id, error)
+                }
+            }
+        }
     }
 
     public var clientId: String {
@@ -239,20 +263,20 @@ public final class OdspDocumentDeltaConnection: IDocumentDeltaConnection {
         get async { await factory.isDisposed(id) }
     }
 
-    public func submit(_ messages: [IDocumentMessage]) async throws {
-        try await factory.submit(id, messages: messages.map(\.json))
+    public func submit(_ messages: [IDocumentMessage]) {
+        writes.yield(.ops(messages.map(\.json)))
     }
 
     /// Signals v2 (`{ content, targetClientId? }`) when the service supports them; otherwise v1
     /// (`[content]`), which cannot target a client.
-    public func submitSignal(_ content: String, targetClientId: String?) async throws {
+    public func submitSignal(_ content: String, targetClientId: String?) throws {
         if details.supportedFeatures?["submit_signals_v2"] == .bool(true) {
             var signal = JSObject<JSONValue>()
             signal["content"] = .string(JSString(content))
             if let targetClientId { signal["targetClientId"] = .string(JSString(targetClientId)) }
-            try await factory.submitSignal(id, signals: [.object(signal)])
+            writes.yield(.signals([.object(signal)]))
         } else if targetClientId == nil {
-            try await factory.submitSignal(id, signals: [.array([.string(JSString(content))])])
+            writes.yield(.signals([.array([.string(JSString(content))])]))
         } else {
             throw OdspNetworkError("usageError", canRetry: false)
         }
@@ -267,7 +291,10 @@ public final class OdspDocumentDeltaConnection: IDocumentDeltaConnection {
         try await factory.flush(id)
     }
 
+    /// Writes queued before disposal reach the socket before `disconnect_document`.
     public func dispose() async {
+        writes.finish()
+        await writer.value
         do { try await factory.dispose(id) }
         catch { await factory.failEvents(id, error) }
     }

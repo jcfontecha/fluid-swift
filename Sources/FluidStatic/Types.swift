@@ -36,3 +36,16 @@ public struct IConnection: Sendable {
 public protocol IMember {
     var connections: [IConnection] { get set }
 }
+
+/// Ports types.ts `Myself`: a member plus the connection this client uses.
+public struct Myself<Member: IMember> {
+    public let member: Member
+    public let currentConnection: String
+}
+
+/// Ports types.ts `IServiceAudienceEvents`.
+public enum ServiceAudienceEvent<Member: IMember> {
+    case membersChanged
+    case memberAdded(clientId: String, member: Member)
+    case memberRemoved(clientId: String, member: Member)
+}

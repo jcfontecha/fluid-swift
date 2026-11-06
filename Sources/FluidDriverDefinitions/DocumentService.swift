@@ -86,7 +86,11 @@ public enum DocumentDeltaConnectionEvent: Sendable {
 public protocol IDocumentDeltaConnection: AnyObject, Sendable {
     var details: IConnected { get }
     var events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error> { get }
-    func submit(_ messages: [IDocumentMessage]) async throws
-    func submitSignal(_ content: String, targetClientId: String?) async throws
+    /// TS `submit(messages): void`: a synchronous FIFO enqueue onto the connection's one ordered
+    /// writer, so ops reach the socket in call order. A disposed connection drops them.
+    func submit(_ messages: [IDocumentMessage])
+    /// TS `submitSignal(content, targetClientId?): void`, on the same writer as `submit`. Throws
+    /// where TS throws a UsageError: a targeted signal on a service without signals v2.
+    func submitSignal(_ content: String, targetClientId: String?) throws
     func dispose() async
 }

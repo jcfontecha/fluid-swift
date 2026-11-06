@@ -25,6 +25,12 @@ public struct OdspClientProps: Sendable {
     }
 }
 
+/// Ports interfaces.ts `IOdspContainerServicesEvents`.
+public enum OdspContainerServicesEvent {
+    case readOnlyStateChanged
+    case sensitivityLabelsInfoChanged
+}
+
 /// Ports interfaces.ts `TokenResponse` (distinct from odsp-driver-definitions' TokenResponse).
 public struct TokenResponse: Sendable {
     public let token: String

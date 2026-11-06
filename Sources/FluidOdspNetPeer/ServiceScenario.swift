@@ -260,12 +260,12 @@ func runServiceScenario(_ scenario: JSONValue) async throws -> JSONValue {
             if submits > 0 {
                 for index in 1...submits {
                     let message = try IDocumentMessage(json: object([("clientSequenceNumber", .number(Double(index))), ("referenceSequenceNumber", .number(Double(latest))), ("type", .string("op")), ("contents", object([("submit", .number(Double(index)))]))]))
-                    try await connection.submit([message])
+                    connection.submit([message])
                     try await waitFor(events) { JSON.stringify($0).hasPrefix(#"["op""#) && JSON.stringify($0).contains("\"submit\":\(index)") }
                 }
             }
             if try scenario.member("signal") == .bool(true) {
-                try await connection.submitSignal(#"{"type":"hello"}"#, targetClientId: nil)
+                try connection.submitSignal(#"{"type":"hello"}"#, targetClientId: nil)
                 try await waitFor(events) { JSON.stringify($0).hasPrefix(#"["signal""#) && JSON.stringify($0).contains("hello") }
             }
         }

@@ -57,16 +57,16 @@ final class PresenceAudienceAdapter: FluidPresence.IAudience {
 }
 
 /// The JS timers and clock presence uses, backed by real time. `setTimeout` callbacks run on the
-/// container's executor (`fire` hops back onto the owning `Container`), never on a detached task,
+/// container's owner (`fire` posts a job to the container's event loop), never on a detached task,
 /// so presence stays synchronous (ARCHITECTURE.md section 2).
 final class ContainerPresenceClock: PresenceClock {
     private var callbacks: [Int: () throws -> Void] = [:]
     private var tasks: [Int: Task<Void, Never>] = [:]
     private var nextHandle = 0
-    private let fire: @Sendable (Int) async -> Void
+    private let fire: @Sendable (Int) -> Void
 
-    /// `fire(handle)` must call `takeCallback(handle)` on the container's executor and run what it returns.
-    init(fire: @escaping @Sendable (Int) async -> Void) {
+    /// `fire(handle)` must make the owner call `takeCallback(handle)` and run what it returns.
+    init(fire: @escaping @Sendable (Int) -> Void) {
         self.fire = fire
     }
 
@@ -86,7 +86,7 @@ final class ContainerPresenceClock: PresenceClock {
         tasks[handle] = Task {
             do {
                 try await Task.sleep(for: .milliseconds(milliseconds))
-                await fire(handle)
+                fire(handle)
             } catch {}
         }
         return handle

@@ -11,7 +11,10 @@ extension ChannelCollection {
         contexts?.insert(runtime.id)
         let id = runtime.id
         runtime.onChannelDirty = { [weak self] channel in self?.onDatastoreChannelDirty(id, channel) }
-        runtime.onSubmit = { [weak self] message in self?.datastoreOutbound.append((id, message)) }
+        runtime.onSubmit = { [weak self] message in
+            self?.datastoreOutbound.append((id, message))
+            self?.onSubmitDatastoreMessage()
+        }
         runtime.onSubmitSignal = { [weak self] type, content, target in
             guard let self else { throw JSONDecodingError("datastore host released") }
             try self.onSubmitDatastoreSignal(id, type, content, target)

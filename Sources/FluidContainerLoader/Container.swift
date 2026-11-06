@@ -21,16 +21,43 @@ private let summarizerClientDetails: JSONValue = .object({
     return details
 }())
 
-/// Ports container-loader/src/container.ts. One actor owns all synchronous protocol, delta,
-/// connection and listener state. Suspension occurs only at socket/REST/timer boundaries. The
-/// container reaches its service only through the driver interfaces it was loaded with.
-public actor Container: IContainer {
-    private final class Outbound {
-        var messages: [IDocumentMessage] = []
-        var signals: [(content: String, target: String?)] = []
+/// Ports container-loader/src/container.ts. The container, its runtime, datastores and DDSes are
+/// one plain, synchronous, non-Sendable graph that belongs to exactly one owner actor
+/// (ARCHITECTURE.md section 2). `loadExistingContainer(_:isolation:)` prepares the graph off the
+/// owner, and the owner adopts it with `start(on:)`. That starts the container's one event loop on
+/// the owner's executor, the analogue of the JS event loop. Socket events, the turn-based flush,
+/// timers and summarizer notices arrive there as jobs. The container awaits only where TS awaits
+/// (delta stream, storage, timers), and after each await it re-checks the state TS re-checks.
+/// It reaches its service only through the driver interfaces it was loaded with.
+public final class Container: IContainer {
+    /// Work for the event loop. Anything may produce a job (socket forwarders, timers, the
+    /// summarizer child); only the loop runs them, on the owner.
+    enum Job: Sendable {
+        /// An event from the delta connection of attempt `attempt`.
+        case connection(attempt: Int, DocumentDeltaConnectionEvent)
+        /// That connection's event stream threw.
+        case connectionFailed(attempt: Int, any Error)
+        /// connectionManager.ts connectCore after its synchronous start: the awaited half.
+        case connect(attempt: Int)
+        /// containerRuntime.ts scheduleFlush, TurnBased: the flush at the end of the turn.
+        case flush
+        /// deltaScheduler.ts paused the inbound queue; resume it on a later turn.
+        case inboundPaused
+        /// deltaScheduler.ts `setTimeout(() => inbound.resume())`.
+        case resumeInbound
+        case noopTimer(Int)
+        case summaryTimer(Int)
+        case summaryAckTimeout(Int)
+        case presenceTimer(Int)
+        /// The summarizer child of `generation` disconnected.
+        case summarizerStopped(generation: Int)
+        /// The summarizer child failed to stop.
+        case summaryFailure(String)
+        /// `endTurn`: every job queued before this one has run.
+        case turnEnd(CheckedContinuation<Void, Never>)
     }
-    /// Presence is a container extension (containerRuntime.ts `acquireExtension`). These live on
-    /// this actor's executor; closures capture the holder so they never capture the actor.
+    /// Presence is a container extension (containerRuntime.ts `acquireExtension`). Closures capture
+    /// this holder, so they never capture the container.
     private final class PresenceState {
         var manager: ContainerPresenceManager?
         var host: ContainerExtensionHost?
@@ -41,8 +68,6 @@ public actor Container: IContainer {
     /// container.ts `signalAudience`: every client the service reports through join/leave/clear
     /// signals, read and write, unlike `ProtocolOpHandler.audience`, which writers join by op.
     private let signalAudience = Audience()
-    private var flushingSignals = false
-    private let outbound = Outbound()
     private var runtime: ContainerRuntime?
     private var entryPoint: AnyObject?
     private let loadRuntime: Bool
@@ -52,16 +77,19 @@ public actor Container: IContainer {
     private var summaryGenerator: SummaryGenerator?
     private var summaryPaused = false
     private var pausedSignals: [ISignalMessage] = []
-    private var summarizerChild: Container?
+    private var summarizerChild: SummarizerHost?
     private let summaryManager = SummaryManager()
     private var summarizer: Summarizer?
     private var summaryTimer: Task<Void, Never>?
+    private var summaryTimerToken = 0
     private var automaticSummaries = false
     private var summaryRequested = false
     private var summaryWorkRunning = false
     private var summaryWaiter: CheckedContinuation<Void, Error>?
     private var summaryAckTimer: Task<Void, Never>?
-    private var summarizerHost: Container?
+    private var summaryAckToken = 0
+    /// A summarizer child's notice to its parent, with the child's generation.
+    private var summarizerStopped: (@Sendable (Int) -> Void)?
     private var summarizerGeneration: Int?
     private var summarizerParentId: JSString?
     private var summaryActive = false
@@ -87,13 +115,23 @@ public actor Container: IContainer {
     private var snapshotSequenceNumber = 0
     private var signals: [ISignalMessage] = []
     private var failure: String?
-    private var reader: Task<Void, Never>?
     private var noopTimer: Task<Void, Never>?
+    private var noopTimerToken = 0
     private var fetching = false
     private var establishing = false
     /// Between a delta connection's handshake and its loss: CatchingUp or Connected.
     private var deltaStreamOpen = false
     private var dirty = false
+    private var disposed = false
+    /// The owner tasks running a connection attempt and a storage fetch, cancelled on close.
+    private var connectTask: Task<Void, Never>?
+    private var fetchTask: Task<Void, Never>?
+    private let jobs: AsyncStream<Job>
+    private let jobSink: AsyncStream<Job>.Continuation
+    private var loop: Task<Void, Never>?
+    /// Created when the owner adopts the container: catch-up before that runs off the owner and
+    /// never yields.
+    private var deltaScheduler: DeltaScheduler?
     public private(set) var closed = false
     public let events = ListenerList<ContainerEvent>()
     /// container.ts `containerMetadata`: no Swift driver emits `metadataUpdate`, so it stays empty.
@@ -128,71 +166,176 @@ public actor Container: IContainer {
         let connectionManager = ConnectionManager()
         self.connectionManager = connectionManager
         deltaManager = DeltaManager(active: { connectionManager.connected })
+        (jobs, jobSink) = AsyncStream.makeStream()
     }
 
     /// loader.ts RelativeLoader with container.ts `clone`: the summarizer loads the same resolved
-    /// URL through the same services, as a summarizer client, at the latest version.
-    private func cloneForSummarizer() throws -> Container {
+    /// URL through the same services, as a summarizer client, at the latest version. The clone
+    /// shares nothing with this container, so it can go to its own owner.
+    private func cloneForSummarizer() throws -> sending Container {
         try Container(
             resolvedUrl: resolvedUrl, urlResolver: urlResolver, documentServiceFactory: serviceFactory,
             runtimeFactory: runtimeFactory, configProvider: configProvider, specifiedVersion: nil,
             clientDetailsOverride: summarizerClientDetails, loadRuntime: true, summaryMode: summaryMode)
     }
 
-    public func onDelta(_ listener: @escaping @Sendable (DeltaManagerEvent) -> Void) {
+    public func onDelta(_ listener: @escaping (DeltaManagerEvent) -> Void) {
         deltaManager.events.on(listener)
     }
 
-    public func onQuorum(_ listener: @escaping @Sendable (QuorumEvent) -> Void) {
+    public func onQuorum(_ listener: @escaping (QuorumEvent) -> Void) {
         quorumEvents.on(listener)
     }
 
-    public func onAudience(_ listener: @escaping @Sendable (AudienceEvent) -> Void) {
+    public func onAudience(_ listener: @escaping (AudienceEvent) -> Void) {
         audienceEvents.on(listener)
     }
 
-    public func connect() async throws {
+    /// container.ts load, then connect: the snapshot, protocol state and runtime, then the delta
+    /// stream and the ops storage has after the snapshot. Runs before an owner adopts the container,
+    /// on whatever isolation the caller has (off the owner for `loadExistingContainer`).
+    nonisolated(nonsending) func open() async throws {
+        try await load()
+        try Task.checkCancellation()
+        guard let attempt = connectionManager.beginConnection() else { return }
         establishing = true
-        defer { establishing = false }
-        if protocolHandler == nil {
-            try await load()
-        }
-        guard let service else { throw JSONDecodingError("no document service") }
-        let details = try await connectionManager.connect(service, client: client)
-        deltaStreamOpen = true
-        // container.ts propagateConnectionState: the signal audience learns the client id while catching up.
-        signalAudience.setCurrentClientId(details.clientId)
-        deltaManager.connect(
-            details, lastSequenceNumber: protocolHandler?.sequenceNumber ?? snapshotSequenceNumber)
-        try protocolHandler?.initialClients(details.initialClients)
-        try resetSignalAudience(details.initialClients)
-        deltaManager.enqueueMessages(details.initialMessages)
-        for signal in details.initialSignals { try processSignal(signal) }
-        try await flushSignals()
-        guard let connection = connectionManager.connection else {
-            throw JSONDecodingError("disconnected")
-        }
-        reader = Task {
-            do {
-                for try await event in connection.events { try await self.receive(event) }
-            } catch {
-                if !Task.isCancelled {
-                    self.failure = String(describing: error)
-                    self.finishSummaryWait(error: error)
-                    self.connectionManager.connectionFailed()
-                    self.deltaManager.disconnect(String(describing: error), error: error)
-                    self.deltaStreamLost()
-                    self.raisePresenceDisconnected()
-                }
+        try await connectToDeltaStream(attempt)
+    }
+
+    /// Adopts the container on `owner` and starts its event loop there. Adoption is once-only.
+    /// `owner` is a non-optional isolated parameter (ARCHITECTURE.md section 2): capturing it
+    /// isolates the loop task to the owner, and `for await` stays on it (SE-0421), so no job ever
+    /// runs elsewhere.
+    func start(on owner: isolated any Actor) {
+        precondition(loop == nil, "Container.start(on:) adopts a container once")
+        let scheduler = DeltaScheduler(inboundLength: { [deltaManager] in deltaManager.pending.count })
+        deltaScheduler = scheduler
+        runtime?.onEvent = { name, _ in
+            if name == "batchBegin" {
+                scheduler.batchBegin()
+            } else if name == "batchEnd" {
+                scheduler.batchEnd()
             }
         }
-        try await catchUp(fetchUnbounded: true)
-        scheduleSummaryWork()
+        loop = Task { [weak self, jobs] in
+            _ = owner
+            for await job in jobs {
+                guard let self else { return }
+                self.run(job, on: owner)
+            }
+        }
+    }
+
+    /// One job, synchronously. Async work (a connection attempt, a gap fetch, summary work) starts
+    /// as a task isolated to the owner and re-checks state after each await.
+    private func run(_ job: Job, on owner: isolated any Actor) {
+        if case .turnEnd(let continuation) = job {
+            continuation.resume()
+            return
+        }
+        guard !closed else { return }
+        switch job {
+        case .connection(let attempt, let event):
+            // Events of a connection this container already dropped are stale.
+            guard connectionManager.isCurrent(attempt) else { return }
+            do {
+                try receive(event)
+                startGapFetchIfNeeded(on: owner)
+            } catch {
+                connectionFailed(error)
+            }
+        case .connectionFailed(let attempt, let error):
+            guard connectionManager.isCurrent(attempt) else { return }
+            connectionFailed(error)
+        case .connect(let attempt):
+            guard connectionManager.pendingConnection == attempt else { return }
+            connectTask = Task {
+                _ = owner
+                do {
+                    try await self.connectToDeltaStream(attempt)
+                } catch {
+                    self.connectAttemptFailed(attempt, error)
+                }
+            }
+        case .flush:
+            // containerRuntime.ts flush: a failure closes the container.
+            do {
+                try runtime?.flush()
+                updateDirtyContainerState()
+            } catch {
+                close(error)
+            }
+        case .inboundPaused:
+            Task { [jobSink] in
+                _ = owner
+                await Task.yield()
+                jobSink.yield(.resumeInbound)
+            }
+        case .resumeInbound:
+            deltaScheduler?.resume()
+            do {
+                try drainInbound()
+                startGapFetchIfNeeded(on: owner)
+            } catch {
+                connectionFailed(error)
+            }
+        case .noopTimer(let token):
+            guard token == noopTimerToken else { return }
+            noopTimer = nil
+            do { try timerFired() } catch { failure = String(describing: error) }
+        case .summaryTimer(let token):
+            guard token == summaryTimerToken else { return }
+            summaryTimer = nil
+            Task {
+                _ = owner
+                do {
+                    try await self.runSummaryWork()
+                } catch {
+                    self.failure = String(describing: error)
+                    if !self.closed { self.disconnect() }
+                }
+            }
+        case .summaryAckTimeout(let token):
+            guard token == summaryAckToken else { return }
+            finishSummaryWait(error: JSONDecodingError("summary ack timeout"))
+        case .presenceTimer(let handle):
+            firePresenceTimer(handle)
+        case .summarizerStopped(let generation):
+            summarizerStopped(generation: generation)
+        case .summaryFailure(let description):
+            summaryFailure = description
+        case .turnEnd:
+            break
+        }
+    }
+
+    /// The end of a turn that the host defines: returns once the loop has run every job queued
+    /// before the call, such as the turn-based flush of the edits this turn made. In TS this comes
+    /// from the event loop itself, because microtasks run before the next macrotask. A Swift actor
+    /// gives no such order between two tasks: a caller's next call can reach the owner before the
+    /// loop runs. A host that drives the owner one request at a time, such as the service harness
+    /// peer, calls this between requests, so each request's edits leave as their own batch, as they
+    /// do from a TS client. It flushes nothing itself and does not change batching within a turn.
+    package nonisolated(nonsending) func endTurn() async {
+        await withCheckedContinuation { continuation in
+            if case .terminated = jobSink.yield(.turnEnd(continuation)) {
+                continuation.resume()
+            }
+        }
+    }
+
+    /// TS `connect(): void`: starts a connection when this client has none and none is in flight.
+    /// The awaited half runs on the owner's loop; `connected` reports the result.
+    public func connect() {
+        precondition(!closed, "The Container is closed and cannot be connected")
+        guard !connectionManager.connected, let attempt = connectionManager.beginConnection() else { return }
+        establishing = true
+        jobSink.yield(.connect(attempt: attempt))
     }
 
     /// The load half of container.ts `load`: document service, storage, snapshot, protocol state,
     /// then the runtime from the runtime factory.
-    private func load() async throws {
+    private nonisolated(nonsending) func load() async throws {
         let service = try await serviceFactory.createDocumentService(
             resolvedUrl, clientIsSummarizer: client.details.type == summarizerClientType)
         self.service = service
@@ -214,8 +357,8 @@ public actor Container: IContainer {
             let (runtime, entryPoint) = try runtimeFactory.instantiateRuntime(context, existing: true)
             runtime.referenceSequenceNumber = loaded.sequenceNumber
             self.entryPoint = entryPoint
-            runtime.onSubmitSignal = { [outbound] envelope, target in
-                outbound.signals.append((JSON.stringify(envelope), target?.description))
+            runtime.onSubmitSignal = { [connectionManager] envelope, target in
+                try connectionManager.submitSignal(JSON.stringify(envelope), targetClientId: target?.description)
             }
             runtime.onRuntimeDispatch = { [presence] name, arguments in
                 guard name == "extension", let manager = presence.manager else { return }
@@ -225,20 +368,22 @@ public actor Container: IContainer {
                     addressChain: parts[0].asArray().map { try $0.asString() },
                     message: InboundExtensionMessage(json: parts[1]), local: parts[2] == .bool(true))
             }
-            runtime.onSubmitBatch = { [deltaManager, outbound] messages in
-                var last = 0
+            // container.ts submitBatch: CSNs are assigned and the batch is enqueued on the
+            // connection in one synchronous step, so wire order is CSN order.
+            runtime.onSubmitBatch = { [deltaManager, connectionManager] messages in
+                var batch: [IDocumentMessage] = []
                 for message in messages {
                     let prepared = try deltaManager.prepareMessage(
                         type: "op", contents: message.member("contents"),
                         referenceSequenceNumber: message.member("referenceSequenceNumber").asInt())
                     var fields = try prepared.json.asObject()
                     for (key, value) in try message.asObject().entries { fields[key] = value }
-                    let wire = try IDocumentMessage(json: .object(fields))
-                    outbound.messages.append(wire)
-                    last = wire.clientSequenceNumber
+                    batch.append(try IDocumentMessage(json: .object(fields)))
                 }
-                return last
+                try connectionManager.sendMessages(batch)
+                return batch.last?.clientSequenceNumber ?? 0
             }
+            runtime.onScheduleFlush = { [jobSink] in jobSink.yield(.flush) }
             self.runtime = runtime
             election = try SummarizerClientElection(members: loaded.quorum.getMembers(), sequenceNumber: loaded.sequenceNumber, initialState: runtime.electedSummarizerData)
             summaryGenerator = SummaryGenerator(ackHandle: version?.id)
@@ -277,7 +422,7 @@ public actor Container: IContainer {
     }
 
     /// container.ts `initializeProtocolStateFromSnapshot`: the quorum blobs, read through storage.
-    private func initializeProtocolStateFromSnapshot(
+    private nonisolated(nonsending) func initializeProtocolStateFromSnapshot(
         _ attributes: IDocumentAttributes, _ storage: any IDocumentStorageService, _ snapshot: ISnapshotTree
     ) async throws -> ProtocolOpHandler {
         let baseTree = getProtocolSnapshotTree(snapshot)
@@ -290,7 +435,7 @@ public actor Container: IContainer {
         return try ProtocolOpHandler(state: IProtocolState(json: .object(state)), audience: protocolAudience)
     }
 
-    private func connectToDeltaStorage() async throws -> any IDocumentDeltaStorageService {
+    private nonisolated(nonsending) func connectToDeltaStorage() async throws -> any IDocumentDeltaStorageService {
         if let deltaStorage { return deltaStorage }
         guard let service else { throw JSONDecodingError("no document service") }
         let connected = try await service.connectToDeltaStorage()
@@ -298,15 +443,64 @@ public actor Container: IContainer {
         return connected
     }
 
-    private func receive(_ event: DocumentDeltaConnectionEvent) async throws {
+    /// connectionManager.ts connectCore and setupNewSuccessfulConnection, then the storage
+    /// catch-up of container.ts load. An attempt that disconnect or close cancelled while it
+    /// awaited the driver installs nothing.
+    private nonisolated(nonsending) func connectToDeltaStream(_ attempt: Int) async throws {
+        guard let service else { throw JSONDecodingError("no document service") }
+        guard let connection = try await connectionManager.connect(service, client: client, attempt: attempt) else {
+            return
+        }
+        establishing = false
+        deltaStreamOpen = true
+        let details = connection.details
+        // container.ts propagateConnectionState: the signal audience learns the client id while catching up.
+        signalAudience.setCurrentClientId(details.clientId)
+        deltaManager.connect(
+            details, lastSequenceNumber: protocolHandler?.sequenceNumber ?? snapshotSequenceNumber)
+        try protocolHandler?.initialClients(details.initialClients)
+        try resetSignalAudience(details.initialClients)
+        deltaManager.enqueueMessages(details.initialMessages)
+        for signal in details.initialSignals { try processSignal(signal) }
+        forwardEvents(of: connection, attempt: attempt)
+        try await catchUp(fetchUnbounded: true)
+        scheduleSummaryWork()
+    }
+
+    /// Moves the connection's events into the job queue, in order. Until the owner adopts the
+    /// container they wait there, so ops that arrive during an off-owner load are kept.
+    private func forwardEvents(of connection: any IDocumentDeltaConnection, attempt: Int) {
+        Task { [jobSink] in
+            do {
+                for try await event in connection.events {
+                    jobSink.yield(.connection(attempt: attempt, event))
+                }
+            } catch {
+                jobSink.yield(.connectionFailed(attempt: attempt, error))
+            }
+        }
+    }
+
+    /// The awaited half of a connection attempt failed. Only the attempt in flight, or the
+    /// connection it installed, reports it; a cancelled attempt was abandoned.
+    private func connectAttemptFailed(_ attempt: Int, _ error: any Error) {
+        if connectionManager.pendingConnection == attempt {
+            connectionManager.cancelConnection()
+            establishing = false
+            failure = String(describing: error)
+        } else if connectionManager.isCurrent(attempt) {
+            connectionFailed(error)
+        }
+    }
+
+    private func receive(_ event: DocumentDeltaConnectionEvent) throws {
         switch event {
         case .op(_, let messages):
             deltaManager.enqueueMessages(messages)
-            try await catchUp()
+            try drainInbound()
             scheduleSummaryWork()
         case .signal(let batch):
             for signal in batch { try processSignal(signal) }
-            try await flushSignals()
         case .nack(let documentId, let nacks):
             throw DriverError("nack", .array([.string(documentId), .array(nacks.map(\.json))]))
         case .disconnect(let reason):
@@ -314,6 +508,18 @@ public actor Container: IContainer {
         case .pong:
             break
         }
+    }
+
+    /// The delta connection failed: a socket error, a nack, or an error processing its events.
+    private func connectionFailed(_ error: any Error) {
+        failure = String(describing: error)
+        finishSummaryWait(error: error)
+        setRuntimeDisconnected()
+        let connection = connectionManager.disconnect()
+        deltaManager.disconnect(String(describing: error), error: error)
+        deltaStreamLost()
+        raisePresenceDisconnected()
+        if let connection { Task { await connection.dispose() } }
     }
 
     private func processSignal(_ signal: ISignalMessage) throws {
@@ -368,47 +574,24 @@ public actor Container: IContainer {
         for entry in clients { try signalAudience.addMember(entry.clientId, entry.client) }
     }
 
-    /// Sends queued runtime signals in order. Signals are queued by synchronous runtime code and leave here,
-    /// the I/O edge; only one flush runs at a time so concurrent callers can not reorder them.
-    private func flushSignals() async throws {
-        guard !flushingSignals else { return }
-        flushingSignals = true
-        defer { flushingSignals = false }
-        while !outbound.signals.isEmpty {
-            guard let connection = connectionManager.connection else {
-                throw JSONDecodingError("disconnected")
-            }
-            let signal = outbound.signals.removeFirst()
-            try await connection.submitSignal(signal.content, targetClientId: signal.target)
-        }
-    }
-
     private func raisePresenceDisconnected() {
         do { try presence.host?.raiseDisconnected() } catch { presence.failure = error }
     }
 
-    private func firePresenceTimer(_ handle: Int) async {
+    private func firePresenceTimer(_ handle: Int) {
         guard let callback = presence.clock?.takeCallback(handle) else { return }
-        do {
-            try callback()
-            try await flushSignals()
-        } catch { presence.failure = error }
+        do { try callback() } catch { presence.failure = error }
     }
 
     /// Native equivalent of fluid-static `getPresence(container)`: acquires the presence container
-    /// extension (containerRuntime.ts `acquireExtensionInternal`) and runs `body` against it
-    /// synchronously on this container's executor, then sends the signals presence queued. `clock`
-    /// is the container's timer-backed `PresenceClock`, which the state factories read (`Date.now`).
-    public func withPresence<Result: Sendable>(
-        _ body: @Sendable (_ presence: any Presence, _ clock: any PresenceClock) throws -> Result
-    ) async throws -> Result {
+    /// extension (containerRuntime.ts `acquireExtensionInternal`). `clock` is the container's
+    /// timer-backed `PresenceClock`, which the state factories read (`Date.now`). A failure that a
+    /// presence listener or timer raised since the last call is thrown here.
+    public func getPresence() throws -> (presence: any Presence, clock: any PresenceClock) {
         if let failure = presence.failure { throw failure }
         let manager = try acquirePresence()
         guard let clock = presence.clock else { throw JSONDecodingError("presence clock missing") }
-        let outcome = Swift.Result { try body(manager.interface, clock) }
-        try await flushSignals()
-        if let failure = presence.failure { throw failure }
-        return try outcome.get()
+        return (manager.interface, clock)
     }
 
     private func acquirePresence() throws -> ContainerPresenceManager {
@@ -417,7 +600,7 @@ public actor Container: IContainer {
             return manager
         }
         guard let runtime else { throw JSONDecodingError("presence requires a loaded runtime") }
-        let clock = ContainerPresenceClock { [weak self] handle in await self?.firePresenceTimer(handle) }
+        let clock = ContainerPresenceClock { [jobSink] handle in jobSink.yield(.presenceTimer(handle)) }
         let adapter = PresenceAudienceAdapter(audience: signalAudience) { [presence] in presence.failure = $0 }
         let host = ContainerExtensionHost(
             runtime: runtime, connectionManager: connectionManager, audience: adapter, clock: clock)
@@ -429,9 +612,12 @@ public actor Container: IContainer {
         return manager
     }
 
-    private func drain() throws -> [IDocumentMessage] {
+    /// deltaQueue.ts processDeltas over container.ts processRemoteMessage: applies, in order and
+    /// synchronously, every queued op that is next in sequence. Once the owner runs the loop,
+    /// deltaScheduler.ts may pause at a runtime batch end; the loop resumes on a later turn.
+    private func drainInbound() throws {
         guard let protocolHandler else { throw JSONDecodingError("no protocol state") }
-        if summaryPaused { return [] }
+        if summaryPaused || deltaScheduler?.paused == true { return }
         while let entry = try deltaManager.nextMessage(
             sequenceNumber: protocolHandler.sequenceNumber)
         {
@@ -466,7 +652,15 @@ public actor Container: IContainer {
             let wasConnected = connectionManager.connected
             try connectionManager.receivedJoin(message)
             try runtime?.recordSummaryMessage(message.json)
-            if message.type == "op" { _ = try runtime?.process(message.json) }
+            if message.type == "op", let runtime {
+                _ = try runtime.process(message.json)
+            } else {
+                // containerRuntime.ts: any other message is a batch of one, and runtime.process
+                // flushes the open local batch before it.
+                try runtime?.flush()
+                deltaScheduler?.batchBegin()
+                deltaScheduler?.batchEnd()
+            }
             runtime?.referenceSequenceNumber = message.sequenceNumber
             if !wasConnected && connectionManager.connected, let id = connectionManager.clientId {
                 try runtime?.reconnect(clientId: id.description)
@@ -475,10 +669,11 @@ public actor Container: IContainer {
             }
             if connectionManager.connected {
                 if result.immediateNoOp == true {
-                    outbound.messages.append(
+                    try connectionManager.sendMessages([
                         try deltaManager.prepareMessage(
                             type: "accept", contents: nil,
-                            referenceSequenceNumber: protocolHandler.sequenceNumber))
+                            referenceSequenceNumber: protocolHandler.sequenceNumber)
+                    ])
                 }
                 deltaManager.noopHeuristic.notifyMessageProcessed(message)
                 if message.type == "op" && deltaManager.noopHeuristic.opsProcessedSinceOpSent == 1 {
@@ -487,17 +682,23 @@ public actor Container: IContainer {
             }
             deltaManager.recordProcessed(
                 entry, duration: (Date().timeIntervalSince1970 - started) * 1000)
+            // deltaScheduler.ts paused the queue at this message's batch end.
+            if deltaScheduler?.paused == true {
+                jobSink.yield(.inboundPaused)
+                break
+            }
+        }
+        if deltaScheduler?.paused != true {
+            deltaScheduler?.inboundQueueIdle()
         }
         if connectionManager.connected && deltaManager.noopHeuristic.takeWantsNoop() {
-            outbound.messages.append(
+            try connectionManager.sendMessages([
                 try deltaManager.prepareMessage(
                     type: "noop", contents: nil,
-                    referenceSequenceNumber: protocolHandler.sequenceNumber))
+                    referenceSequenceNumber: protocolHandler.sequenceNumber)
+            ])
         }
-        let messages = outbound.messages
-        outbound.messages.removeAll(keepingCapacity: true)
         updateDirtyContainerState()
-        return messages
     }
 
     /// container.ts `updateDirtyContainerState`, from the runtime's pending messages: emits
@@ -509,25 +710,53 @@ public actor Container: IContainer {
         events.emit(dirty ? .dirty : .saved)
     }
 
-    private func catchUp(fetchUnbounded: Bool = false) async throws {
-        try await sendMessages(drain())
-        if summaryPaused { return }
-        if !fetching && (fetchUnbounded || !deltaManager.pending.isEmpty) {
-            fetching = true
-            defer { fetching = false }
-            var unbounded = fetchUnbounded
-            while let current = protocolHandler, unbounded || !deltaManager.pending.isEmpty {
-                // Refetch the prior op deliberately: DeltaManager detects a replaced file by its
-                // sender/type/MSN/reference/timestamp fingerprint, not by comparing contents. The
-                // driver batches the range and, bounded, fetches all of it (requestOps 0x270).
-                let (from, to) = deltaManager.fetchRange(sequenceNumber: current.sequenceNumber)
-                let reason = unbounded ? "DocumentOpen" : "Gap"
-                unbounded = false
-                let deltaStorage = try await connectToDeltaStorage()
-                for try await messages in deltaStorage.fetchMessages(from, to: to, cachedOnly: false, fetchReason: reason) {
-                    deltaManager.enqueueMessages(messages, source: "storage")
-                    try await sendMessages(drain())
-                }
+    /// Ops are queued past the next sequence number, and the scheduler has not merely paused.
+    private var hasGap: Bool {
+        deltaScheduler?.paused != true && !deltaManager.pending.isEmpty
+    }
+
+    /// Drains what is queued, then fetches from storage: unbounded at connect (DocumentOpen),
+    /// otherwise only a gap.
+    private nonisolated(nonsending) func catchUp(fetchUnbounded: Bool = false) async throws {
+        try drainInbound()
+        if summaryPaused || fetching { return }
+        guard fetchUnbounded || hasGap else { return }
+        fetching = true
+        defer { fetching = false }
+        try await fetchMissingDeltas(unbounded: fetchUnbounded)
+    }
+
+    /// deltaManager.ts fetchMissingDeltas: a gap in the socket's ops is filled from storage in the
+    /// background while the loop keeps running.
+    private func startGapFetchIfNeeded(on owner: isolated any Actor) {
+        guard !fetching, !summaryPaused, hasGap else { return }
+        fetching = true
+        fetchTask = Task {
+            _ = owner
+            defer { self.fetching = false }
+            do {
+                try await self.fetchMissingDeltas(unbounded: false)
+            } catch {
+                if !self.closed { self.connectionFailed(error) }
+            }
+        }
+    }
+
+    private nonisolated(nonsending) func fetchMissingDeltas(unbounded fetchUnbounded: Bool) async throws {
+        var unbounded = fetchUnbounded
+        while let current = protocolHandler, !closed, unbounded || hasGap {
+            // Refetch the prior op deliberately: DeltaManager detects a replaced file by its
+            // sender/type/MSN/reference/timestamp fingerprint, not by comparing contents. The
+            // driver batches the range and, bounded, fetches all of it (requestOps 0x270).
+            let (from, to) = deltaManager.fetchRange(sequenceNumber: current.sequenceNumber)
+            let reason = unbounded ? "DocumentOpen" : "Gap"
+            unbounded = false
+            let deltaStorage = try await connectToDeltaStorage()
+            for try await messages in deltaStorage.fetchMessages(from, to: to, cachedOnly: false, fetchReason: reason) {
+                // deltaManager.ts clearQueues: a closed container drops what storage returns.
+                guard !closed else { return }
+                deltaManager.enqueueMessages(messages, source: "storage")
+                try drainInbound()
             }
         }
     }
@@ -536,48 +765,40 @@ public actor Container: IContainer {
     /// still exists. Merely retaining that timer can acknowledge a new batch prematurely.
     private func restartNoopTimer() {
         noopTimer?.cancel()
+        noopTimerToken += 1
         let delay = deltaManager.noopHeuristic.noopTimeFrequency
         guard delay.isFinite else {
             noopTimer = nil
             return
         }
-        noopTimer = Task {
-            do {
-                try await Task.sleep(for: .milliseconds(delay))
-                try await self.timerFired()
-            } catch is CancellationError {} catch { self.failure = String(describing: error) }
+        let token = noopTimerToken
+        noopTimer = Task { [jobSink] in
+            do { try await Task.sleep(for: .milliseconds(delay)) } catch { return }
+            jobSink.yield(.noopTimer(token))
         }
     }
 
-    private func sendMessages(_ messages: [IDocumentMessage]) async throws {
-        guard !messages.isEmpty else { return }
-        guard let connection = connectionManager.connection else {
-            throw JSONDecodingError("disconnected")
-        }
-        for message in messages { try await connection.submit([message]) }
-    }
-
-    private func timerFired() async throws {
-        noopTimer = nil
+    private func timerFired() throws {
         if connectionManager.connected && deltaManager.noopHeuristic.opsProcessedSinceOpSent > 0 {
-            try await submit(type: "noop")
+            try submit(type: "noop")
         }
     }
 
-    public func submit(type: String, contents: JSONValue? = nil) async throws {
-        guard connectionManager.connected, let connection = connectionManager.connection,
-            let protocolHandler
-        else { throw JSONDecodingError("not connected to own join") }
+    /// container.ts submitMessage: one protocol message, enqueued on the connection synchronously.
+    public func submit(type: String, contents: JSONValue? = nil) throws {
+        guard connectionManager.connected, let protocolHandler else {
+            throw JSONDecodingError("not connected to own join")
+        }
         let message = try deltaManager.prepareMessage(
             type: type, contents: contents, referenceSequenceNumber: protocolHandler.sequenceNumber)
-        try await connection.submit([message])
+        try connectionManager.sendMessages([message])
     }
 
-    public func signal(_ text: String) async throws {
-        guard let connection = connectionManager.connection else {
+    public func signal(_ text: String) throws {
+        guard connectionManager.connection != nil else {
             throw JSONDecodingError("disconnected")
         }
-        try await connection.submitSignal(text, targetClientId: nil)
+        try connectionManager.submitSignal(text, targetClientId: nil)
     }
 
     public func view() throws -> JSONValue {
@@ -610,20 +831,6 @@ public actor Container: IContainer {
         return .object(view)
     }
 
-    /// Runs `body` against the runtime's entry point on this container's executor, then flushes the
-    /// runtime's batch and sends it: the end of the JS turn, where containerRuntime.ts flushes.
-    public func withEntryPoint<Result: Sendable>(_ body: @Sendable (AnyObject) throws -> Result) async throws -> Result {
-        if let failure { throw JSONDecodingError(failure) }
-        guard let entryPoint, let runtime else { throw JSONDecodingError("container has no runtime") }
-        let result = try body(entryPoint)
-        try runtime.flush()
-        let messages = outbound.messages
-        outbound.messages.removeAll(keepingCapacity: true)
-        try await sendMessages(messages)
-        updateDirtyContainerState()
-        return result
-    }
-
     public var connectionState: ConnectionState {
         if deltaStreamOpen { return connectionManager.connected ? .connected : .catchingUp }
         return establishing ? .establishingConnection : .disconnected
@@ -647,18 +854,49 @@ public actor Container: IContainer {
 
     public var readOnlyInfo: ReadOnlyInfo { deltaManager.readOnlyInfo }
 
-    public func getEntryPoint() async throws -> AnyObject {
+    public nonisolated(nonsending) func getEntryPoint() async throws -> AnyObject {
         if closed { throw JSONDecodingError("The context is already disposed") }
         guard let entryPoint else { throw JSONDecodingError("container has no runtime") }
         return entryPoint
     }
 
-    /// container.ts `close`: disconnect for good, then emit `closed`.
-    public func close(_ error: (any Error)?) async {
+    /// container.ts `close`: disconnects for good, then emits `closed`. Nothing processes after
+    /// it, so the event loop ends. A summarizer is disposed too (closeCore: no user disposes it).
+    public func close(_ error: (any Error)?) {
         guard !closed else { return }
         closed = true
-        await disconnect()
+        tearDown()
         events.emit(.closed(error: error))
+        if isSummarizer { dispose(error) }
+    }
+
+    /// container.ts `dispose`: closes without `closed`, releases the document service and the
+    /// timers, then emits `disposed`.
+    public func dispose(_ error: (any Error)?) {
+        guard !disposed else { return }
+        disposed = true
+        if !closed {
+            closed = true
+            tearDown()
+        }
+        noopTimer?.cancel()
+        noopTimer = nil
+        summaryAckTimer?.cancel()
+        summaryAckTimer = nil
+        presence.clock?.cancelAll()
+        service?.dispose(error)
+        events.emit(.disposed(error: error))
+    }
+
+    /// The terminal half of close and dispose: the connection, any attempt or fetch in flight, the
+    /// summarizer and the job queue go away.
+    private func tearDown() {
+        disconnectCore()
+        connectTask?.cancel()
+        connectTask = nil
+        fetchTask?.cancel()
+        fetchTask = nil
+        jobSink.finish()
     }
 
     public func generateSummary() throws -> JSONValue {
@@ -666,24 +904,26 @@ public actor Container: IContainer {
         return try runtime.summarize(fullTree: true, trackState: false).summary.json
     }
 
-    public func submitSummarizerMessage(_ contents: JSONValue) async throws {
+    public nonisolated(nonsending) func submitSummarizerMessage(_ contents: JSONValue) async throws {
         guard let summarizerChild else { throw JSONDecodingError("no running summarizer") }
         try await summarizerChild.submit(type: "summarize", contents: contents)
     }
 
-    private var loaded: Bool { protocolHandler != nil }
+    var loaded: Bool { protocolHandler != nil }
 
-    public func summarizerView() async throws -> JSONValue {
-        guard let summarizerChild, await summarizerChild.loaded else { return .null }
-        return try await summarizerChild.view()
+    public nonisolated(nonsending) func summarizerView() async throws -> JSONValue {
+        guard let summarizerChild else { return .null }
+        return try await summarizerChild.view() ?? .null
     }
-    public func stopSummarizer() async {
+
+    public nonisolated(nonsending) func stopSummarizer() async {
         automaticSummaries = false
         summaryTimer?.cancel()
         summaryTimer = nil
-        await summarizerChild?.disconnect()
+        let child = summarizerChild
         summarizerChild = nil
         _ = summaryManager.cleanup(generation: summaryManager.generation)
+        await child?.disconnect()
     }
 
     public func enableSummaries() {
@@ -700,20 +940,15 @@ public actor Container: IContainer {
         else if let start = summaryManager.startDeadline { deadline = start }
         else { return }
         summaryTimer?.cancel()
-        summaryTimer = Task {
-            do {
-                try await Task.sleep(for: .milliseconds(max(0, deadline - now)))
-                try Task.checkCancellation()
-                try await self.runSummaryWork()
-            } catch is CancellationError {} catch {
-                self.failure = String(describing: error)
-                await self.disconnect()
-            }
+        summaryTimerToken += 1
+        let token = summaryTimerToken
+        summaryTimer = Task { [jobSink] in
+            do { try await Task.sleep(for: .milliseconds(max(0, deadline - now))) } catch { return }
+            jobSink.yield(.summaryTimer(token))
         }
     }
 
-    private func runSummaryWork() async throws {
-        summaryTimer = nil
+    private nonisolated(nonsending) func runSummaryWork() async throws {
         summaryWorkRunning = true
         defer {
             summaryWorkRunning = false
@@ -750,11 +985,12 @@ public actor Container: IContainer {
                     return
                 }
                 guard let parentId = connectionManager.clientId else { throw JSONDecodingError("missing parent id") }
-                let child = try cloneForSummarizer()
+                let child = SummarizerHost(try cloneForSummarizer())
                 summarizerChild = child
                 do {
-                    await child.startSummarizer(parentClientId: parentId, host: self, generation: generation)
-                    try await child.connect()
+                    try await child.open(parentClientId: parentId, generation: generation) { [jobSink] generation in
+                        jobSink.yield(.summarizerStopped(generation: generation))
+                    }
                     guard generation == summaryManager.generation else {
                         await child.disconnect()
                         return
@@ -771,15 +1007,17 @@ public actor Container: IContainer {
             if summaryManager.state == .stopping {
                 let generation = summaryManager.generation
                 if let child = summarizerChild {
-                    try await stopChild(child, reason: summaryManager.pendingStopReason ?? "notElectedParent")
+                    try await child.stop(reason: summaryManager.pendingStopReason ?? "notElectedParent")
                 }
                 if summaryManager.cleanup(generation: generation) { summarizerChild = nil }
             }
         }
     }
 
-    private func startSummarizer(parentClientId: JSString, host: Container, generation: Int) {
-        summarizerHost = host
+    /// A summarizer child: `parentClientId` elects it, and `stopped` tells the parent, on the
+    /// parent's loop, that the child of `generation` disconnected.
+    func startSummarizer(parentClientId: JSString, generation: Int, stopped: @escaping @Sendable (Int) -> Void) {
+        summarizerStopped = stopped
         summarizerGeneration = generation
         summarizerParentId = parentClientId
         enableSummaries()
@@ -787,19 +1025,19 @@ public actor Container: IContainer {
 
     /// The interactive host owns a separate non-interactive summarizer container, as in
     /// summaryManager.ts/createSummarizer.ts. Its runtime has no local application edits.
-    public func summarize() async throws -> JSONValue {
+    public nonisolated(nonsending) func summarize() async throws -> JSONValue {
         if !isSummarizer {
             if summarizerChild == nil {
-                let child = try cloneForSummarizer()
+                let child = SummarizerHost(try cloneForSummarizer())
                 summarizerChild = child
-                try await child.connect()
+                try await child.open(parentClientId: nil, generation: nil, stopped: nil)
             }
             guard let summarizerChild else { throw JSONDecodingError("missing summarizer child") }
             return try await summarizerChild.summarize()
         }
         guard let runtime, let summaryGenerator, let protocolHandler, let storage,
             connectionManager.connected, runtime.pendingStateManager.pendingMessagesCount == 0,
-            outbound.messages.isEmpty, !summaryActive, summaryGenerator.pendingHandle == nil
+            !summaryActive, summaryGenerator.pendingHandle == nil
         else { throw JSONDecodingError("summary preconditions failed") }
         summaryActive = true
         defer {
@@ -826,7 +1064,7 @@ public actor Container: IContainer {
                 context: summaryGenerator.context(referenceSequenceNumber: reference))
             let contents = try summaryGenerator.submitted(handle: handle,
                 referenceSequenceNumber: reference, minimumSequenceNumber: minimum)
-            try await submit(type: "summarize", contents: .string(JSString(JSON.stringify(contents))))
+            try submit(type: "summarize", contents: .string(JSString(JSON.stringify(contents))))
         } catch {
             summaryPaused = false
             summaryGenerator.failAttempt()
@@ -842,35 +1080,20 @@ public actor Container: IContainer {
         if let nack = summaryGenerator.lastNack { throw try SummaryNackError(nack) }
         if let failure { throw JSONDecodingError(failure) }
         if summaryGenerator.acknowledgedCount == before {
+            summaryAckToken += 1
+            let token = summaryAckToken
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 summaryWaiter = continuation
-                summaryAckTimer = Task {
-                    do {
-                        try await Task.sleep(for: .milliseconds(180000))
-                        self.finishSummaryWait(error: JSONDecodingError("summary ack timeout"))
-                    } catch is CancellationError {} catch { self.finishSummaryWait(error: error) }
+                summaryAckTimer = Task { [jobSink] in
+                    do { try await Task.sleep(for: .milliseconds(180000)) } catch { return }
+                    jobSink.yield(.summaryAckTimeout(token))
                 }
             }
         }
         return .string(summaryGenerator.ackHandle ?? "")
     }
 
-    private func stopChild(_ child: Container, reason: String) async throws {
-        let timeout = Task {
-            do {
-                try await Task.sleep(for: .milliseconds(120000))
-                await child.disconnect()
-            } catch is CancellationError {} catch { self.summaryFailure = String(describing: error) }
-        }
-        defer { timeout.cancel() }
-        do { try await child.stopGracefully(reason: reason) }
-        catch {
-            await child.disconnect()
-            throw error
-        }
-    }
-
-    private func stopGracefully(reason: String) async throws {
+    nonisolated(nonsending) func stopGracefully(reason: String) async throws {
         automaticSummaries = false
         summaryTimer?.cancel()
         summaryTimer = nil
@@ -882,7 +1105,7 @@ public actor Container: IContainer {
             summarizer?.runningSummarizer.heuristicRunner.shouldRunLastSummary() == true {
             _ = try await summarize()
         }
-        await disconnect()
+        disconnect()
     }
 
     private func summarizerStopped(generation: Int) {
@@ -904,44 +1127,55 @@ public actor Container: IContainer {
         else { waiter?.resume() }
     }
 
-    public func disconnect() async {
-        let resumeAutomaticSummaries = automaticSummaries
-        automaticSummaries = false
+    /// TS `disconnect(): void`. A running summarizer child stops in the background, as
+    /// summaryManager.ts stops it once the parent is no longer connected; its stop notice cleans
+    /// up on this container's loop.
+    public func disconnect() {
+        precondition(!closed, "The Container is closed and cannot be disconnected")
+        disconnectCore()
+    }
+
+    private func disconnectCore() {
         if !isSummarizer, let child = summarizerChild, summaryManager.state == .running {
             summaryManager.stop(reason: "parentNotConnected", now: Date().timeIntervalSince1970 * 1000)
-            do { try await stopChild(child, reason: "parentNotConnected") }
-            catch { summaryFailure = String(describing: error) }
+            Task { [jobSink] in
+                do { try await child.stop(reason: "parentNotConnected") }
+                catch { jobSink.yield(.summaryFailure(String(describing: error))) }
+            }
+        } else {
+            _ = summaryManager.cleanup(generation: summaryManager.generation)
+            if let child = summarizerChild { Task { await child.disconnect() } }
+            summarizerChild = nil
         }
-        _ = summaryManager.cleanup(generation: summaryManager.generation)
         finishSummaryWait(error: JSONDecodingError("summarizer disconnected"))
         summaryTimer?.cancel()
         summaryTimer = nil
-        await summarizerChild?.disconnect()
-        summarizerChild = nil
-        runtime?.connected = false
-        if let runtime {
-            for id in runtime.channelCollection.datastoreIds {
-                do { try runtime.channelCollection.getDatastore(id).setConnectionState(false, clientId: nil) }
-                catch { failure = String(describing: error) }
-            }
-        }
+        setRuntimeDisconnected()
         let hadConnection = connectionManager.connection != nil
-        connectionManager.connectionFailed()
+        establishing = false
+        let connection = connectionManager.disconnect()
         if hadConnection {
             deltaManager.disconnect("Client disconnect")
             deltaStreamLost()
         }
         noopTimer?.cancel()
         noopTimer = nil
-        reader?.cancel()
-        reader = nil
-        await connectionManager.disconnect()
+        if let connection { Task { await connection.dispose() } }
         raisePresenceDisconnected()
-        automaticSummaries = resumeAutomaticSummaries
-        if let summarizerHost, let summarizerGeneration {
-            self.summarizerHost = nil
+        if let summarizerStopped, let summarizerGeneration {
+            self.summarizerStopped = nil
             self.summarizerGeneration = nil
-            await summarizerHost.summarizerStopped(generation: summarizerGeneration)
+            summarizerStopped(summarizerGeneration)
+        }
+    }
+
+    /// containerRuntime.ts setConnectionState(false): the runtime and its datastores stop sending.
+    private func setRuntimeDisconnected() {
+        guard let runtime else { return }
+        runtime.connected = false
+        for id in runtime.channelCollection.datastoreIds {
+            do { try runtime.channelCollection.getDatastore(id).setConnectionState(false, clientId: nil) }
+            catch { failure = String(describing: error) }
         }
     }
 }
