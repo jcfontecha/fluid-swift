@@ -545,12 +545,13 @@ public struct ISnapshotTreeEx: DriverJSONValue {
 public struct IVersion: DriverJSONValue {
     public let json: JSONValue
     public let id: JSString
-    public let treeId: JSString
+    /// Optional in practice: ODSP returns `{ id, treeId: undefined! }` (odspDocumentStorageManager.ts).
+    public let treeId: JSString?
     public let date: JSString?
     public init(json: JSONValue) throws {
         let object = try json.asObject()
         self.id = try json.member("id").asString()
-        self.treeId = try json.member("treeId").asString()
+        self.treeId = try object["treeId"].map { value in try value.asString() }
         self.date = try object["date"].map { value in try value.asString() }
         self.json = json
     }
@@ -666,6 +667,29 @@ public struct ISnapshot: DriverJSONValue {
         self.latestSequenceNumber = try object["latestSequenceNumber"].map { value in try decodeInt(value) }
         self.snapshotFormatV = try decodeLiteral(json.member("snapshotFormatV"), 1)
         self.json = json
+    }
+}
+
+extension ISnapshot {
+    /// Driver-authored snapshot. Blob bytes live in `blobContents.buffers`; `json.blobContents`
+    /// is `{}`, as JSON.stringify of a Map.
+    public init(snapshotTree: ISnapshotTree, blobContents: SnapshotBlobContents, ops: [ISequencedDocumentMessage],
+        sequenceNumber: Int?, latestSequenceNumber: Int?)
+    {
+        var object = JSObject<JSONValue>()
+        object["snapshotTree"] = snapshotTree.json
+        object["blobContents"] = blobContents.json
+        object["ops"] = .array(ops.map(\.json))
+        if let sequenceNumber { object["sequenceNumber"] = .number(Double(sequenceNumber)) }
+        if let latestSequenceNumber { object["latestSequenceNumber"] = .number(Double(latestSequenceNumber)) }
+        object["snapshotFormatV"] = .number(1)
+        self.json = .object(object)
+        self.snapshotTree = snapshotTree
+        self.blobContents = blobContents
+        self.ops = ops
+        self.sequenceNumber = sequenceNumber
+        self.latestSequenceNumber = latestSequenceNumber
+        self.snapshotFormatV = 1
     }
 }
 
