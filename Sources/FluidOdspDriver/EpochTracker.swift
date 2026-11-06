@@ -94,8 +94,29 @@ public class EpochTracker: @unchecked Sendable {
         }
     }
 
+    /// epochTracker.ts validateEpoch (socket handshake, prefetched snapshot): on a mismatch
+    /// checkForEpochError awaits removeEntries, which only logs its own failure, before rethrowing.
+    nonisolated(nonsending) public func validateEpoch(_ epoch: String?, fetchType: OdspFetchType) async throws {
+        do { try validateEpoch(epoch) }
+        catch let error as OdspNetworkError where error.errorType == "fileOverwrittenInStorage" {
+            // The synchronous core already counted this clear.
+            try? await cacheRemove?()
+            throw error
+        }
+    }
+
+    /// The synchronous core (validateEpochFromResponse). It counts the clear on a mismatch; the
+    /// caller removes the entries. EpochTrackerWithRedemption overrides it, as TS overrides
+    /// validateEpochFromResponse.
     public func validateEpoch(_ epoch: String?) throws {
         guard let epoch else { throw JSONDecodingError("0x584") }
+        try checkForEpochErrorCore(epoch)
+    }
+
+    /// checkForEpochErrorCore plus the epoch learning of validateEpochFromResponse. A failed
+    /// response's epoch goes through this directly, as TS checkForEpochError does, not through the
+    /// overridable validateEpochFromResponse.
+    private func checkForEpochErrorCore(_ epoch: String) throws {
         let mismatch = state.withLock { state -> Bool in
             if let current = state.fluidEpoch, !current.isEmpty, !epoch.isEmpty, current != epoch {
                 state.cacheClearCount += 1
@@ -118,7 +139,7 @@ public class EpochTracker: @unchecked Sendable {
     public func classify(status: Int, headers: [String: String], body: String = "") throws -> OdspNetworkError {
         var error = try createOdspNetworkError(status: status, headers: headers, body: body)
         if status == 409, fluidEpoch != nil, let incoming = error.serverEpoch {
-            do { try validateEpoch(incoming) }
+            do { try checkForEpochErrorCore(incoming) }
             catch let mismatch as OdspNetworkError { return mismatch }
         }
         if status == 409 {

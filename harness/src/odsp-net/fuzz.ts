@@ -310,17 +310,19 @@ try {
         }
     }
     snapshotDelay = 0;
-    for (const failPut of [false, true]) {
+    // The CLP case rides on the failed put: in one process only the oracle's first successful
+    // prefetch observes the 5-second eviction, so a second successful run would not compare.
+    for (const [failPut, clp] of [[false, false], [true, true]]) {
         reset(2);
-        const expected = await prefetchOracle(origin, failPut);
+        const expected = await prefetchOracle(origin, failPut, clp);
         const expectedRequests = structuredClone(trace);
         reset(2);
         if (child && lines) {
-            child.stdin.write(JSON.stringify({ prefetch: true, failPut, origin }) + '\n');
+            child.stdin.write(JSON.stringify({ prefetch: true, failPut, clp, origin }) + '\n');
             const line = await lines.next();
             assert(!line.done);
-            assert.deepEqual(JSON.parse(line.value), expected, `prefetch ${failPut}`);
-            assert.deepEqual(trace, expectedRequests, `prefetch requests ${failPut}`);
+            assert.deepEqual(JSON.parse(line.value), expected, `prefetch ${failPut} clp ${clp}`);
+            assert.deepEqual(trace, expectedRequests, `prefetch requests ${failPut} clp ${clp}`);
         }
     }
     const expectedCache = await epochCacheOracle(origin);

@@ -227,7 +227,10 @@ while let line = readLine() {
         if try input.asObject()["prefetch"] == .bool(true) {
             guard case .bool(let failPut) = try input.member("failPut") else { throw JSONDecodingError("invalid failPut") }
             let origin = try input.member("origin").asString().description
-            let resolved = try OdspDriverUrlResolver().resolve(origin + "?driveId=d&itemId=i&path=")
+            var headers = JSObject<JSONValue>()
+            if try input.member("clp") == .bool(true) { headers["X-CLP-Compliant-App"] = .bool(true) }
+            guard let resolvedUrl = try await OdspDriverUrlResolver().resolve(IRequest(url: origin + "?driveId=d&itemId=i&path=", headers: headers.isEmpty ? nil : headers)) else { throw JSONDecodingError("unresolved") }
+            let resolved = try getOdspResolvedUrl(resolvedUrl)
             let network = OdspNetwork(resolvedUrl: resolved, epochTracker: EpochTracker(), tokenFetcher: { _ in .token("initial") })
             let put = PrefetchPutGate()
             let clock = PrefetchClock()

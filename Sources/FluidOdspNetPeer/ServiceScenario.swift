@@ -152,6 +152,15 @@ private func eventJSON(_ event: DocumentDeltaConnectionEvent) -> JSONValue {
     }
 }
 
+/// oracle.ts clpHeaders: the `X-CLP-Compliant-App` resolve header, when the scenario sets one.
+private func clpHeaders(_ scenario: JSONValue) throws -> JSObject<JSONValue>? {
+    let clp = try scenario.member("clp")
+    guard clp != .null else { return nil }
+    var headers = JSObject<JSONValue>()
+    headers["X-CLP-Compliant-App"] = clp
+    return headers
+}
+
 /// Runs one oracle.ts scenario through the Swift factory.
 func runServiceScenario(_ scenario: JSONValue) async throws -> JSONValue {
     let tokens = Log()
@@ -181,15 +190,21 @@ func runServiceScenario(_ scenario: JSONValue) async throws -> JSONValue {
     do {
         if kind == "load" {
             let url = createOdspUrl(siteUrl: origin, driveId: driveId, itemId: try scenario.member("itemId").asString().description, dataStorePath: "")
-            guard let resolvedUrl = try await resolver.resolve(IRequest(url: url)) else { throw JSONDecodingError("unresolved") }
+            guard let resolvedUrl = try await resolver.resolve(IRequest(url: url, headers: try clpHeaders(scenario))) else { throw JSONDecodingError("unresolved") }
             out["resolvedUrl"] = resolvedUrl.json
             out["absoluteUrl"] = string(try await resolver.getAbsoluteUrl(resolvedUrl, relativeUrl: "/store/x"))
             service = try await factory.createDocumentService(resolvedUrl, clientIsSummarizer: false)
         } else {
-            let request = createOdspCreateContainerRequest(siteUrl: origin, driveId: driveId, filePath: try scenario.member("filePath").asString().description, fileName: try scenario.member("fileName").asString().description)
+            let created = createOdspCreateContainerRequest(siteUrl: origin, driveId: driveId, filePath: try scenario.member("filePath").asString().description, fileName: try scenario.member("fileName").asString().description)
+            var headers = created.headers ?? JSObject()
+            for (key, value) in try clpHeaders(scenario)?.entries ?? [] { headers[key] = value }
+            let request = IRequest(url: created.url, headers: headers)
             out["createRequest"] = object([("url", string(request.url)), ("headers", request.headers.map { .object($0) })])
-            guard let resolvedUrl = try await resolver.resolve(request) else { throw JSONDecodingError("unresolved") }
+            guard var resolvedUrl = try await resolver.resolve(request) else { throw JSONDecodingError("unresolved") }
             out["createResolvedUrl"] = resolvedUrl.json
+            if try scenario.member("hostContext") == .bool(true) {
+                resolvedUrl = try getOdspResolvedUrl(resolvedUrl).setting("context", .string(JSString("context-\(seed)"))).setting("appName", .string("harness-app")).resolvedUrl
+            }
             let summary = kind == "create" ? try SummaryTree(json: JSON.parse(createNewSummaryText)) : nil
             service = try await factory.createContainer(summary, resolvedUrl: resolvedUrl, clientIsSummarizer: false)
             out["resolvedUrl"] = service?.resolvedUrl.json

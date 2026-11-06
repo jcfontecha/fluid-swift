@@ -45,6 +45,8 @@ actor ParallelRequests<T: Sendable> {
     private let responseCallback: @Sendable ([T]) throws -> Void
     private var endResult: Result<Void, Error>?
     private var endWaiter: CheckedContinuation<Void, Error>?
+    /// The request loops. They share TS's abort signal: cancelling the manager cancels them all.
+    private var requestTasks: [Task<Void, Never>] = []
 
     init(from: Int, to: Int?, payloadSize: Int, requestCallback: @escaping @Sendable (Int, Int, Int, Bool) async throws -> (partial: Bool, cancel: Bool, payload: [T]), responseCallback: @escaping @Sendable ([T]) throws -> Void) {
         latestRequested = from
@@ -64,6 +66,7 @@ actor ParallelRequests<T: Sendable> {
             workingState = .canceled
             end(.success(()))
         }
+        for task in requestTasks { task.cancel() }
     }
 
     func run(_ concurrency: Int) async throws {
@@ -139,10 +142,10 @@ actor ParallelRequests<T: Sendable> {
             return
         }
         requestsInFlight += 1
-        Task {
+        requestTasks.append(Task {
             do { try await self.addRequestCore(chunk.from, chunk.to) }
             catch { self.fail(error) }
-        }
+        })
     }
 
     private func addRequestCore(_ fromArg: Int, _ toArg: Int) async throws {
@@ -210,11 +213,12 @@ actor ParallelRequests<T: Sendable> {
 }
 
 /// getSingleOpBatch: retries retryable failures, and empty results when the end is known, until
-/// ops arrive. 30 s of consecutive empty successes is a non-retryable failure.
+/// ops arrive. 30 s of consecutive empty successes is a non-retryable failure. Task cancellation is
+/// TS's abort signal (`while (signal?.aborted !== true)`): the loop stops and returns `nothing`.
 func getSingleOpBatch(strongTo: Bool, get: @Sendable () async throws -> (messages: [JSONValue], partialResult: Bool)) async throws -> (partial: Bool, cancel: Bool, payload: [JSONValue]) {
     var lastSuccessTime: Double?
     var waitTime = 50.0
-    while true {
+    while !Task.isCancelled {
         var lastError: Error?
         do {
             let (messages, partialResult) = try await get()
@@ -233,11 +237,14 @@ func getSingleOpBatch(strongTo: Bool, get: @Sendable () async throws -> (message
             guard error.canRetry else { throw error }
         }
         waitTime = calculateMaxWaitTime(waitTime, lastError)
-        try await Task.sleep(for: .milliseconds(waitTime))
+        do { try await Task.sleep(for: .milliseconds(waitTime)) }
+        catch { break }
     }
+    return (false, true, [])
 }
 
-/// requestOps: an ordered stream of contiguous op batches for [fromTotal, toTotal).
+/// requestOps: an ordered stream of contiguous op batches for [fromTotal, toTotal). Ending the
+/// stream's iteration aborts the fetch; as TS's abort listener does, that cancels the manager at once.
 func requestOps(concurrency: Int, fromTotal: Int, toTotal: Int?, payloadSize: Int, get: @escaping @Sendable (Int, Int) async throws -> (messages: [JSONValue], partialResult: Bool)) -> AsyncThrowingStream<[JSONValue], Error> {
     let (stream, continuation) = AsyncThrowingStream<[JSONValue], Error>.makeStream()
     let lastFetch = LastFetch()
@@ -247,9 +254,13 @@ func requestOps(concurrency: Int, fromTotal: Int, toTotal: Int?, payloadSize: In
         try lastFetch.deliver(deltas, fromTotal: fromTotal)
         continuation.yield(deltas)
     })
-    Task {
+    let task = Task {
         do {
-            try await manager.run(concurrency)
+            try await withTaskCancellationHandler {
+                try await manager.run(concurrency)
+            } onCancel: {
+                Task { await manager.cancel() }
+            }
             if await !manager.canceled {
                 if let toTotal {
                     guard let last = lastFetch.value, last >= toTotal - 1 else { throw JSONDecodingError("0x270") }
@@ -260,6 +271,7 @@ func requestOps(concurrency: Int, fromTotal: Int, toTotal: Int?, payloadSize: In
             continuation.finish(throwing: error)
         }
     }
+    continuation.onTermination = { _ in task.cancel() }
     return stream
 }
 

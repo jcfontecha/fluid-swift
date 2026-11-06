@@ -56,6 +56,10 @@ export interface Scenario {
     summary: 'container' | 'channel' | 'none';
     createBlob: string | null;
     server: ServerScript;
+    /** The resolve request's `X-CLP-Compliant-App` header value; null leaves the header out. */
+    clp: boolean | null;
+    /** Create-new only: the host sets `context` and `appName` on the resolved URL before createContainer. */
+    hostContext: boolean;
 }
 
 const loadFaults: readonly FaultTarget[] = ['treesLatest', 'joinSession', 'ops', 'blob', 'createBlob', 'upload', 'versions', 'push'];
@@ -144,5 +148,8 @@ export function createScenario(seed: number, origin: string): Scenario {
             extraBlob,
             fault: chooseFault(random, kind === 'load' ? loadFaults : createFaults),
         },
+        // Drawn after every other field, so the earlier fields of each seed are unchanged.
+        clp: random.pick([null, null, true, false]),
+        hostContext: kind !== 'load' && random.int(2) === 0,
     };
 }

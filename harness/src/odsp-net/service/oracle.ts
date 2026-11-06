@@ -104,6 +104,11 @@ async function waitFor(events: unknown[][], predicate: (event: unknown[]) => boo
     throw new Error('timed out waiting for a socket event');
 }
 
+/** The `X-CLP-Compliant-App` resolve header (ClpCompliantAppHeader), when the scenario sets one. */
+function clpHeaders(scenario: Scenario): Record<string, boolean> | undefined {
+    return scenario.clp === null ? undefined : { 'X-CLP-Compliant-App': scenario.clp };
+}
+
 /** Runs one scenario through the real TS OdspDocumentServiceFactory and returns the observable outcome. */
 export async function runOracle(scenario: Scenario): Promise<Record<string, unknown>> {
     const out: Record<string, unknown> = {};
@@ -131,16 +136,21 @@ export async function runOracle(scenario: Scenario): Promise<Record<string, unkn
     try {
         if (scenario.kind === 'load') {
             const url = createOdspUrl({ siteUrl: scenario.origin, driveId: scenario.driveId, itemId: scenario.itemId, dataStorePath: '' });
-            const resolvedUrl = await resolver.resolve({ url });
+            const resolvedUrl = await resolver.resolve({ url, headers: clpHeaders(scenario) });
             out.resolvedUrl = JSON.parse(JSON.stringify(resolvedUrl));
             out.absoluteUrl = await resolver.getAbsoluteUrl(resolvedUrl, '/store/x');
             service = await factory.createDocumentService(resolvedUrl, logger, false);
         }
         else {
             const request = createOdspCreateContainerRequest(scenario.origin, scenario.driveId, scenario.filePath, scenario.fileName);
+            request.headers = { ...request.headers, ...clpHeaders(scenario) };
             out.createRequest = request;
             const resolvedUrl = await resolver.resolve(request);
             out.createResolvedUrl = JSON.parse(JSON.stringify(resolvedUrl));
+            if (scenario.hostContext) {
+                resolvedUrl.context = `context-${scenario.seed}`;
+                resolvedUrl.appName = 'harness-app';
+            }
             const summary = scenario.kind === 'create' ? createNewSummary() : undefined;
             service = await factory.createContainer(summary, resolvedUrl, logger, false);
             out.resolvedUrl = JSON.parse(JSON.stringify(service.resolvedUrl));

@@ -36,7 +36,7 @@ public actor OdspDeltaStorageWithCache: IDocumentDeltaStorageService {
 
     public nonisolated func fetchMessages(_ from: Int, to: Int?, cachedOnly: Bool, fetchReason: String?) -> AsyncThrowingStream<[ISequencedDocumentMessage], any Error> {
         let (stream, continuation) = AsyncThrowingStream<[ISequencedDocumentMessage], any Error>.makeStream()
-        Task {
+        let task = Task {
             do {
                 // A fixed range cannot be served from cache alone: the stream would never end.
                 guard !cachedOnly || to == nil else { throw JSONDecodingError("0x1e3") }
@@ -55,6 +55,8 @@ public actor OdspDeltaStorageWithCache: IDocumentDeltaStorageService {
                 continuation.finish(throwing: error)
             }
         }
+        // The loader's abort: a consumer that stops iterating cancels the fetch (parallelRequests.ts:434, :617).
+        continuation.onTermination = { _ in task.cancel() }
         return stream
     }
 

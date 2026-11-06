@@ -196,3 +196,98 @@ struct OdspSummaryTests {
         #expect(try body.withLock { $0 }?.member("type") == .string("channel"))
     }
 }
+
+private let reviewResolvedUrl = "https://contoso.sharepoint.com/?driveId=d&itemId=i&path="
+private let emptyJSONSnapshot = #"{"trees":[{"id":"root","sequenceNumber":0,"entries":[]}],"blobs":[],"ops":[]}"#
+
+struct OdspEpochMismatchTests {
+    /// epochTracker.ts:234-242 validateEpoch and :467-499 checkForEpochError: a mismatch awaits
+    /// removeEntries (whose failure is only logged) before the epoch error is rethrown.
+    @Test func validateEpochClearsCacheBeforeRethrowing() async throws {
+        let removals = Mutex(0)
+        let tracker = EpochTracker(cacheRemove: {
+            removals.withLock { $0 += 1 }
+            throw JSONDecodingError("cache removal failed")
+        })
+        try await tracker.validateEpoch("E", fetchType: .treesLatest)
+        #expect(removals.withLock { $0 } == 0)
+        do {
+            try await tracker.validateEpoch("F", fetchType: .push)
+            Issue.record("expected an epoch mismatch")
+        } catch let error as OdspNetworkError {
+            #expect(error.errorType == "fileOverwrittenInStorage")
+            #expect(!error.canRetry)
+        }
+        #expect(removals.withLock { $0 } == 1)
+        #expect(tracker.cacheClearCount == 1)
+        #expect(tracker.fluidEpoch == "E")
+    }
+
+    /// odspDocumentStorageManager.ts:603: the prefetched snapshot's epoch goes through
+    /// `await epochTracker.validateEpoch`, so a mismatch clears the cache before the network fetch.
+    @Test func prefetchEpochMismatchClearsCache() async throws {
+        let removals = Mutex(0)
+        let tracker = EpochTracker(cacheRemove: { removals.withLock { $0 += 1 } })
+        try tracker.validateEpoch("A")
+        let resolved = try OdspDriverUrlResolver().resolve(reviewResolvedUrl)
+        let responses = Mutex(["B", "A"])
+        let network = OdspNetwork(resolvedUrl: resolved, epochTracker: tracker, tokenFetcher: { _ in .token("t") }, send: { _ in
+            let epoch = responses.withLock { $0.removeFirst() }
+            return OdspResponse(status: 200, headers: ["content-type": "application/json", "x-fluid-epoch": epoch], body: Data(emptyJSONSnapshot.utf8))
+        })
+        let storage = OdspDocumentStorageService(network: network, flushCallback: { .null }, relayServiceTenantAndSessionId: { nil })
+        #expect(await storage.prefetchLatestSnapshot().value)
+        _ = try await storage.fetchSnapshot(fetchSource: nil, loadingGroupIds: nil)
+        #expect(removals.withLock { $0 } == 1)
+        #expect(responses.withLock { $0 }.isEmpty)
+    }
+}
+
+struct OdspDeltaFetchCancellationTests {
+    /// parallelRequests.ts:434 and :617: once the consumer aborts, getSingleOpBatch stops retrying
+    /// and the manager is cancelled; an offline fetch makes no further requests.
+    @Test func offlineRetryStopsWhenTheConsumerCancels() async throws {
+        let calls = Mutex(0)
+        let storage = OdspDeltaStorageWithCache(snapshotOps: nil, batchSize: 10, concurrency: 1, getFromStorage: { _, _, _ in
+            calls.withLock { $0 += 1 }
+            throw OdspNetworkError("fetchFailure", canRetry: true)
+        }, getCached: { _, _ in [] }, requestFromSocket: { _, _ in }, opsReceived: { _ in }, storageManagerGetter: { nil })
+        let consumer = Task {
+            for try await _ in storage.fetchMessages(1, to: 5, cachedOnly: false, fetchReason: nil) {}
+        }
+        while calls.withLock({ $0 }) == 0 { await Task.yield() }
+        consumer.cancel()
+        _ = await consumer.result
+        // Without cancellation the retries run at 100, 300 and 700 ms.
+        try await Task.sleep(for: .milliseconds(800))
+        #expect(calls.withLock { $0 } == 1)
+    }
+}
+
+struct OdspRedemptionTests {
+    /// epochTracker.ts:524-536 and :553-571: a snapshot served from cache completes the redemption
+    /// deferral, so a 401-404 joinSession afterwards fails at once (:585-610): one request, no wait.
+    @Test func joinSessionFailureAfterCacheHitFailsImmediately() async throws {
+        let joins = Mutex(0)
+        let waits = Mutex(0)
+        let tracker = EpochTrackerWithRedemption(sleep: { _ in waits.withLock { $0 += 1 } })
+        let resolved = try OdspDriverUrlResolver().resolve(reviewResolvedUrl)
+        let network = OdspNetwork(resolvedUrl: resolved, epochTracker: tracker, tokenFetcher: { _ in .token("t") }, send: { _ in
+            joins.withLock { $0 += 1 }
+            return OdspResponse(status: 403, headers: [:], body: Data())
+        })
+        let snapshot = CompactSnapshot(snapshotTree: CompactSnapshotTree(id: "root"), blobContents: JSMap(), ops: [], sequenceNumber: 0, latestSequenceNumber: 0)
+        let cached = OdspDocumentStorageService.CachedSnapshot(snapshot: snapshot, fluidEpoch: "E", cacheEntryTime: Date().timeIntervalSince1970 * 1000)
+        let storage = OdspDocumentStorageService(network: network, cacheRead: { cached }, flushCallback: { .null }, relayServiceTenantAndSessionId: { nil })
+        _ = try await storage.fetchSnapshot(fetchSource: nil, loadingGroupIds: nil)
+        #expect(joins.withLock { $0 } == 0)
+        do {
+            _ = try await fetchJoinSession(resolved: resolved, network: network)
+            Issue.record("expected the join session to fail")
+        } catch let error as OdspNetworkError {
+            #expect(error.statusCode == 403)
+        }
+        #expect(joins.withLock { $0 } == 1)
+        #expect(waits.withLock { $0 } == 0)
+    }
+}

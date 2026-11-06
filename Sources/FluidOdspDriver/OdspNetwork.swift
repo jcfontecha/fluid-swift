@@ -179,6 +179,10 @@ public final class OdspNetwork: Sendable {
         if let reason = request.fetchReason { stats += ", fetchReason=" + reason }
         var protocolLines = ["X-RequestStats: " + stats]
         if let epoch = epochTracker.fluidEpoch { protocolLines.append("x-fluid-epoch: " + epoch) }
+        // epochTracker.ts addEpochInRequest: ClpCompliantAppHeader when the file entry's resolved URL
+        // has a truthy isClpCompliantApp, after x-fluid-epoch.
+        let isClpCompliantApp = resolvedUrl.isClpCompliantApp == true
+        if isClpCompliantApp { protocolLines.append("X-CLP-Compliant-App: true") }
         if request.headers["Content-Type"]?.hasPrefix("multipart/") == true {
             let text = String(decoding: request.body, as: UTF8.self)
             guard let range = text.range(of: "\r\n"), text.hasPrefix("--") else { throw JSONDecodingError("0x21e") }
@@ -186,6 +190,7 @@ public final class OdspNetwork: Sendable {
         } else {
             request.headers["X-RequestStats"] = stats
             if let epoch = epochTracker.fluidEpoch { request.headers["x-fluid-epoch"] = epoch }
+            if isClpCompliantApp { request.headers["X-CLP-Compliant-App"] = "true" }
         }
         await epochTracker.rateLimiter.acquire()
         let response: OdspResponse

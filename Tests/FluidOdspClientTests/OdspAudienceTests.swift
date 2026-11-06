@@ -29,6 +29,19 @@ struct OdspAudienceTests {
         #expect(member.email == nil)
     }
 
+    /// odspAudience.ts copies the fields through an unchecked cast; 0x836 only needs one of them
+    /// to be `!== undefined`, so a null email (app-only or guest identities) is present.
+    @Test func nullEmailIsCopiedNotRejected() throws {
+        let member = try createOdspAudienceMember(client(user: #"{"id":"protocol-id","oid":"object-id","name":"Ada","email":null}"#))
+        #expect(member.id == "object-id")
+        #expect(member.name == "Ada")
+        #expect(member.email == nil)
+        let onlyNull = try createOdspAudienceMember(client(user: #"{"id":"protocol-id","email":null}"#))
+        #expect(onlyNull.id == nil)
+        #expect(onlyNull.name == nil)
+        #expect(onlyNull.email == nil)
+    }
+
     @Test func rejectsUserWithoutOdspFields() throws {
         #expect(throws: (any Error).self) {
             try createOdspAudienceMember(client(user: #"{"id":"protocol-id"}"#))

@@ -23,8 +23,12 @@ nonisolated(nonsending) func fetchSnapshotCore(resolved: IOdspResolvedUrl, netwo
     let fetchResponse: ((OdspRequest) async throws -> OdspResponse)?
     if untracked { fetchResponse = { request in try await network.fetchWithoutEpoch(request) } }
     else { fetchResponse = nil }
+    var lines = ["prefer: manualredirect"]
+    // fetchSnapshot.ts:793: the epoch tracker adds ClpCompliantAppHeader, so only an untracked
+    // request carries it here, whenever isClpCompliantApp is defined.
+    if untracked, let isClpCompliantApp = resolved.isClpCompliantApp { lines.append("X-CLP-Compliant-App: " + String(isClpCompliantApp)) }
     let response = try await network.authorized(url: url, make: { auth, boundary in
-        OdspRequest(url: url, headers: ["Content-Type": "multipart/form-data;boundary=" + boundary, "accept": (binaryOnly ? "" : "application/json, ") + "application/ms-fluid; v=1.0"], body: odspMultipart(boundary: boundary, lines: ["Authorization: " + auth, "X-HTTP-Method-Override: GET", "prefer: manualredirect"]), timeoutMs: try options["timeout"]?.asNumber(), fetchType: .treesLatest, fetchReason: scenarioName)
+        OdspRequest(url: url, headers: ["Content-Type": "multipart/form-data;boundary=" + boundary, "accept": (binaryOnly ? "" : "application/json, ") + "application/ms-fluid; v=1.0"], body: odspMultipart(boundary: boundary, lines: ["Authorization: " + auth, "X-HTTP-Method-Override: GET"] + lines), timeoutMs: try options["timeout"]?.asNumber(), fetchType: .treesLatest, fetchReason: scenarioName)
     }, fetchResponse: fetchResponse)
     guard !response.body.isEmpty else { throw OdspNetworkError("incorrectServerResponse", canRetry: false, statusCode: 712) }
     let type = response.headers["content-type"] ?? ""

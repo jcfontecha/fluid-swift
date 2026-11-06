@@ -223,7 +223,7 @@ public actor OdspDocumentStorageService: IDocumentStorageService {
         if !avoidPrefetch, firstSnapshotFetchCall, let prefetchedSnapshot {
             do {
                 let cached = try await prefetchedSnapshot.value.snapshot
-                try network.epochTracker.validateEpoch(cached.fluidEpoch)
+                try await network.epochTracker.validateEpoch(cached.fluidEpoch, fetchType: .treesLatest)
                 return cached.snapshot
             } catch { onPrefetchError(error) }
         }

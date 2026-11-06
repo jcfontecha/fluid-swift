@@ -46,6 +46,9 @@ func createNewFluidFile(network: OdspNetwork, newFileInfo: INewFileInfo, createN
     var headers = JSObject<JSONValue>()
     headers["X-CLP-Compliant-App"] = resolvedUrl.isClpCompliantApp.map { .bool($0) }
     var odspResolvedUrl = try OdspDriverUrlResolver().resolveOdspUrl(IRequest(url: odspUrl, headers: headers))
+    // createFile.ts:115-116: the host's context and appName carry over to the created file.
+    let hostFields = try resolvedUrl.json.asObject()
+    odspResolvedUrl = try odspResolvedUrl.setting("context", hostFields["context"]).setting("appName", hostFields["appName"])
     // The new resolve has no container package name, so the create-new request's code hint wins.
     if odspResolvedUrl.containerPackageName == nil {
         odspResolvedUrl = try odspResolvedUrl.setting("codeHint", resolvedUrl.json.asObject()["codeHint"])
