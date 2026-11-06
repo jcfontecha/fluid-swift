@@ -10,11 +10,26 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
+    "@fluidframework/aqueduct": "3.11.0",
+    "@fluidframework/container-definitions": "3.11.0",
+    "@fluidframework/container-loader": "3.11.0",
+    "@fluidframework/container-runtime": "3.11.0",
     "@fluidframework/counter": "3.11.0",
     "@fluidframework/datastore-definitions": "3.11.0",
     "@fluidframework/driver-definitions": "3.11.0",
+    "@fluidframework/map": "3.11.0",
+    "@fluidframework/routerlicious-driver": "3.11.0",
     "@fluidframework/runtime-definitions": "3.11.0",
     "@fluidframework/test-runtime-utils": "3.11.0",
+    "@fluidframework/tinylicious-client": "3.11.0",
+    "@fluidframework/tinylicious-driver": "3.11.0",
+    "engine.io-parser": "5.2.3",
+    "fluid-framework": "3.11.0",
+    "lz4js": "0.2.0",
+    "socket.io": "4.8.4",
+    "socket.io-client": "4.8.3",
+    "socket.io-parser": "4.2.7",
+    "tinylicious": "7.0.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
