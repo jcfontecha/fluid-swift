@@ -1,0 +1,4 @@
+Mutation: DatastoreIntegration.swift .channels -> .wrong-channels
+Command: npm run fuzz:datastore -- --seeds=1
+Result: exit 1; AssertionError at seed 0, fullSummary.tree subtree key mismatch.
+Mutation reverted in finally; clean farm rerun separately.

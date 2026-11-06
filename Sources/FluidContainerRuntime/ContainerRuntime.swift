@@ -58,6 +58,10 @@ public final class ContainerRuntime {
       pendingStateManager = PendingStateManager()
       idCompressor = try IdCompressor(sessionId)
     }
+    channelCollection.onSubmitDatastoreSignal = { [weak self] id, type, content, target in
+      guard let self else { throw JSONDecodingError("container host released") }
+      try self.submitSignal(type: type, content: content, address: id, targetClientId: target)
+    }
     blobManager.sendBlobAttachMessage = { [weak self] metadata in
       guard let self else { return }
       try self.submit(object([("type", string("blobAttach"))]), metadata: metadata)
@@ -73,6 +77,9 @@ public final class ContainerRuntime {
     try outbox.submit(.init(runtimeOp: runtimeOp, referenceSequenceNumber: referenceSequenceNumber, metadata: metadata, localOpMetadata: localOpMetadata), blobAttach: runtimeOp.member("type") == string("blobAttach"))
   }
   public func flush(batchId: String? = nil, staged: Bool = false) throws {
+    try channelCollection.drainDatastoreMessages { op, metadata in
+      try self.submit(op, localOpMetadata: metadata)
+    }
     outbox.shouldSend = connected
     try outbox.flush(batchId: batchId, referenceSequenceNumber: referenceSequenceNumber, staged: staged)
   }
@@ -80,6 +87,7 @@ public final class ContainerRuntime {
     self.clientId = clientId
     connected = true
     clientSequenceNumber = 0
+    try channelCollection.setDatastoreConnectionState(true, clientId: JSString(clientId))
     try idCompressor.resetUnfinalizedCreationRange()
     try pendingStateManager.replayPendingStates(clientId: clientId) { [unowned self] messages, id, staged in
       for message in messages {
@@ -88,6 +96,9 @@ public final class ContainerRuntime {
         if try message.runtimeOp.member("type") == string("blobAttach") {
           guard let metadata = message.metadata else { throw JSONDecodingError("0xc01") }
           try self.blobManager.reSubmit(metadata)
+          continue
+        }
+        if try self.channelCollection.reSubmitDatastore(message.runtimeOp, metadata: message.localOpMetadata) {
           continue
         }
         try self.submit(self.reSubmit(message.runtimeOp), localOpMetadata: message.localOpMetadata)
@@ -106,7 +117,9 @@ public final class ContainerRuntime {
     try pendingStateManager.applyStashedOpsAt(sequenceNumber) { [unowned self] content in
       let op = try JSON.parse(content)
       switch ContainerMessageType(rawValue: try op.member("type").asString().description) {
-      case .fluidDataStoreOp, .attach, .alias: return try self.applyStashedOp(content)
+      case .fluidDataStoreOp, .attach, .alias:
+        if try self.channelCollection.ownsDatastoreOp(op) { return try self.channelCollection.applyDatastoreStash(op) }
+        return try self.applyStashedOp(content)
       case .idAllocation, .blobAttach, .documentSchemaChange: return nil
       case .rejoin: throw JSONDecodingError("rejoin not expected here")
       case .gc: throw JSONDecodingError("GC op not expected to be stashed in summarizer")

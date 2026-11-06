@@ -7,6 +7,7 @@
     "fuzz:oplifecycle": "tsx src/oplifecycle/fuzz.ts",
     "fuzz:pendingstate": "tsx src/pendingstate/fuzz.ts",
     "fuzz:routing": "tsx src/routing/fuzz.ts",
+    "fuzz:datastore": "tsx src/datastore/fuzz.ts",
     "fuzz:mergetree": "tsx src/mergetree/driver.ts",
     "fuzz:tree-changes": "tsx src/tree/fuzz.ts",
     "fixtures:driver-definitions": "tsx src/driver-definitions-fixtures.ts",

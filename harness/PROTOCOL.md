@@ -618,3 +618,88 @@ harness entropy; normal creation uses its injectable UUID generator. Runtime
 schema/GC services, datastore materialization, extension acquisition/version
 negotiation, and telemetry logging/latency statistics are not reimplemented by
 this routing lane. The signal counter and all wire-tracking fields are native.
+
+## H5 — datastore runtime and channel contexts
+
+`npm run fuzz:datastore -- --self` runs independent real 3.11.0
+`FluidDataStoreRuntime` instances with real SharedMap, SharedDirectory and
+SharedCounter factories. `npm run fuzz:datastore` builds `FluidDatastorePeer`
+with `--scratch-path .build/h5` and compares raw JSON text for 1,000 seeds.
+`--seeds=N` selects a smaller farm. Each newline-delimited request is `{seed}`;
+failures preserve input and both outputs in `traces/datastore/<seed>.json`.
+The native peer has a 30-second response deadline.
+
+Every seed exercises detached creation and edits, binding, datastore attachment,
+local acknowledgments, contiguous inbound channel ops, connection transitions,
+DDS resubmission, counter rollback, handle storage in a map, summary reload into
+lazy remote contexts, deferred inbound replay, stashed DDS ops and captured
+metadata expansion, late channel attach ops, and stashed attach loading into a
+rehydrated local context. Numeric map keys, deletions, emoji and lone surrogates
+vary with the seed. The detached map stores a handle to an initially unbound
+counter, exercising transitive attach-graph binding. The oracle asserts counter state, reload state and stored
+handles independently of native comparisons. Both targeted and broadcast signal
+submissions and inbound signals are observed.
+
+Comparisons include container-level envelopes produced at the minimal context
+boundary, attach `ITree` strings (including `.attributes` and `.gcdata`), channel
+summaries, datastore summaries wrapped in `.channels` plus `.component`, GC
+routes, resolved and stored handle URLs, and DDS state. Native context metadata
+is retained in generic boxes; only local token IDs cross the existing native
+container pending-state seam, never DDS metadata on the wire. The twin runs the
+same local history; summary blobs are not sorted or normalized. Reload storage
+is deterministic and byte-preserving; the oracle uses real summarizer nodes for
+remote contexts and the installed wrapping helper for container summary layout.
+
+Swift Testing ports cover datastore/channel ID validation, empty GC, disposal,
+bound/unbound attach summaries, pending attach acknowledgments, lazy remote
+message replay, local rollback/stash rejection and activity cleanup, short/legacy
+registry names, compact ID namespaces, unloaded detached attach-summary reuse,
+lone-surrogate and empty handle paths, real ChannelCollection routing, transitive handle binding, and a DDS edit traveling
+through ContainerRuntime outbox, pending correlation and local acknowledgment.
+Run `swift test --scratch-path .build/h5 --filter FluidDatastoreTests`.
+Sixteen H5 tests pass with the normal focused Swift test command. While another lane has uncompilable test sources, the
+focused target can be built with `swift build --scratch-path .build/h5 --target
+FluidDatastoreTests`, then its `.xctest` bundle run through Xcode's
+`swiftpm-testing-helper --test-bundle-path <bundle>/Contents/MacOS/FluidDatastoreTests
+--testing-library swift-testing`, with Xcode's Developer frameworks and
+Developer/usr/lib on the corresponding DYLD search paths. This avoids building
+or loading unrelated unfinished test targets; it is not a whole-repo green claim.
+
+A planted `.channels` -> `.wrong-channels` mutation in the native integration
+was rejected at seed 0, then reverted. See
+`src/datastore/fixtures/planted-divergence.txt`. Clean self-check and differential
+farms each pass 1,000 seeds; all four existing runtime farms also pass 1,000.
+The initial skeleton test build was interrupted by concurrent DDS compile errors,
+not counted as behavioral-red proof. The expanded attach farm separately caught
+missing `ITree.mode` fields and the wrong `.gcdata` blob name before correction.
+
+Native source map (TS paths relative to runtime/datastore/src):
+
+| Swift type | TypeScript source |
+| --- | --- |
+| FluidDataStoreRuntime, LegacyTypeAwareRegistry | dataStoreRuntime.ts |
+| ChannelContext, ChannelFactory/ChannelInstance bridge | channelContext.ts |
+| LocalChannelContextBase, LocalChannelContext, RehydratedLocalChannelContext | localChannelContext.ts |
+| RemoteChannelContext | remoteChannelContext.ts |
+| ChannelDeltaConnection | channelDeltaConnection.ts |
+| ChannelStorageService | channelStorageService.ts |
+| FluidObjectHandle | fluidHandle.ts |
+| ChannelCollection datastore registration, dispatch and metadata bridge | container-runtime/src/channelCollection.ts |
+| summarizeDatastore | container-runtime/src/dataStoreContext.ts summarizeInternal/getAttachSummary |
+| summaryToITree, summaryFromITree | runtime-utils/src/summaryUtils.ts / snapshot conversion |
+
+The native host must resolve asynchronous storage before entering the synchronous
+container executor. Incremental summary handles, telemetry, extension acquisition,
+and automatic application entry-point provisioning are not part of this harness.
+Channel creation/binding is exposed as throwing native runtime calls; DDS APIs
+remain the previously certified native DDS interfaces. Registered datastore
+signals propagate synchronously to the container signal submission path; native errors propagate through the throwing submit API.
+
+Final shared-checkout caveat: after the focused 16-test command passed, a new
+concurrent `FluidTreeTests/RevisionReplacerTests.swift` caused the whole-repo
+`swift test --scratch-path .build/h5` build to fail because
+`DefaultRevisionReplacer` was not yet in scope. No tree files were changed by H5.
+The H5 target and differential results above remain separate from that moving
+whole-checkout build. The final routing regression used the existing routing
+driver copied to `/tmp/h5-routing.mts` with only imports/root and `.build/h4` ->
+`.build/h5` adjusted; its committed source was not changed.
