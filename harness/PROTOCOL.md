@@ -1344,3 +1344,220 @@ asked for a socket token despite a host websocket fetcher, and seed 3 failed on 
   and an epoch-tracker cache hit does not complete the redemption deferral.
 - `createNewContainerOnExistingFile` is ported but not exercised; OdspClient never creates into an existing item.
 - The handshake timeout, socket transport errors and nacks are left to ODSP 2.
+
+## M4 — ODSP live service
+
+`npm run service:m4 -- --clients ts,ts --seeds 0..99` starts the local ODSP service
+(`harness/src/odsp-service`) on port **7095** and runs each seed against a new SharePoint Embedded
+file, with one new peer process per entry of `--clients` (2–4 entries, `ts` or `swift`).
+`--parallel N` runs N seeds at once, each with its own peer processes. A seed's connections
+(editor, summarizer, fresh loads) share their process's push socket, but no other seed's do.
+`--port` picks 7095–7099 so runs can go side by side. `--clients ts,swift` builds `FluidOdspServicePeer` with
+`swift build --scratch-path .build/m4 --product FluidOdspServicePeer` (override with
+`--scratch-path`) and **fails before any seed runs** if the product cannot be built. There is no
+fallback to TS. `npm run odsp-service -- [--port 7095] [--host 0.0.0.0]` runs the same service
+standalone for apps and prints its connection values.
+
+### The local ODSP service
+
+Clients reach it exactly like SharePoint Embedded through the unmodified 3.11.0
+`OdspClient`/`OdspDocumentServiceFactory`:
+
+| Value | Local service |
+|---|---|
+| `siteUrl` | `http://localhost:7095` (the origin; the API root is `<siteUrl>/_api/v2.1`) |
+| `driveId` | `b!bG9jYWwtb2RzcA` |
+| item id | returned by create: `01` + 32 characters of `[A-Z2-7]`, e.g. `01YRLM4EBLAQIY3H2NTBDCNJIGMH4EOTB5` |
+| storage token | `storage:<user>` (`<user>` matches `[A-Za-z0-9._-]+`) |
+| websocket token | `push:<user>` |
+| `filePath` | `""` (files are created in the drive root) |
+
+Endpoint URLs in join-session responses follow the request's `Host` header, so a device can use
+the machine's LAN address with `--host 0.0.0.0`. Tokens carry no secret, but each is checked
+where ODSP expects it: the storage token as `Authorization: Bearer storage:<user>` on every REST
+call (HTTP header, or inside the UMP body for `?ump=1` calls), the push token as
+`connect_document.token`. A swapped or missing token is a 401 / `connect_document_error` 401.
+Push puts `{id, oid, name, email}` for `<user>` into the join op (`createOdspAudienceMember`
+reads `oid`/`name`/`email`).
+
+REST (all under `/_api/v2.1/drives/<driveId>/items/`), derived from the 3.11.0 driver source and
+`specs/odsp-driver/*.md`:
+
+| Request | Driver source | Response |
+|---|---|---|
+| `POST root:<folder>/<name>:/opStream/snapshots/snapshot[?ump=1]` | createNewUtils.ts | `{"@odata.context",driveId,id,itemId,itemUrl,sequenceNumber,name}` |
+| `PUT root:<folder>/<name>.tmp:/content?@name.conflictBehavior=rename&select=id,name,parentReference` | createFile.ts (empty file) | `{id,name,parentReference}` |
+| `PATCH <item>?@name.conflictBehavior=rename` `{name}` | createFile.ts (pending rename) | `{id,name}` |
+| `POST <item>/opStream/joinSession?ump=1` (override POST) | vroom.ts | `{id,tenantId,snapshotStorageUrl,deltaStorageUrl,deltaStreamSocketUrl,refreshSessionDurationSeconds[,socketToken]}` |
+| `POST <item>/opStream/snapshots/trees/latest?ump=1&...` (override GET) | fetchSnapshot.ts | compact binary, `content-type: application/ms-fluid; v=1.0` |
+| `POST <item>/opStream?ump=1&filter=sequenceNumber ge F and sequenceNumber le T` (override GET) | odspDeltaStorageService.ts | `{value:[{op,sequenceNumber}]}` |
+| `POST <item>/opStream/snapshots/snapshot` with `If-Match` | odspSummaryUploadManager.ts | `{id}` |
+| `POST <item>/opStream/attachment/content` (octet-stream) | odspDocumentStorageManager.ts | `{id}` |
+| `GET <item>/opStream/attachments/<id>/content` | odspDocumentStorageManager.ts | bytes, `cache-control: private, max-age=31536000` |
+
+Every request must carry `X-RequestStats`. Every file response carries `x-fluid-epoch`; a request
+whose `x-fluid-epoch` differs is a 409 `fluidEpochMismatch`. UMP bodies are parsed exactly as the
+driver frames them (`--B`, header lines, `_post: 1`, optional `\r\n<json>\r\n`, `--B--`); the
+override method decides the route. trees/latest serves the latest **acked** snapshot encoded with
+the driver's own `convertToCompactSnapshot`, plus every persisted op after it (`ops`,
+`latestSequenceNumber`). Only `ump`, `mds`, `blobs`, `deltas`, `channels` and an empty `groupId`
+are accepted; loading groups, JSON-only `accept`, channel-type summaries, share links, versions and
+`trees/<id>` are not implemented and answer an error (which fails the run). Any 4xx/5xx the service
+sends, and any error a server lambda logs, is a **server failure**; checkpoints require none.
+
+Summaries are single-commit, as ODSP's: the summarizer flushes, uploads a `container` payload with
+`If-Match: fluid:sessionid=<tenantId>/<sessionId>;containerid=<parent>`, then submits the summarize
+op. The upload is a proposal: its parent must be the latest acked snapshot (else 412) and its
+`sequenceNumber` must be within `[parent.sequenceNumber, last persisted op]`; `.protocol/attributes`
+must carry the same sequence number. Handle entries `<parent>/.app/<path>` reuse the parent's
+subtree or blob; attachment entries name uploaded attachment ids. When the summarize op is
+sequenced and still names that proposal and parent (`handle`, `head`), the service commits it as the
+latest snapshot and sends `summaryAck {handle: <proposal id>, summaryProposal}` through deli;
+otherwise `summaryNack`. The first summary of an empty file (no `If-Match` parent, sequence 0) is
+committed on upload.
+
+Push is Socket.IO (websocket transport) on the same port. Sequencing is the real routerlicious
+code: `@fluidframework/server-memory-orderer` 7.0.1 `LocalOrderer` (deli, broadcaster, scriptorium)
+with in-memory `server-test-utils` storage, one orderer per file, configured with
+`enableTraces: false` and `deli.skipSummarizeAugmentationForSingleCommmit: true` (no scribe
+consumes deli's checkpoint). The ODSP storage lambda replaces scribe: it persists the sequenced
+stream (the op store behind opStream, `get_ops`, `flush_ops` and snapshot ops) and acks summaries.
+The handshake mirrors nexus (`server-lambdas` 7.0.1): token-derived identity and scopes
+(`summary:write` only for summarizer clients), writers get an orderer connection, readers do not,
+join/leave signals go to the document room. ODSP-specific behavior, from
+`odspDocumentDeltaConnection.ts`:
+
+| Event | Service behavior |
+|---|---|
+| `connect_document` | strict 3.11.0 `IConnect` shape; epoch must match; replies `connect_document_success` with `nonce`, `epoch`, `checkpointSequenceNumber`, `supportedFeatures {submit_signals_v2, api_get_ops, api_flush_ops}`, or `connect_document_error {code,message,nonce}` |
+| `submitOp(clientId, batches)` | nexus sanitization, then the orderer; no message-size check (nexus default) |
+| `submitSignal(clientId, signals)` | v2 only; emitted as `signal(signal, documentId)` to the document room or `client#<target>` |
+| `get_ops(clientId, {nonce,from,to})` | `get_ops_response {nonce, code:200, messages}` from the op store (`to` inclusive) |
+| `flush_ops(clientId, {nonce})` | waits until everything sequenced is persisted, then `flush_ops_response {nonce, code:200, lastPersistedSequenceNumber}` |
+| `disconnect_document(clientId, documentId)` / socket close | leave op, leave signal, room cleanup |
+| `ping` (volatile, with ack) | acknowledged (driver-base latency `pong`) |
+| `op` | `(documentId, messages)` from the broadcaster, to the document room |
+| `nack` | `(clientId, nacks)`, so other connections sharing the socket ignore it (the driver accepts the client id) |
+
+One physical socket can carry several documents and several clients of one document (the driver
+shares one socket per URL in a process). Rooms are reference counted per socket, so ops reach each
+socket once. Joins and leaves are synchronous: the 3.11.0 loader first connects a clean container
+`read`, then reconnects `write` on the same socket on its first edit, and a deferred room leave
+from the old connection dropped the new connection's ops and its own join signal (presence then
+asserts 0xcbb; found by this harness and fixed). The harness injects two faults in-process. The first is `server_disconnect(error, clientId)` with a
+code, for one client (`OdspPush.serverDisconnect`). The second drops a writer from deli without
+telling it (`OdspPush.evict`, deli's client timeout); deli then nacks its next op as a nonexistent
+client. `server_disconnect` is injected only once the client's socket has had no `connect_document`
+in flight for 250 ms. In 3.11.0 every connection on the socket runs `clientId === this.clientId`
+(odspDocumentDeltaConnection.ts `disconnectHandler`). Driver-base's `clientId` getter throws
+"calling method before _details is initialized" for a connection still in its handshake, which
+kills the client process. Without the guard, parallel 4-client seeds hit this after 130 seeds.
+The socket-wide form (no client id) is not injected either: it also ends every summarizer container
+on that socket, and summarizer restarts are throttled, so with parallel seeds the first-summary
+waits timed out.
+
+### Peer interface
+
+Newline-delimited JSON-RPC 2.0 over stdio, as the M1/M2 service peer:
+`{"jsonrpc":"2.0","id":N,"method":M,"params":{"client":C,...}}` →
+`{"jsonrpc":"2.0","id":N,"result":R}` or `{"jsonrpc":"2.0","id":N,"error":{"message":S}}`.
+Requests to one process are serialized. `client` names a client handle local to the peer; a
+process hosts any number. Logs go to stderr. The process exits when stdin closes. The TS peer is
+`harness/src/odsp-service/ts-peer.ts`; the Swift peer is the executable `FluidOdspServicePeer`.
+
+Each handle is an independent app instance: its own `OdspClient` with `siteUrl`/`driveId` as given,
+`filePath: ""`, and a token provider returning `storage:<user>` / `push:<user>`. The container
+schema is `initialObjects: { map: SharedMap, text: SharedString }`, opened with
+`getContainer(itemId, schema, "2.0.0")`, plus presence (`getPresenceAlpha`) with workspace
+`m4:state` holding one `Latest` state `value`, initially `null`.
+
+| Method | Params | Result |
+|---|---|---|
+| `open` | `siteUrl`, `driveId`, `itemId`, `user` | `null` once loaded (it may still be connecting) |
+| `view` | — | `{connected, clientId, sequenceNumber, initialSequenceNumber, pending, map, text}` |
+| `mapSet` | `key`, `value` (JSON) | `null` |
+| `mapDelete` | `key` | `null` |
+| `textInsert` | `pos`, `text` | `null`; inserts at `min(pos, length)` |
+| `textRemove` | `start`, `end` | `null`; removes `[min(start,len), min(end,len))` if nonempty |
+| `blobUpload` | `key`, `text` | `null`; uploads the UTF-8 bytes with `uploadBlob` and sets the handle at `key` |
+| `blobRead` | `key` | the UTF-8 text of the blob whose handle is at `key` |
+| `presenceSet` | `value` `{by: string, n: number}` | `null`; sets the local `value` |
+| `presence` | — | `{attendee, remotes: [{attendee, connected, value}]}` |
+| `pauseInbound` / `resumeInbound` | — | `null`; stop/resume processing inbound ops (a lagging client) |
+| `disconnect` / `connect` | — | `null`; container disconnect/connect (local edits stay pending) |
+| `events` | — | every driver/loader telemetry event of category `error`, or named `*_firstFailed`, `*_maxRetriesExceeded`, `*_lastError`, `*_runWithRetryAborted`, `MultipleRetries`, `DeltaConnectionFailureToConnect`, `FlushExtraCall`, as `{eventName, category, detail}` since `open` |
+| `close` | — | `null`; disposes the container |
+
+`view` fields: `connected` is connection state Connected; `sequenceNumber` the last processed
+sequence number; `initialSequenceNumber` the snapshot sequence number the container loaded;
+`pending` the container's dirty flag; `map` the SharedMap as JSON with handles written
+`{"type":"__fluid_handle__","url":<absolute path>}`; `text` the SharedString text. A Swift peer
+reports its native equivalents; `events` is the Swift driver's own error/retry diagnostics.
+
+### Per seed
+
+1. A TS `OdspClient` creates the container, sets `created` and a text prefix and, on about half the
+   seeds, uploads a blob while detached (`blob-detached`). It attaches, waits until saved, and
+   disposes; its telemetry must be clean. Without the blob the driver creates the file from the
+   summary in one request. With it, the driver creates an empty `.tmp` file, uploads the blob,
+   uploads the first summary without a parent, and renames the file.
+2. Every peer opens client `s<seed>-c<i>` as user `user<i>`.
+3. Concurrent random map set/delete and text insert/remove rounds; presence round; checkpoint.
+4. 1–2 attachment blobs uploaded from random clients; checkpoint (every client reads every blob).
+5. Wait for an acked summary covering the last runtime op (the elected TS summarizer, default
+   heuristics; nothing forces it). From here on one seeded channel (`map` or `text`) is frozen:
+   it is not edited again, so every later summary must reuse it from its parent by handle.
+6. A random client pauses inbound processing while all clients edit, then resumes; checkpoint.
+7. A random client disconnects, edits offline while others edit, reconnects; checkpoint.
+8. `server_disconnect` (401 or 503) for a random client; edits; checkpoint; that client must have a
+   new client id. Then deli drops a random writer; it edits (nacked, reconnects); checkpoint; new
+   client id. Presence round.
+9. A fresh client (new `OdspClient`, empty caches) opens on a random peer; it must have loaded a
+   committed snapshot at or after step 5; edits from everyone; checkpoint including it.
+10. Wait for an acked summary covering the last runtime op; at least two summaries were acked and
+    summaries after step 5 referenced their parent by handle.
+    A fresh client loads it: `initialSequenceNumber` is a committed snapshot at or after that op, so
+    its state comes from the summary alone; checkpoint including it.
+
+A checkpoint waits until every client is connected, not pending and at the service's last
+persisted sequence number, then requires deep-equal `map`, equal `text`, equal blob reads, no
+server failures, and no new `events` on any client. The one exception is
+`ConnectionManager:submitSignalDisconnected`, allowed only on the client the phase disconnected
+(steps 7 and 8). Presence can send a queued signal in the window where the runtime still
+reports the connection that the fault just dropped. After all seeds, the run requires that the
+REST routes, push events and summary handle references in the table above were each exercised at
+least once (`service:m4 surface` line). Failures write `harness/traces/service-m4-<clients>-<seed>.jsonl`
+with every RPC exchange, checkpoint views, server failures and failed REST records, and
+`…-<seed>.odsp.json` with the file's stored snapshots, blobs and full op log.
+`npx tsx src/odsp-service/replay.ts <dump> [--port 7098]` loads that dump into a fresh service. It
+opens the file with the real driver once per committed snapshot, each time applying every stored
+op without a push connection, and reports which loads reach the state of the full replay from the
+creation snapshot.
+
+### Planted divergence
+
+Every seed asserts that the comparator rejects its final map with an extra entry.
+`npm run service:m4 -- --clients ts,ts --seeds 0..0 --plant-divergence` adds that entry to the last
+client's view at every checkpoint and **must exit nonzero**. Two planted bugs in the service itself
+are recorded in `harness/src/odsp-service/planted-divergence-m4.txt`, and the source was restored
+afterwards: handle entries resolved against the file's first snapshot (caught as a rejected upload),
+and the silent variant that only takes the stale subtree when its path exists there. The silent
+variant passed the first version of the scenario, because every reused subtree was identical in
+the first snapshot. The frozen channel in step 5 was added for this, and the variant now fails at
+the mid-stream fresh load with a stale map.
+
+### Status (2026-11-06)
+
+Final-code runs: `--clients ts,ts`, `ts,ts,ts` and `ts,ts,ts,ts`, seeds `0..99` each (`--parallel`
+8, 6 and 5): 300/300 seeds passed, every required surface entry exercised (for example, the
+2-client run made 13,234 `submitOp`, 332 `get_ops`, 285 `flush_ops`, 53 nacks and 555 summary handle
+references, and used the empty-file creation path 50 times). `--clients ts,swift` stops before any seed
+because `FluidOdspServicePeer` does not exist yet.
+
+Open: during development a 4-client run (seed 8, machine load average ~44, before the dump and
+per-seed peers existed) once produced a mid-stream fresh client whose SharedString differed from
+all four live clients by a few single characters. The fresh client loaded the summary at sequence
+176, taken while one client was offline with pending edits, and caught up to 242; its map matched.
+It did not recur in 730 later 4-client seeds. Its trace is `harness/traces/service-m4-ts-ts-ts-ts-8.jsonl`
+(local, not committed); a recurrence now writes the `.odsp.json` dump for `replay.ts`, which
+separates a wrong summary from a wrong op log.

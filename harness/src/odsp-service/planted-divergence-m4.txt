@@ -1,0 +1,52 @@
+M4 planted divergence (2026-11-06). Each mutation was applied to the clean source, run, and reverted;
+the restored file was compared byte for byte with a saved copy (cmp) before continuing.
+
+1. Comparator flag (no source change)
+   npm run service:m4 -- --clients ts,ts --seeds 0..0 --plant-divergence
+   -> exit 1 at the first checkpoint:
+      AssertionError [ERR_ASSERTION]: open: map of s0-c1
+      + actual - expected
+        {
+      +   'planted-divergence': 0,
+          created: { seed: 0 }
+        }
+
+2. Service bug, loud: summary handles resolved against the file's first snapshot
+   (harness/src/odsp-service/store.ts OdspFile.addReference)
+   -    let node: ISnapshotTree | undefined = parent.tree;
+   +    let node: ISnapshotTree | undefined = [...this.snapshots.values()][0]?.tree;
+   npm run service:m4 -- --clients ts,ts --seeds 0..2
+   -> exit 1: the summarizer's upload is rejected and the run stops on the server failure
+      AssertionError [ERR_ASSERTION]: reconnect: quiescent at 83: server failures
+      + 'rest POST /_api/v2.1/drives/b!bG9jYWwtb2RzcA/items/01HZVKZCCMWLL6OOEJOU6RYR5MZMYXK6FH/opStream/snapshots/snapshot
+         -> 400 {"error":{"code":"invalidRequest","message":"tree handle 10d99d45-.../.app/gc not found in parent"}}'
+      (peer telemetry: Summarizer:Running SummarizeFailed, statusCode 400)
+
+3. Service bug, silent: tree handles resolved against the first snapshot whenever the path exists
+   there (a stale-cache bug that never fails a request)
+   -      const subtree = node.trees[name];
+   +      let stale: ISnapshotTree | undefined = [...this.snapshots.values()][0]?.tree;
+   +      for (const segment of segments) {
+   +        stale = stale?.trees[segment];
+   +      }
+   +      const subtree = stale?.trees[name] ?? node.trees[name];
+   With the first scenario (both DDSes edited in every summary interval) this was NOT caught:
+   seeds 0..2 passed, because every subtree reused by handle was identical in the first snapshot.
+   The scenario now freezes one seeded channel (map or text) after the first summary, so later
+   summaries must reuse it from the parent, and asserts that they did. Rerun:
+   npm run service:m4 -- --clients ts,ts --seeds 0..2
+   -> exit 1: the mid-stream fresh client loads the stale map
+      AssertionError [ERR_ASSERTION]: mid-stream load: map of s0-mid
+      + actual - expected
+        {
+      -   'blob-0': { type: '__fluid_handle__', url: '/_blobs/e6afcb30-624f-48da-a553-cb269af9a70f' },
+          created: { seed: 0 },
+      -   k10: { by: 's0-c1', nested: [55, null, 'ü'], seed: 0, step: 0 },
+      -   k11: { by: 's0-c1', nested: [587, null, 'ü'], seed: 0, step: 6 },
+          ...
+
+Final-code reruns (after per-seed peer processes, detached-blob creation and the fault guard):
+- `--plant-divergence`, seeds 0..0: exit 1, "open: map of s0-c1 ... + 'planted-divergence': 0".
+- Plant 3 (silent stale handles), seeds 0..2: exit 1, "mid-stream load: map of s0-mid", the mid
+  client's map lacks the live entries (blob-0, k*), keeping only the first snapshot's.
+  store.ts was restored and checked with cmp (byte-identical).
