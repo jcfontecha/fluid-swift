@@ -35,6 +35,14 @@ Implement core identities/cursors/schema/delta first; then field algebras under 
 
 The area files include literal format declarations/encoders and full algorithm decision procedures, with source ranges. Those procedures define the cases and execution order; prose tables are navigation, not permission to omit a branch. No runtime code, builds, dependencies, or git state are changed by these specifications.
 
+### Public and assembly companion specs
+
+- [simple-tree.md](simple-tree.md): runtime schema/node semantics, TS-only inference boundaries, hydration, events, Tree utilities and constraints.
+- [shared-tree.md](shared-tree.md): checkout/view/branch composition, schema-data change union and blob-by-blob summary layout.
+- [codec.md](codec.md): read dispatch, collaboration-floor write selection and per-format compatibility.
+- [text.md](text.md): plain/formatted atom schemas, text deltas and coordinate spaces.
+- [misc.md](misc.md): sandbox protocol, tables, extensible unions, JSON/serializable domains and support utilities.
+
 ## 3. Wire and persisted formats
 
 There are THREE independent version axes: summary-component layout (`.metadata`), payload codec version, and the dependent unversioned field codec selected by its parent. Never infer one from another. The default minimum collaboration version is 2.0; codec writers choose newest compatible stable format, unless explicitly overridden. `reference/fluidframework-3.11.0/packages/dds/tree/src/shared-tree/sharedTree.ts:756` `reference/fluidframework-3.11.0/packages/dds/tree/src/codec/versioned/codec.ts:581`
