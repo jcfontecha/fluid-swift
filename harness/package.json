@@ -7,7 +7,9 @@
     "replay": "tsx src/replay.ts",
     "peer:ts": "tsx src/peer.ts",
     "fixtures": "tsx src/fixtures.ts",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "lz4-fixtures": "tsx src/lz4-fixtures.ts",
+    "lz4-check": "tsx src/lz4-check.ts"
   },
   "dependencies": {
     "@fluidframework/aqueduct": "3.11.0",

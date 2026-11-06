@@ -1,0 +1,5 @@
+module CLZ4 [system] {
+    umbrella header "lz4frame.h"
+    link "c"
+    export *
+}

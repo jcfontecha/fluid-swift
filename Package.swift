@@ -11,6 +11,9 @@ let package = Package(
     ],
     targets: [
         .target(name: "FluidJS"),
+        .target(name: "CLZ4", publicHeadersPath: "."),
+        .target(name: "FluidLZ4", dependencies: ["CLZ4"]),
+        .executableTarget(name: "FluidLZ4Check", dependencies: ["FluidLZ4"]),
         .target(name: "FluidProtocol", dependencies: ["FluidJS"]),
         .target(name: "FluidDatastoreDefinitions", dependencies: ["FluidJS", "FluidProtocol"]),
         .target(name: "FluidCounter", dependencies: ["FluidJS", "FluidProtocol", "FluidDatastoreDefinitions"]),
@@ -20,5 +23,6 @@ let package = Package(
             dependencies: ["FluidJS", "FluidProtocol", "FluidDatastoreDefinitions", "FluidCounter", "FluidTestRuntimeUtils"]
         ),
         .testTarget(name: "FluidJSTests", dependencies: ["FluidJS"]),
+        .testTarget(name: "FluidLZ4Tests", dependencies: ["FluidLZ4"]),
     ]
 )
