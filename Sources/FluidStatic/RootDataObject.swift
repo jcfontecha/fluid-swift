@@ -1,9 +1,11 @@
 import FluidJS
 import FluidAqueduct
+import FluidContainerDefinitions
 import FluidContainerRuntime
 import FluidDatastore
 import FluidDatastoreDefinitions
 import FluidMap
+import Foundation
 
 /// rootDataObject.ts `rootDataStoreId`: the alias, not the physical datastore ID.
 let rootDataStoreId: JSString = "rootDOId"
@@ -108,4 +110,25 @@ public func createDOProviderContainerRuntimeFactory(
         rootDataObjectFactory: try RootDataObjectFactory(sharedObjects: sharedObjects),
         oldestSupportedClient: oldestSupportedClient,
         runtimeOptions: runtimeOptionOverrides)
+}
+
+/// rootDataObject.ts `DOProviderContainerRuntimeFactory.instantiateRuntime`, through
+/// containerRuntime.ts `loadContainerRuntime`: the runtime with the factory's options, the root
+/// data object's channel registry, and the root data object as the entry point (provideEntryPoint).
+/// Every stored property is immutable and its channel factories capture only types, so the
+/// factory is safe to share between containers. Creating a new container is not ported.
+extension DOProviderContainerRuntimeFactory: IRuntimeFactory, @unchecked Sendable {
+    public func instantiateRuntime(_ context: IContainerContext, existing: Bool) throws
+        -> (runtime: ContainerRuntime, entryPoint: AnyObject)
+    {
+        guard existing, let baseSnapshot = context.baseSnapshot else {
+            throw DatastoreError("creating a new container is not ported")
+        }
+        let runtime = try ContainerRuntime(
+            sessionId: UUID().uuidString.lowercased(), clientId: context.clientId?.description ?? "",
+            deltaManager: context.deltaManager, quorum: context.quorum, oldestSupportedClient: oldestSupportedClient,
+            runtimeOptions: .object(runtimeOptions))
+        try runtime.loadSnapshot(baseSnapshot, factories: rootDataObjectFactory.sharedObjects)
+        return (runtime, try RootDataObject(runtime: runtime))
+    }
 }

@@ -1,27 +1,23 @@
-import FluidDriverBase
 import FluidDriverDefinitions
 import FluidJS
-import FluidRouterliciousDriver
-import Foundation
 
 /// Ports container-loader/src/connectionManager.ts. Synchronous connection state is owned by
-/// Container's executor; connectToDeltaStream and socket disposal are the only async edges.
+/// Container's executor; connectToDeltaStream and connection disposal are the only async edges.
 public final class ConnectionManager {
-    public private(set) var connection: DocumentDeltaConnection?
+    public private(set) var connection: (any IDocumentDeltaConnection)?
     public private(set) var clientId: JSString?
     public private(set) var connected = false
 
     public init() {}
 
-    public nonisolated(nonsending) func connect(_ service: DocumentService, summarizer: Bool = false) async throws
+    public nonisolated(nonsending) func connect(_ service: any IDocumentService, client: IClient) async throws
         -> IConnected
     {
-        let connection = DocumentDeltaConnection()
+        let connection = try await service.connectToDeltaStream(client)
         self.connection = connection
-        let details = try await service.connectToDeltaStream(connection, summarizer: summarizer)
-        clientId = details.clientId
+        clientId = connection.details.clientId
         connected = false
-        return details
+        return connection.details
     }
 
     /// Write-mode clients must wait for their own sequenced join before submitting ops.
@@ -35,7 +31,7 @@ public final class ConnectionManager {
         connected = false
         let old = connection
         connection = nil
-        await old?.disconnect()
+        await old?.dispose()
     }
 
     public func connectionFailed() { connected = false }

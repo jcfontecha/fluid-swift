@@ -1,3 +1,4 @@
+import FluidContainerDefinitions
 import FluidDriverDefinitions
 import FluidJS
 
@@ -7,9 +8,10 @@ public final class ProtocolOpHandler {
     public private(set) var sequenceNumber: Int
     public private(set) var minimumSequenceNumber: Int
     public let quorum: Quorum
-    public let audience = Audience()
+    public let audience: Audience
 
-    public init(state: IProtocolState) throws {
+    public init(state: IProtocolState, audience: Audience = Audience()) throws {
+        self.audience = audience
         sequenceNumber = state.sequenceNumber
         minimumSequenceNumber = state.minimumSequenceNumber
         quorum = Quorum(members: state.members, proposals: state.proposals, values: state.values)
@@ -85,7 +87,7 @@ public final class ProtocolOpHandler {
         result["proposals"] = .array(quorum.proposals.getProposals().map(\.json))
         result["values"] = .array(quorum.proposals.getValues().map(\.json))
         result["audience"] = .array(
-            audience.getMembers().map { .array([.string($0.clientId), $0.client.json]) })
+            audience.getMembers().entries.map { .array([.string($0.key), $0.value.json]) })
         return .object(result)
     }
 }

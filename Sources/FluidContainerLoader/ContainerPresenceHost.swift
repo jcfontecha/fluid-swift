@@ -1,3 +1,4 @@
+import FluidContainerDefinitions
 import FluidContainerRuntime
 import FluidDatastoreDefinitions
 import FluidDriverDefinitions
@@ -12,7 +13,7 @@ import Foundation
 /// A TS listener's exception propagates to whoever raised the event. `Audience` raises events
 /// through the non-throwing `ListenerList`, so a throwing presence listener reports to `onError`,
 /// which fails the container.
-final class PresenceAudienceAdapter: IAudience {
+final class PresenceAudienceAdapter: FluidPresence.IAudience {
     private let audience: Audience
     private let onError: (any Error) -> Void
     private var registrations: [Int: Int] = [:]
@@ -23,11 +24,7 @@ final class PresenceAudienceAdapter: IAudience {
         self.onError = onError
     }
 
-    func getMembers() -> JSMap<JSString, IClient> {
-        var members = JSMap<JSString, IClient>()
-        for member in audience.getMembers() { members.set(member.clientId, member.client) }
-        return members
-    }
+    func getMembers() -> JSMap<JSString, IClient> { audience.getMembers() }
 
     func getMember(_ clientId: JSString) -> IClient? { audience.getMember(clientId) }
 
@@ -148,7 +145,7 @@ final class ContainerExtensionHost: ExtensionHost {
 
     func getQuorum() -> any IQuorumClients { runtime.getQuorum() }
 
-    func getAudience() -> any IAudience { audience }
+    func getAudience() -> any FluidPresence.IAudience { audience }
 
     func onDisconnected(_ listener: @escaping () throws -> Void) {
         disconnectedListeners.append(listener)

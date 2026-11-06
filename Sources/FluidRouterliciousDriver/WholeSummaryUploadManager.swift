@@ -2,9 +2,14 @@ import FluidDriverDefinitions
 import FluidJS
 import Foundation
 
-/// Ports routerlicious-driver/src/wholeSummaryUploadManager.ts and storageUtils.ts.
+/// Ports routerlicious-driver/src/wholeSummaryUploadManager.ts and storageUtils.ts. Only the
+/// upload is ported; whole-summary storage reads (wholeSummaryDocumentStorageService.ts) are not.
 public struct WholeSummaryUploadManager: Sendable {
     let rest: RestClient
+
+    public init(manager: RestClient) {
+        rest = manager
+    }
     public static func payload(_ summary: SummaryTree, parentHandle: JSString?) throws -> JSONValue {
         func entries(_ tree: ISummaryTree) throws -> [JSONValue] {
             try tree.tree.entries.map { key, child in
@@ -63,22 +68,6 @@ public struct WholeSummaryUploadManager: Sendable {
         return .object(payload)
     }
     public func writeSummaryTree(_ summary: SummaryTree, parentHandle: JSString?) async throws -> JSString {
-        try await rest.post("/repos/tinylicious/git/summaries?initial=false", body: Self.payload(summary, parentHandle: parentHandle)).member("id").asString()
-    }
-}
-
-extension DocumentStorageService {
-    public func latestVersion() async throws -> JSString {
-        let rest = RestClient(endpoint: endpoint, document: document, tokens: tokens)
-        let commits = try await rest.get("/repos/tinylicious/commits?count=1&sha=\(encodeURIComponent(document))").asArray()
-        guard let commit = commits.first else { throw JSONDecodingError("no document version") }
-        return try Git.ICommitDetails(json: commit).sha
-    }
-    public func uploadSummaryWithContext(_ summary: SummaryTree, context: ISummaryContext, wholeSummary: Bool = false) async throws -> JSString {
-        let rest = RestClient(endpoint: endpoint, document: document, tokens: tokens)
-        if wholeSummary {
-            return try await WholeSummaryUploadManager(rest: rest).writeSummaryTree(summary, parentHandle: context.ackHandle)
-        }
-        return try await SummaryTreeUploadManager(rest: rest).writeSummaryTree(summary, parentHandle: context.ackHandle)
+        try await rest.post("/git/summaries?initial=false", body: Self.payload(summary, parentHandle: parentHandle)).member("id").asString()
     }
 }

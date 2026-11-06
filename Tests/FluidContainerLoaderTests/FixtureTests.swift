@@ -1,3 +1,4 @@
+import FluidContainerDefinitions
 import FluidDatastoreDefinitions
 import FluidDriverBase
 import FluidDriverDefinitions
@@ -68,6 +69,7 @@ private func replacing(_ message: ISequencedDocumentMessage, _ key: JSString, _ 
         switch event {
         case .addMember: order.append("audience.addMember")
         case .removeMember: order.append("audience.removeMember")
+        case .selfChanged: order.append("audience.selfChanged")
         }
     }
     delta.events.on { event in

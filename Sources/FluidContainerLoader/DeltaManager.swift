@@ -1,10 +1,11 @@
+import FluidContainerDefinitions
 import FluidDatastoreDefinitions
 import FluidDriverBase
 import FluidDriverDefinitions
 import FluidJS
 
 /// Ports container-loader/src/deltaManager.ts: inbound queue, validation and storage gap ranges.
-/// REST fetching is performed by Container only after this synchronous queue has drained.
+/// Storage fetching is performed by Container only after this synchronous queue has drained.
 public final class DeltaManager: IDeltaManager {
     public struct Pending {
         public let message: ISequencedDocumentMessage
@@ -157,9 +158,10 @@ public final class DeltaManager: IDeltaManager {
         return try IDocumentMessage(json: .object(message))
     }
 
-    /// Refetch the prior op deliberately to detect an overwritten file (specs/container-loader/delta.md).
-    public func fetchRange(sequenceNumber: Int) -> (from: Int, to: Int) {
-        let from = max(1, sequenceNumber)
-        return (from, min(pending.first?.message.sequenceNumber ?? (from + 2000), from + 2000))
+    /// deltaManager.ts fetchMissingDeltasCore: refetch the prior op deliberately to detect an
+    /// overwritten file (specs/container-loader/delta.md), up to the first queued op, exclusive, or
+    /// to the end when nothing is queued. The driver splits the range into batches.
+    public func fetchRange(sequenceNumber: Int) -> (from: Int, to: Int?) {
+        (max(1, sequenceNumber), pending.first?.message.sequenceNumber)
     }
 }

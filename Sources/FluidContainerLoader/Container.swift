@@ -1,19 +1,30 @@
+import FluidContainerDefinitions
 import FluidContainerRuntime
 import FluidDatastore
-import FluidMap
-import FluidPresence
-import FluidStatic
+import FluidDatastoreDefinitions
 import FluidDriverBase
 import FluidDriverDefinitions
 import FluidJS
-import FluidRouterliciousDriver
-import FluidSocketIO
-import FluidTinyliciousDriver
+import FluidPresence
 import Foundation
 
+/// container.ts `summarizerClientType`.
+private let summarizerClientType: JSString = "summarizer"
+
+/// summaryHelpers.ts formCreateSummarizerFn: the summarizer's client details override.
+private let summarizerClientDetails: JSONValue = .object({
+    var capabilities = JSObject<JSONValue>()
+    capabilities["interactive"] = .bool(false)
+    var details = JSObject<JSONValue>()
+    details["capabilities"] = .object(capabilities)
+    details["type"] = .string(summarizerClientType)
+    return details
+}())
+
 /// Ports container-loader/src/container.ts. One actor owns all synchronous protocol, delta,
-/// connection and listener state. Suspension occurs only at socket/REST/timer boundaries.
-public actor Container {
+/// connection and listener state. Suspension occurs only at socket/REST/timer boundaries. The
+/// container reaches its service only through the driver interfaces it was loaded with.
+public actor Container: IContainer {
     private final class Outbound {
         var messages: [IDocumentMessage] = []
         var signals: [(content: String, target: String?)] = []
@@ -33,10 +44,9 @@ public actor Container {
     private var flushingSignals = false
     private let outbound = Outbound()
     private var runtime: ContainerRuntime?
-    private var rootDataObject: RootDataObject?
+    private var entryPoint: AnyObject?
     private let loadRuntime: Bool
     private let isSummarizer: Bool
-    private let wholeSummary: Bool
     private let summaryMode: SummaryManager.Mode
     private var election: SummarizerClientElection?
     private var summaryGenerator: SummaryGenerator?
@@ -57,7 +67,18 @@ public actor Container {
     private var summaryActive = false
     private var summaryCompletionWaiters: [CheckedContinuation<Void, Never>] = []
     private var summaryFailure: String?
-    private let service: DocumentService
+    private let resolvedUrl: IResolvedUrl
+    private let urlResolver: any IUrlResolver
+    private let serviceFactory: any IDocumentServiceFactory
+    private let runtimeFactory: any IRuntimeFactory<ContainerRuntime>
+    private let configProvider: (any IConfigProviderBase)?
+    private let specifiedVersion: JSString?
+    private let client: IClient
+    private var service: (any IDocumentService)?
+    private var storage: (any IDocumentStorageService)?
+    private var deltaStorage: (any IDocumentDeltaStorageService)?
+    /// The protocol handler's audience (container.ts `audience`), created before the handler.
+    private let protocolAudience = Audience()
     private var protocolHandler: ProtocolOpHandler?
     private let deltaManager: DeltaManager
     private let connectionManager: ConnectionManager
@@ -69,18 +90,53 @@ public actor Container {
     private var reader: Task<Void, Never>?
     private var noopTimer: Task<Void, Never>?
     private var fetching = false
+    private var establishing = false
+    /// Between a delta connection's handshake and its loss: CatchingUp or Connected.
+    private var deltaStreamOpen = false
+    private var dirty = false
+    public private(set) var closed = false
+    public let events = ListenerList<ContainerEvent>()
+    /// container.ts `containerMetadata`: no Swift driver emits `metadataUpdate`, so it stays empty.
+    public private(set) var containerMetadata = JSObject<JSString>()
 
-    public init(endpoint: String, document: String, loadRuntime: Bool = false, summarizer: Bool = false, wholeSummary: Bool = false, summaryMode: SummaryManager.Mode = .enabled) {
+    /// container.ts `setupClient`: the interactive write client, with the request's client
+    /// details override spread over its details.
+    init(
+        resolvedUrl: IResolvedUrl, urlResolver: any IUrlResolver, documentServiceFactory: any IDocumentServiceFactory,
+        runtimeFactory: any IRuntimeFactory<ContainerRuntime>, configProvider: (any IConfigProviderBase)?,
+        specifiedVersion: JSString?, clientDetailsOverride: JSONValue?, loadRuntime: Bool, summaryMode: SummaryManager.Mode
+    ) throws {
+        var fields = try JSON.parse(#"{"mode":"write","details":{"capabilities":{"interactive":true}},"permission":[],"scopes":[],"user":{"id":""}}"#).asObject()
+        if let clientDetailsOverride {
+            var details = try fields["details"]?.asObject() ?? JSObject()
+            for (key, value) in try clientDetailsOverride.asObject().entries { details[key] = value }
+            fields["details"] = .object(details)
+        }
+        let client = try IClient(json: .object(fields))
+        let isSummarizer = client.details.type == summarizerClientType
+        self.client = client
+        self.resolvedUrl = resolvedUrl
+        self.urlResolver = urlResolver
+        serviceFactory = documentServiceFactory
+        self.runtimeFactory = runtimeFactory
+        self.configProvider = configProvider
+        self.specifiedVersion = specifiedVersion
         self.loadRuntime = loadRuntime
-        isSummarizer = summarizer
-        self.wholeSummary = wholeSummary
+        self.isSummarizer = isSummarizer
         self.summaryMode = summaryMode
-        automaticSummaries = loadRuntime && !summarizer && (summaryMode == .enabled || summaryMode == .disableHeuristics)
+        automaticSummaries = loadRuntime && !isSummarizer && (summaryMode == .enabled || summaryMode == .disableHeuristics)
         let connectionManager = ConnectionManager()
         self.connectionManager = connectionManager
         deltaManager = DeltaManager(active: { connectionManager.connected })
-        service = DocumentService(
-            endpoint: endpoint, document: document, tokens: InsecureTinyliciousTokenProvider())
+    }
+
+    /// loader.ts RelativeLoader with container.ts `clone`: the summarizer loads the same resolved
+    /// URL through the same services, as a summarizer client, at the latest version.
+    private func cloneForSummarizer() throws -> Container {
+        try Container(
+            resolvedUrl: resolvedUrl, urlResolver: urlResolver, documentServiceFactory: serviceFactory,
+            runtimeFactory: runtimeFactory, configProvider: configProvider, specifiedVersion: nil,
+            clientDetailsOverride: summarizerClientDetails, loadRuntime: true, summaryMode: summaryMode)
     }
 
     public func onDelta(_ listener: @escaping @Sendable (DeltaManagerEvent) -> Void) {
@@ -96,61 +152,16 @@ public actor Container {
     }
 
     public func connect() async throws {
+        establishing = true
+        defer { establishing = false }
         if protocolHandler == nil {
-            let loadedVersion = try await service.storage.latestVersion()
-            let snapshot = try await service.storage.snapshot(version: loadedVersion)
-            let loaded = try ProtocolOpHandler(state: DocumentStorageService.protocolState(snapshot))
-            deltaManager.lastSequenceNumber = loaded.sequenceNumber
-            deltaManager.minimumSequenceNumber = loaded.minimumSequenceNumber
-            if loadRuntime {
-                let runtime = try ContainerRuntime(sessionId: UUID().uuidString.lowercased(), clientId: "",
-                    deltaManager: deltaManager, quorum: QuorumClientsView(loaded.quorum.clients))
-                try runtime.loadSnapshot(snapshot, factories: [
-                    ChannelFactory(SharedMap.self, snapshotFormatVersion: "0.2"),
-                    ChannelFactory(SharedDirectory.self, snapshotFormatVersion: "0.1"),
-                ])
-                runtime.referenceSequenceNumber = loaded.sequenceNumber
-                rootDataObject = try RootDataObject(runtime: runtime)
-                runtime.onSubmitSignal = { [outbound] envelope, target in
-                    outbound.signals.append((JSON.stringify(envelope), target?.description))
-                }
-                runtime.onRuntimeDispatch = { [presence] name, arguments in
-                    guard name == "extension", let manager = presence.manager else { return }
-                    let parts = try arguments.asArray()
-                    guard parts.count == 3 else { throw JSONDecodingError("invalid extension dispatch") }
-                    try manager.processSignal(
-                        addressChain: parts[0].asArray().map { try $0.asString() },
-                        message: InboundExtensionMessage(json: parts[1]), local: parts[2] == .bool(true))
-                }
-                runtime.onSubmitBatch = { [deltaManager, outbound] messages in
-                    var last = 0
-                    for message in messages {
-                        let prepared = try deltaManager.prepareMessage(
-                            type: "op", contents: message.member("contents"),
-                            referenceSequenceNumber: message.member("referenceSequenceNumber").asInt())
-                        var fields = try prepared.json.asObject()
-                        for (key, value) in try message.asObject().entries { fields[key] = value }
-                        let wire = try IDocumentMessage(json: .object(fields))
-                        outbound.messages.append(wire)
-                        last = wire.clientSequenceNumber
-                    }
-                    return last
-                }
-                self.runtime = runtime
-                election = try SummarizerClientElection(members: loaded.quorum.getMembers(), sequenceNumber: loaded.sequenceNumber, initialState: runtime.electedSummarizerData)
-                summaryGenerator = SummaryGenerator(ackHandle: loadedVersion)
-                if let summarizerParentId {
-                    summarizer = Summarizer(parentClientId: summarizerParentId, sequenceNumber: loaded.sequenceNumber,
-                        now: Date().timeIntervalSince1970 * 1000)
-                }
-            }
-            loaded.quorum.events.on { [quorumEvents] in quorumEvents.emit($0) }
-            loaded.audience.events.on { [audienceEvents] in audienceEvents.emit($0) }
-            snapshotSequenceNumber = loaded.sequenceNumber
-            deltaManager.lastSequenceNumber = loaded.sequenceNumber
-            protocolHandler = loaded
+            try await load()
         }
-        let details = try await connectionManager.connect(service, summarizer: isSummarizer)
+        guard let service else { throw JSONDecodingError("no document service") }
+        let details = try await connectionManager.connect(service, client: client)
+        deltaStreamOpen = true
+        // container.ts propagateConnectionState: the signal audience learns the client id while catching up.
+        signalAudience.setCurrentClientId(details.clientId)
         deltaManager.connect(
             details, lastSequenceNumber: protocolHandler?.sequenceNumber ?? snapshotSequenceNumber)
         try protocolHandler?.initialClients(details.initialClients)
@@ -170,6 +181,7 @@ public actor Container {
                     self.finishSummaryWait(error: error)
                     self.connectionManager.connectionFailed()
                     self.deltaManager.disconnect(String(describing: error), error: error)
+                    self.deltaStreamLost()
                     self.raisePresenceDisconnected()
                 }
             }
@@ -178,26 +190,129 @@ public actor Container {
         scheduleSummaryWork()
     }
 
-    private func receive(_ event: SocketEvent) async throws {
-        switch event.name {
-        case "op":
-            guard event.arguments.count == 2 else {
-                throw JSONDecodingError("invalid op arguments")
+    /// The load half of container.ts `load`: document service, storage, snapshot, protocol state,
+    /// then the runtime from the runtime factory.
+    private func load() async throws {
+        let service = try await serviceFactory.createDocumentService(
+            resolvedUrl, clientIsSummarizer: client.details.type == summarizerClientType)
+        self.service = service
+        let storage = try await service.connectToStorage()
+        self.storage = storage
+        let (snapshot, version) = try await getSnapshot(
+            storage, supportGetSnapshotApi: supportGetSnapshotApi(), specifiedVersion: specifiedVersion)
+        let baseSnapshotTree = snapshot.snapshotTree
+        let attributes = try await getDocumentAttributes(storage, baseSnapshotTree)
+        let loaded = try await initializeProtocolStateFromSnapshot(attributes, storage, baseSnapshotTree)
+        deltaManager.lastSequenceNumber = loaded.sequenceNumber
+        deltaManager.minimumSequenceNumber = loaded.minimumSequenceNumber
+        if loadRuntime {
+            let blobContents = try await getBlobContentsFromTree(snapshot, storage: storage)
+            let context = IContainerContext(
+                clientId: nil, clientDetails: client.details,
+                baseSnapshot: try summaryTreeFromSnapshot(baseSnapshotTree, blobContents: blobContents),
+                deltaManager: deltaManager, quorum: QuorumClientsView(loaded.quorum.clients), attachState: .attached)
+            let (runtime, entryPoint) = try runtimeFactory.instantiateRuntime(context, existing: true)
+            runtime.referenceSequenceNumber = loaded.sequenceNumber
+            self.entryPoint = entryPoint
+            runtime.onSubmitSignal = { [outbound] envelope, target in
+                outbound.signals.append((JSON.stringify(envelope), target?.description))
             }
-            deltaManager.enqueueMessages(
-                try event.arguments[1].asArray().map { try ISequencedDocumentMessage(json: $0) })
+            runtime.onRuntimeDispatch = { [presence] name, arguments in
+                guard name == "extension", let manager = presence.manager else { return }
+                let parts = try arguments.asArray()
+                guard parts.count == 3 else { throw JSONDecodingError("invalid extension dispatch") }
+                try manager.processSignal(
+                    addressChain: parts[0].asArray().map { try $0.asString() },
+                    message: InboundExtensionMessage(json: parts[1]), local: parts[2] == .bool(true))
+            }
+            runtime.onSubmitBatch = { [deltaManager, outbound] messages in
+                var last = 0
+                for message in messages {
+                    let prepared = try deltaManager.prepareMessage(
+                        type: "op", contents: message.member("contents"),
+                        referenceSequenceNumber: message.member("referenceSequenceNumber").asInt())
+                    var fields = try prepared.json.asObject()
+                    for (key, value) in try message.asObject().entries { fields[key] = value }
+                    let wire = try IDocumentMessage(json: .object(fields))
+                    outbound.messages.append(wire)
+                    last = wire.clientSequenceNumber
+                }
+                return last
+            }
+            self.runtime = runtime
+            election = try SummarizerClientElection(members: loaded.quorum.getMembers(), sequenceNumber: loaded.sequenceNumber, initialState: runtime.electedSummarizerData)
+            summaryGenerator = SummaryGenerator(ackHandle: version?.id)
+            if let summarizerParentId {
+                summarizer = Summarizer(parentClientId: summarizerParentId, sequenceNumber: loaded.sequenceNumber,
+                    now: Date().timeIntervalSince1970 * 1000)
+            }
+        }
+        loaded.quorum.events.on { [quorumEvents] in quorumEvents.emit($0) }
+        loaded.audience.events.on { [audienceEvents] in audienceEvents.emit($0) }
+        snapshotSequenceNumber = loaded.sequenceNumber
+        deltaManager.lastSequenceNumber = loaded.sequenceNumber
+        protocolHandler = loaded
+    }
+
+    /// telemetry-utils config `getBoolean`: a boolean, or the string form of one.
+    private func configBoolean(_ name: String) -> Bool? {
+        switch configProvider?.getRawConfig(name) {
+        case .bool(let value): value
+        case .string("true"): true
+        case .string("false"): false
+        default: nil
+        }
+    }
+
+    /// container.ts `supportGetSnapshotApi`: the service must support getSnapshot and the
+    /// `Fluid.Container.UseLoadingGroupIdForSnapshotFetch2` feature gate must be on.
+    private func supportGetSnapshotApi() -> Bool {
+        configBoolean("Fluid.Container.UseLoadingGroupIdForSnapshotFetch2") == true
+            && service?.policies?.supportGetSnapshotApi == true
+    }
+
+    /// containerStorageAdapter.ts: the service policy wins over the `summarizeProtocolTree2` gate.
+    private func shouldSummarizeProtocolTree() -> Bool {
+        service?.policies?.summarizeProtocolTree ?? configBoolean("Fluid.Container.summarizeProtocolTree2") ?? false
+    }
+
+    /// container.ts `initializeProtocolStateFromSnapshot`: the quorum blobs, read through storage.
+    private func initializeProtocolStateFromSnapshot(
+        _ attributes: IDocumentAttributes, _ storage: any IDocumentStorageService, _ snapshot: ISnapshotTree
+    ) async throws -> ProtocolOpHandler {
+        let baseTree = getProtocolSnapshotTree(snapshot)
+        var state = JSObject<JSONValue>()
+        state["sequenceNumber"] = .number(Double(attributes.sequenceNumber))
+        state["minimumSequenceNumber"] = .number(Double(attributes.minimumSequenceNumber))
+        state["members"] = try await readAndParse(storage, baseTree.blobs["quorumMembers"])
+        state["proposals"] = try await readAndParse(storage, baseTree.blobs["quorumProposals"])
+        state["values"] = try await readAndParse(storage, baseTree.blobs["quorumValues"])
+        return try ProtocolOpHandler(state: IProtocolState(json: .object(state)), audience: protocolAudience)
+    }
+
+    private func connectToDeltaStorage() async throws -> any IDocumentDeltaStorageService {
+        if let deltaStorage { return deltaStorage }
+        guard let service else { throw JSONDecodingError("no document service") }
+        let connected = try await service.connectToDeltaStorage()
+        deltaStorage = connected
+        return connected
+    }
+
+    private func receive(_ event: DocumentDeltaConnectionEvent) async throws {
+        switch event {
+        case .op(_, let messages):
+            deltaManager.enqueueMessages(messages)
             try await catchUp()
             scheduleSummaryWork()
-        case "signal":
-            guard let value = event.arguments.first else {
-                throw JSONDecodingError("missing signal")
-            }
-            let batch: [JSONValue]
-            if case .array(let values) = value { batch = values } else { batch = [value] }
-            for value in batch { try processSignal(ISignalMessage(json: value)) }
+        case .signal(let batch):
+            for signal in batch { try processSignal(signal) }
             try await flushSignals()
-        case "nack": throw DriverError("nack", .array(event.arguments))
-        default: break
+        case .nack(let documentId, let nacks):
+            throw DriverError("nack", .array([.string(documentId), .array(nacks.map(\.json))]))
+        case .disconnect(let reason):
+            throw reason
+        case .pong:
+            break
         }
     }
 
@@ -244,7 +359,7 @@ public actor Container {
     }
 
     private func removeAllSignalAudienceMembers() {
-        for member in signalAudience.getMembers() { signalAudience.removeMember(member.clientId) }
+        for clientId in signalAudience.getMembers().keys { signalAudience.removeMember(clientId) }
     }
 
     /// connectionManager.ts: a new connection synthesizes a `clear` signal, then a `join` per initial client.
@@ -264,7 +379,7 @@ public actor Container {
                 throw JSONDecodingError("disconnected")
             }
             let signal = outbound.signals.removeFirst()
-            try await connection.submitSignal(signal.content, target: signal.target)
+            try await connection.submitSignal(signal.content, targetClientId: signal.target)
         }
     }
 
@@ -355,6 +470,8 @@ public actor Container {
             runtime?.referenceSequenceNumber = message.sequenceNumber
             if !wasConnected && connectionManager.connected, let id = connectionManager.clientId {
                 try runtime?.reconnect(clientId: id.description)
+                protocolHandler.audience.setCurrentClientId(id)
+                events.emit(.connected(clientId: id))
             }
             if connectionManager.connected {
                 if result.immediateNoOp == true {
@@ -379,8 +496,19 @@ public actor Container {
         }
         let messages = outbound.messages
         outbound.messages.removeAll(keepingCapacity: true)
+        updateDirtyContainerState()
         return messages
     }
+
+    /// container.ts `updateDirtyContainerState`, from the runtime's pending messages: emits
+    /// `dirty` or `saved` on a change.
+    private func updateDirtyContainerState() {
+        let dirty = (runtime?.pendingStateManager.pendingMessagesCount ?? 0) > 0
+        guard self.dirty != dirty else { return }
+        self.dirty = dirty
+        events.emit(dirty ? .dirty : .saved)
+    }
+
     private func catchUp(fetchUnbounded: Bool = false) async throws {
         try await sendMessages(drain())
         if summaryPaused { return }
@@ -389,21 +517,16 @@ public actor Container {
             defer { fetching = false }
             var unbounded = fetchUnbounded
             while let current = protocolHandler, unbounded || !deltaManager.pending.isEmpty {
-                let previousSequenceNumber = current.sequenceNumber
                 // Refetch the prior op deliberately: DeltaManager detects a replaced file by its
-                // sender/type/MSN/reference/timestamp fingerprint, not by comparing contents.
+                // sender/type/MSN/reference/timestamp fingerprint, not by comparing contents. The
+                // driver batches the range and, bounded, fetches all of it (requestOps 0x270).
                 let (from, to) = deltaManager.fetchRange(sequenceNumber: current.sequenceNumber)
-                let messages = try await service.deltaStorage.fetchMessages(
-                    from: from, to: to, reason: unbounded ? "DocumentOpen" : "Gap")
-                deltaManager.enqueueMessages(messages, source: "storage")
-                try await sendMessages(drain())
-                let last = messages.last?.sequenceNumber ?? 0
-                unbounded = unbounded && last == to - 1
-                if let next = deltaManager.pending.first, let updated = protocolHandler,
-                    next.message.sequenceNumber > updated.sequenceNumber + 1,
-                    updated.sequenceNumber == previousSequenceNumber
-                {
-                    throw JSONDecodingError("delta storage did not fill the sequence gap")
+                let reason = unbounded ? "DocumentOpen" : "Gap"
+                unbounded = false
+                let deltaStorage = try await connectToDeltaStorage()
+                for try await messages in deltaStorage.fetchMessages(from, to: to, cachedOnly: false, fetchReason: reason) {
+                    deltaManager.enqueueMessages(messages, source: "storage")
+                    try await sendMessages(drain())
                 }
             }
         }
@@ -454,7 +577,7 @@ public actor Container {
         guard let connection = connectionManager.connection else {
             throw JSONDecodingError("disconnected")
         }
-        try await connection.submitSignal(text)
+        try await connection.submitSignal(text, targetClientId: nil)
     }
 
     public func view() throws -> JSONValue {
@@ -487,36 +610,55 @@ public actor Container {
         return .object(view)
     }
 
-    /// Opens an existing fluid-static container. All object edits stay on this actor.
-    public static func open(endpoint: String, document: String) async throws -> Container {
-        let container = Container(endpoint: endpoint, document: document, loadRuntime: true)
-        try await container.connect()
-        return container
-    }
-
-    public func mapEntries(_ name: JSString = "map") throws -> JSONValue {
+    /// Runs `body` against the runtime's entry point on this container's executor, then flushes the
+    /// runtime's batch and sends it: the end of the JS turn, where containerRuntime.ts flushes.
+    public func withEntryPoint<Result: Sendable>(_ body: @Sendable (AnyObject) throws -> Result) async throws -> Result {
         if let failure { throw JSONDecodingError(failure) }
-        guard let map = rootDataObject?.initialObjects[name] as? SharedMap else {
-            throw JSONDecodingError("initialObject is not a SharedMap")
-        }
-        var values = JSObject<JSONValue>()
-        for (key, value) in map.entries() { values[key] = value ?? .null }
-        return .object(values)
-    }
-
-    public func withMap<Result: Sendable>(
-        _ name: JSString = "map", _ edit: @Sendable (SharedMap) throws -> Result
-    ) async throws -> Result {
-        if let failure { throw JSONDecodingError(failure) }
-        guard let map = rootDataObject?.initialObjects[name] as? SharedMap, let runtime else {
-            throw JSONDecodingError("initialObject is not a SharedMap")
-        }
-        let result = try edit(map)
+        guard let entryPoint, let runtime else { throw JSONDecodingError("container has no runtime") }
+        let result = try body(entryPoint)
         try runtime.flush()
         let messages = outbound.messages
         outbound.messages.removeAll(keepingCapacity: true)
         try await sendMessages(messages)
+        updateDirtyContainerState()
         return result
+    }
+
+    public var connectionState: ConnectionState {
+        if deltaStreamOpen { return connectionManager.connected ? .connected : .catchingUp }
+        return establishing ? .establishingConnection : .disconnected
+    }
+
+    /// container.ts propagateConnectionState: one `disconnected` per transition to Disconnected.
+    private func deltaStreamLost() {
+        guard deltaStreamOpen else { return }
+        deltaStreamOpen = false
+        events.emit(.disconnected)
+    }
+
+    public var isDirty: Bool { dirty }
+
+    public var attachState: AttachState { .attached }
+
+    /// container.ts `clientId`: the audience's self, set once this client's join is processed.
+    public var clientId: JSString? { protocolAudience.getSelf()?.clientId }
+
+    public var audience: any FluidContainerDefinitions.IAudience { protocolAudience }
+
+    public var readOnlyInfo: ReadOnlyInfo { deltaManager.readOnlyInfo }
+
+    public func getEntryPoint() async throws -> AnyObject {
+        if closed { throw JSONDecodingError("The context is already disposed") }
+        guard let entryPoint else { throw JSONDecodingError("container has no runtime") }
+        return entryPoint
+    }
+
+    /// container.ts `close`: disconnect for good, then emit `closed`.
+    public func close(_ error: (any Error)?) async {
+        guard !closed else { return }
+        closed = true
+        await disconnect()
+        events.emit(.closed(error: error))
     }
 
     public func generateSummary() throws -> JSONValue {
@@ -608,8 +750,7 @@ public actor Container {
                     return
                 }
                 guard let parentId = connectionManager.clientId else { throw JSONDecodingError("missing parent id") }
-                let child = Container(endpoint: service.storage.endpoint, document: service.storage.document,
-                    loadRuntime: true, summarizer: true, wholeSummary: wholeSummary, summaryMode: summaryMode)
+                let child = try cloneForSummarizer()
                 summarizerChild = child
                 do {
                     await child.startSummarizer(parentClientId: parentId, host: self, generation: generation)
@@ -649,15 +790,14 @@ public actor Container {
     public func summarize() async throws -> JSONValue {
         if !isSummarizer {
             if summarizerChild == nil {
-                let child = Container(endpoint: service.storage.endpoint, document: service.storage.document,
-                    loadRuntime: true, summarizer: true, wholeSummary: wholeSummary, summaryMode: summaryMode)
+                let child = try cloneForSummarizer()
                 summarizerChild = child
                 try await child.connect()
             }
             guard let summarizerChild else { throw JSONDecodingError("missing summarizer child") }
             return try await summarizerChild.summarize()
         }
-        guard let runtime, let summaryGenerator, let protocolHandler,
+        guard let runtime, let summaryGenerator, let protocolHandler, let storage,
             connectionManager.connected, runtime.pendingStateManager.pendingMessagesCount == 0,
             outbound.messages.isEmpty, !summaryActive, summaryGenerator.pendingHandle == nil
         else { throw JSONDecodingError("summary preconditions failed") }
@@ -679,8 +819,11 @@ public actor Container {
         do {
             try summarizer?.runningSummarizer.begin(now: Date().timeIntervalSince1970 * 1000, referenceSequenceNumber: reference)
             let summary = try runtime.summarize()
-            let handle = try await service.storage.uploadSummaryWithContext(summary.summary,
-                context: summaryGenerator.context(referenceSequenceNumber: reference), wholeSummary: wholeSummary)
+            // protocolTreeDocumentStorageService.ts uploadSummaryWithContext.
+            let upload = shouldSummarizeProtocolTree()
+                ? try addProtocolSummaryIfMissing(summary.summary, protocolHandler) : summary.summary
+            let handle = try await storage.uploadSummaryWithContext(upload,
+                context: summaryGenerator.context(referenceSequenceNumber: reference))
             let contents = try summaryGenerator.submitted(handle: handle,
                 referenceSequenceNumber: reference, minimumSequenceNumber: minimum)
             try await submit(type: "summarize", contents: .string(JSString(JSON.stringify(contents))))
@@ -784,7 +927,10 @@ public actor Container {
         }
         let hadConnection = connectionManager.connection != nil
         connectionManager.connectionFailed()
-        if hadConnection { deltaManager.disconnect("Client disconnect") }
+        if hadConnection {
+            deltaManager.disconnect("Client disconnect")
+            deltaStreamLost()
+        }
         noopTimer?.cancel()
         noopTimer = nil
         reader?.cancel()
@@ -798,4 +944,34 @@ public actor Container {
             await summarizerHost.summarizerStopped(generation: summarizerGeneration)
         }
     }
+}
+
+/// container.ts `captureProtocolSummary`: the protocol handler's attributes and quorum, in TS's
+/// literal property order (`tree` before `type`, `content` before `type`).
+func captureProtocolSummary(_ protocolHandler: ProtocolOpHandler) throws -> ISummaryTree {
+    func blob(_ value: JSONValue) -> JSONValue {
+        var object = JSObject<JSONValue>()
+        object["content"] = .string(JSString(JSON.stringify(value)))
+        object["type"] = .number(Double(SummaryType.blob.rawValue))
+        return .object(object)
+    }
+    var attributes = JSObject<JSONValue>()
+    attributes["minimumSequenceNumber"] = .number(Double(protocolHandler.minimumSequenceNumber))
+    attributes["sequenceNumber"] = .number(Double(protocolHandler.sequenceNumber))
+    let quorum = protocolHandler.quorum
+    var tree = JSObject<JSONValue>()
+    tree["attributes"] = blob(.object(attributes))
+    tree["quorumMembers"] = blob(.array(quorum.getMembers().map(\.json)))
+    tree["quorumProposals"] = blob(.array(quorum.proposals.getProposals().map(\.json)))
+    tree["quorumValues"] = blob(.array(quorum.proposals.getValues().map(\.json)))
+    var summary = JSObject<JSONValue>()
+    summary["tree"] = .object(tree)
+    summary["type"] = .number(Double(SummaryType.tree.rawValue))
+    return try ISummaryTree(json: .object(summary))
+}
+
+/// container.ts `addProtocolSummaryIfMissing`: a combined summary is uploaded as is.
+func addProtocolSummaryIfMissing(_ summaryTree: SummaryTree, _ protocolHandler: ProtocolOpHandler) throws -> SummaryTree {
+    guard case .tree(let tree) = summaryTree, !isCombinedAppAndProtocolSummary(tree) else { return summaryTree }
+    return .tree(try combineAppAndProtocolSummary(tree, captureProtocolSummary(protocolHandler)))
 }
