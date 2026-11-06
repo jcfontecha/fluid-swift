@@ -20,6 +20,7 @@ let package = Package(
         .testTarget(name: "FluidTreeTests", dependencies: ["FluidTree", "FluidJS", "FluidIdCompressor"], resources: [.copy("Fixtures")]),
         .target(name: "FluidJS"),
         .target(name: "FluidContainerRuntime", dependencies: ["FluidJS", "FluidLZ4", "FluidDriverDefinitions", "FluidIdCompressor"]),
+        .executableTarget(name: "FluidRoutingPeer", dependencies: ["FluidContainerRuntime", "FluidJS"]),
         .executableTarget(name: "FluidOpLifecyclePeer", dependencies: ["FluidContainerRuntime", "FluidJS"]),
         .executableTarget(name: "FluidPendingStatePeer", dependencies: ["FluidContainerRuntime", "FluidJS"]),
         .testTarget(name: "FluidContainerRuntimeTests", dependencies: ["FluidContainerRuntime", "FluidJS"]),

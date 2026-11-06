@@ -556,3 +556,87 @@ missing native types before implementation. No sequence algebra/codecs,
 optional handler, ModularChangeFamily or native change-family transport exists.
 The default mixed command therefore continues to fail explicitly. The requested
 planted rebase tie-break divergence is not yet exercised. See `src/tree/README.md`.
+
+## H4 — runtime routing, signals and attachment blobs
+
+`npm run fuzz:routing -- --self` checks independent real 3.11.0 TypeScript instances.
+`npm run fuzz:routing` builds `FluidRoutingPeer` with `--scratch-path .build/h4`
+and compares 1,000 seeds as raw JSON text. `--seeds=N` selects a smaller farm.
+Requests are newline-delimited `{seed,uuids,detached,pending,commands}` scenarios;
+responses are ordered `{destination,value}` observations. Peer requests have a
+30-second deadline. Mismatches retain scenario, expected and actual observations
+in `traces/routing/<seed>.json`.
+
+The oracle constructs the real BlobManager, BlobHandle, Outbox and
+SignalTelemetryManager. It invokes the installed ContainerRuntime's actual
+`validateAndProcessRuntimeMessages`, `processInboundMessages`, and `processSignal`
+methods on a prototype-backed host with explicit service stubs. The real
+ChannelCollection methods strip datastore envelopes and bunch contiguous ops;
+datastore contexts only record calls. GC, schema, and ID-allocation destinations
+record dispatch rather than implementing those services again. H2/H3 separately
+certify actual ID finalization. Compatibility probes call the installed runtime
+option/default and minimum-version validators. Summary reload uses the installed
+`loadBlobManagerLoadInfo`, including snapshot blob *values*, not attachment names.
+
+Each seed covers all nine logical ContainerMessageType values, rejection of
+`groupedBatch`/future types at the logical boundary, mixed-type outbound grouped
+batches, grouped and ungrouped batch event order, contiguous datastore bunching,
+missing/deleted datastore decisions, and local metadata/logical CSNs. H1 remains
+the transport compression/chunk-reassembly oracle: intermediate `chunkedOp` must
+never reach logical dispatch. Signals cover omitted versus empty addresses,
+broadcast numbering, targeted non-numbering, null server clients, missing/deleted
+stores, extension suffixes including the trailing empty segment, and unknown
+slash routes. Listener envelopes, routing decisions, outbound messages and all
+blob summary strings are compared without key sorting or payload normalization.
+
+Blob schedules include detached pseudo-storage IDs, deduplication and redirect
+patching, legacy creation waiting for ack, pending payload handles, attachGraph,
+sharing, original-client acks after pending-state restoration, resume, cache reads,
+unknown reads, TTL resubmit, identity reconstruction on summary load, shared-storage
+sweep, abort during upload, and authoritative ack defeating a late upload. Storage
+is a deterministic byte-preserving stub on both sides. UUIDs and the millisecond
+clock are explicit inputs. Each completed command drains TS microtasks before
+comparison; native state transitions and callbacks run synchronously on the
+container executor. Pending reads remain callback-pending until a matching ack;
+there is no invented timeout. Expected command errors compare the command's
+failure decision, not engine-specific diagnostic text. Oracle assertions also
+require the expected batch/op events and reject unexpected command failures.
+
+Swift Testing ports upstream blob-handle sharing, pending capture, aggregate-work
+transitions, TTL's strict half-life boundary, detached dedup/sweep, unknown blob
+metadata, pending reads, late upload races and dirty-listener abort. The abort
+regression failed before the native fix (`uploads == 0` and `!hasBlob("a")`).
+Additional tests cover actual ContainerRuntime outbox/pending/blob-ack integration,
+stashed blob bytes, signal addressing, and lone-surrogate handle paths. Initial
+skeleton test builds encountered concurrent merge-tree compile errors; those were
+not treated as behavioral red evidence. Run:
+`swift test --scratch-path .build/h4 --filter FluidContainerRuntimeTests`.
+
+The planted localId→localId redirect mutation was rejected at seed 0 and reverted;
+see `src/routing/fixtures/planted-divergence.txt`. The clean 1,000-seed self-check
+and native farm pass. Existing farms can use the same isolated build directory:
+`npm run fuzz:oplifecycle -- --scratch-path=.build/h4`,
+`npm run fuzz:idcompressor -- --scratch-path=.build/h4`, and
+`npm run fuzz:pendingstate -- --scratch-path=.build/h4`.
+
+Native source map (paths relative to container-runtime/src unless noted):
+
+| Swift type/functions | TypeScript source |
+| --- | --- |
+| ContainerRuntime | containerRuntime.ts (routing, signals, op/pending/blob glue) |
+| ContainerMessageType | messageTypes.ts |
+| ChannelCollection | channelCollection.ts (routing boundary; recording datastore contexts) |
+| SignalTelemetryManager | signalTelemetryProcessing.ts (wire tracking counter) |
+| BlobManager, BlobHandle | blobManager/blobManager.ts |
+| BlobManagerLoadInfo, loadBlobManagerLoadInfo, toRedirectTable, summarizeBlobManagerState | blobManager/blobManagerSnapSum.ts |
+| getGCNodePathFromLocalId, isBlobPath | blobManager/blobManager.ts |
+| getMinVersionForCollabDefaults, validateRuntimeOptions | containerCompatibility.ts |
+| validateMinimumVersionForCollab | runtime-utils/src/compatibilityBase.ts |
+
+The host must serialize storage completions onto its container executor. Native
+BlobManager's storage/read completions are its asynchronous I/O boundary, not
+Tasks or actors inside op application. Its explicit local-ID overload supports
+harness entropy; normal creation uses its injectable UUID generator. Runtime
+schema/GC services, datastore materialization, extension acquisition/version
+negotiation, and telemetry logging/latency statistics are not reimplemented by
+this routing lane. The signal counter and all wire-tracking fields are native.

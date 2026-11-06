@@ -1,0 +1,4 @@
+Mutation: processBlobAttachMessage installed localId -> localId instead of localId -> storageId.
+Command: npm run fuzz:routing -- --seeds=1
+Result: AssertionError [ERR_ASSERTION]: seed 0
+Mutation reverted in finally; clean 1000-seed Swift differential rerun passed.
