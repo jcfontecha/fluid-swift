@@ -135,7 +135,14 @@ public actor SocketIOClient {
     }
 
     public func close() async {
-        if connected { try? await send(.message(.init(.disconnect))) }
+        if connected {
+            do {
+                try await send(.message(.init(.disconnect)))
+            } catch {
+                await finish("io client disconnect: \(error)")
+                return
+            }
+        }
         await finish("io client disconnect")
     }
 
@@ -192,16 +199,19 @@ public actor SocketIOClient {
                 connecting = nil
                 deliver("connect", [])
             case .connectError:
-                deliver("connect_error", [message.data!])
+                guard let data = message.data else { throw SocketIOError.protocolError("missing connect error payload") }
+                deliver("connect_error", [data])
                 await finish("connect error", reportConnectError: false)
             case .disconnect: await finish("io server disconnect")
             case .event:
                 guard connected else { throw SocketIOError.protocolError("event before connect") }
-                let args = try message.data!.asArray()
+                guard let data = message.data else { throw SocketIOError.protocolError("missing event payload") }
+                let args = try data.asArray()
                 deliver(try args[0].asString().description, Array(args.dropFirst()), id: message.id)
             case .ack:
+                guard let data = message.data else { throw SocketIOError.protocolError("missing ack payload") }
                 if let id = message.id, let handler = acknowledgements.removeValue(forKey: id) {
-                    deliveryContinuation.yield(Delivery(event: SocketEvent(name: "ack", arguments: try message.data!.asArray(), acknowledgementID: id), handlers: [handler]))
+                    deliveryContinuation.yield(Delivery(event: SocketEvent(name: "ack", arguments: try data.asArray(), acknowledgementID: id), handlers: [handler]))
                 }
             }
         case .close: await finish("transport close")
