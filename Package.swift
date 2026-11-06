@@ -26,6 +26,7 @@ let package = Package(
         .executableTarget(name: "FluidMergeTreePeer", dependencies: ["FluidMergeTree", "FluidJS"]),
         .testTarget(name: "FluidMergeTreeTests", dependencies: ["FluidMergeTree", "FluidJS"]),
         .target(name: "FluidJS"),
+        .executableTarget(name: "FluidOdspNetPeer", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"]),
         .target(name: "FluidOdspDriver", dependencies: ["FluidJS", "FluidDriverDefinitions"]),
         .testTarget(name: "FluidOdspDriverTests", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"]),
         .executableTarget(name: "FluidOdspSnapshotPeer", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"]),

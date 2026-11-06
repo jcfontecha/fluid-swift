@@ -1034,3 +1034,54 @@ sequence numbers above 2^53 (see above); `IBlob` encodings other than `utf-8`/`b
 Swift Testing ports (`swift test --scratch-path .build/h10 --filter FluidOdspDriverTests`): the unit tests of
 `zipItDataRepresentationTests.spec.ts` and `snapshotFormatTests.spec.ts`, the spec's 133-byte worked hex example in
 both directions, and the byte-grammar, hazard and error-code tests.
+
+## ODSP network differential harness (ODSP 2)
+
+`npm run fuzz:odsp-net -- --self` exercises the installed 3.11.0 driver against itself;
+without `--self` it builds `FluidOdspNetPeer` using `--scratch-path .build/odsp2` and compares
+1,000 scripted seeds over a loopback HTTP server. `--seeds=N` selects a smaller run.
+The fake also exposes a websocket-only Socket.IO endpoint; live socket comparison is not yet wired.
+
+The current comparisons run the actual TS `OdspDeltaStorageService`, `EpochTracker`,
+`downloadSnapshot`, `fetchJoinSession` and `OdspSummaryUploadManager`. They cover REST delta
+storage (wrapped ops, holes, 401 claims refresh, 403, 404, missing/same-epoch 409, true epoch
+mismatch with cache clearing, 429/retry-after and 500), successful join-session, successful
+JSON/compact snapshot downloads, and successful summary upload (text, binary, handle and attachment).
+A separate comparison runs the actual TS `runWithRetry` with Node virtual timers/Date and a fixed
+random source against native clock injection: five attempts at 0/1000/2000/3000/4000 ms and a
+terminal nonretryable error. It does not yet cover random backoff or redemption timing.
+
+Each request compares method, raw URL (including query order/escaping), protocol headers,
+and UTF-8 body including CRLF boundaries. Multipart boundary UUIDs become `BOUNDARY` and
+only the driverId UUID within X-RequestStats becomes `NORMALIZED`. RequestNumber and the
+rest of correlation text remain compared. Transport-generated Host, Connection,
+Content-Length, User-Agent, Accept-Language, Accept-Encoding and Sec-Fetch-Mode are omitted.
+Accept is compared for snapshot requests; the implicit transport default is omitted otherwise.
+Authenticated native requests explicitly send the no-cache headers observed from Node fetch;
+these are compared, not filtered. Caller results compare deep JSON, including error category,
+retryability, optional status, claims, tenant, server epoch, cache-clear count, and
+`getRetryDelayFromError` converted to milliseconds. Snapshot blob bytes compare as hex.
+Telemetry-only error fields and messages are not yet compared.
+
+`harness/src/odsp-net/planted-divergence.txt` records the failed run with native numeric
+retry-after interpreted as milliseconds instead of seconds. The source was restored afterward.
+`npm run fuzz:odsp-snapshot -- --scratch-path=.build/odsp2` runs the independent H10 codec farm.
+
+**This lane is not fully certified. Remaining implementation/integration work:**
+
+- Full create-new/share-link/nav resolution and the Office/OneNote/ODC adapter packages.
+- Epoch persisted-cache envelopes, 24-request limiter, redirect handling and 15-second redemption synchronization.
+- Snapshot manager's concurrent cache/network race, default mds/timeout and blobless retry, and prefetch deferred/5-second eviction/persisted-put failure ordering.
+- Ops cache backing-store adapters and automatic flush timer; streaming/concurrent range fetching and cancellation.
+- Live Socket.IO adapter and handshake/early-event queues, factory-wide socket reuse, response/error/flush promise behavior. The current specialization tests synchronous ref teardown, multiplex filtering and request framing only.
+- Join-session discovery caching, refresh timer and disconnect-driven invalidation.
+- Full error telemetry/message mapping, all host-token failure metadata, HTTP redirect behavior and all special-facet/error branches.
+- Summary relay-flush retry and empty-file pending rename integration.
+
+`python3 harness/src/odsp-net/test-swift.py` compiles and runs the real ODSP test files through
+an ephemeral four-target manifest, reusing the same `Sources`/`Tests` and `.build/odsp2` scratch path.
+This avoids compiling sibling lanes' in-progress test targets; it does not substitute copies or mocks
+for native ODSP source. The ordinary full-package filtered command can still fail on unrelated
+concurrent edits (observed: ContainerRuntime `SummaryManagerTests` referencing a missing `Throttler`).
+
+The green REST/codec farms must not be presented as whole-driver certification.

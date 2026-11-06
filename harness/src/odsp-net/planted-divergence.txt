@@ -1,0 +1,46 @@
+Building for debugging...
+[1 / 1]
+[2 / 7] FluidOdspDriver
+[5 / 10] FluidOdspDriver
+[10 / 11] FluidOdspDriver
+[11 / 12] FluidOdspNetPeer-product
+Build complete! (1.12 sec)
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: outcome seed 32
++ actual - expected
+
+  {
+    cacheClears: 0,
+    canRetry: true,
+    errorType: 'throttlingError',
++   retryAfterMs: 1,
+-   retryAfterMs: 1000,
+    statusCode: 429
+  }
+
+    at <anonymous> (/Users/juan/.t3/scratch/2026-11-06-https-github-com-microsoft-fluidframework-c98490f3/harness/src/odsp-net/fuzz.ts:141:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: {
+    errorType: 'throttlingError',
+    canRetry: true,
+    statusCode: 429,
+    retryAfterMs: 1,
+    cacheClears: 0
+  },
+  expected: {
+    errorType: 'throttlingError',
+    canRetry: true,
+    statusCode: 429,
+    retryAfterMs: 1000,
+    cacheClears: 0
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.3
