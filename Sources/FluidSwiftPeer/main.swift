@@ -4,8 +4,11 @@ import FluidDatastoreDefinitions
 import FluidDriverDefinitions
 import FluidJS
 import FluidMap
+import FluidOrderedCollection
+import FluidPactMap
 import FluidRegisterCollection
 import FluidSharedSummaryBlock
+import FluidTaskManager
 import FluidTestRuntimeUtils
 import Foundation
 
@@ -28,6 +31,7 @@ protocol PeerClient: AnyObject {
   func rollback() throws
   func stash(_ contents: JSONValue) throws
   func reconnect(_ id: JSString) throws
+  func membership(_ members: [JSString])
 }
 final class RuntimeClient<C: Channel>: PeerClient {
   let runtime: MockContainerRuntime<C>
@@ -162,6 +166,33 @@ final class Peer {
           : try SharedSummaryBlockClass.load(id: channelId, summary: SummaryTree(json: summary))
         clients[id] = sharedSummaryBlockAdapter(
           MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
+      } else if type == PactMapClass.type {
+        let c =
+          summary == .null
+          ? PactMapClass(id: channelId)
+          : try PactMapClass.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = pactMapAdapter(
+          MockContainerRuntime(
+            clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode,
+            quorum: try initialQuorum(params)))
+      } else if type == TaskManagerClass.type {
+        let c =
+          summary == .null
+          ? TaskManagerClass(id: channelId)
+          : try TaskManagerClass.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = taskManagerAdapter(
+          MockContainerRuntime(
+            clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode,
+            quorum: try initialQuorum(params)))
+      } else if type == ConsensusQueue.type {
+        let c =
+          summary == .null
+          ? ConsensusQueue(id: channelId)
+          : try ConsensusQueue.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = orderedCollectionAdapter(
+          MockContainerRuntime(
+            clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode,
+            quorum: try initialQuorum(params)), clientId: id)
       } else {
         throw PeerError(description: "not implemented: \(type)")
       }
@@ -201,7 +232,9 @@ final class Peer {
       r["outbound"] = .array(c.takeOutbound().map(\.json))
       return .object(r)
     case "membership":
-      return result("outbound", .array(try client(params).takeOutbound().map(\.json)))
+      let c = try client(params)
+      c.membership(try params.member("members").asArray().map { try $0.asString() })
+      return result("outbound", .array(c.takeOutbound().map(\.json)))
     case "disposeClient":
       clients[try params.member("clientId").asString()] = nil
       return .object(JSObject())

@@ -41,4 +41,22 @@ public protocol Channel: AnyObject {
 public protocol IFluidDataStoreRuntime: AnyObject {
     /// Undefined while the container has never connected.
     var clientId: JSString? { get }
+
+    /// `getQuorum()`: the connected members, in the order the quorum added them.
+    func getQuorum() -> any IQuorumClients
+
+    /// `deltaManager`.
+    var deltaManager: any IDeltaManager { get }
+}
+
+/// Runtimes that predate quorum-dependent channels (PactMap, TaskManager) do not provide these
+/// members yet; using them there is a programming error.
+extension IFluidDataStoreRuntime {
+    public func getQuorum() -> any IQuorumClients {
+        preconditionFailure("this IFluidDataStoreRuntime does not provide a quorum")
+    }
+
+    public var deltaManager: any IDeltaManager {
+        preconditionFailure("this IFluidDataStoreRuntime does not provide a delta manager")
+    }
 }

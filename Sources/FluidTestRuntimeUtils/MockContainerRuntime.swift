@@ -9,9 +9,15 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
   public var clientId: JSString? { currentClientId }
   private var currentClientId: JSString
   public let channel: C
-  public private(set) var lastSequenceNumber: Int
+  public var lastSequenceNumber: Int { mockDeltaManager.lastSequenceNumber }
   public private(set) var connected = true
   public let flushMode: FlushMode
+  /// `MockContainerRuntimeFactory.quorum`: shared by every runtime created with it.
+  public let quorum: MockQuorumClients
+  /// `MockFluidDataStoreRuntime.deltaManagerInternal`.
+  public let mockDeltaManager = MockDeltaManager()
+  public var deltaManager: any IDeltaManager { mockDeltaManager }
+  public func getQuorum() -> any IQuorumClients { quorum }
   private var clientSequenceNumber = 0
   private struct Pending {
     let csn: Int
@@ -21,15 +27,25 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
   private var pendingMessages: [Pending] = []
   private var outbox: [(JSONValue, C.LocalOpMetadata, Int)] = []
   private var outbound: [UnsequencedMessage] = []
+  /// Called for every message the runtime sends, in submission order. A
+  /// `MockContainerRuntimeFactory` uses it to build its shared queue.
+  public var onSend: ((UnsequencedMessage) -> Void)?
+  /// Called when a disconnect drops the runtime's unsequenced messages
+  /// (`MockContainerRuntimeFactory.clearOutstandingClientMessages`).
+  public var onDropOutstanding: (() -> Void)?
   private var remote: [SequencedMessage] = []
 
   public init(
-    clientId: JSString, channel: C, lastSequenceNumber: Int, flushMode: FlushMode = .immediate
+    clientId: JSString, channel: C, lastSequenceNumber: Int, flushMode: FlushMode = .immediate,
+    quorum: MockQuorumClients = MockQuorumClients()
   ) {
     currentClientId = clientId
     self.channel = channel
-    self.lastSequenceNumber = lastSequenceNumber
+    self.quorum = quorum
+    mockDeltaManager.lastSequenceNumber = lastSequenceNumber
     self.flushMode = flushMode
+    // MockContainerRuntime's constructor joins the quorum before any channel is created.
+    quorum.addMember(clientId, .object(JSObject()))
     channel.connect(self) { [unowned self] contents, metadata in submit(contents, metadata) }
   }
   public func takeOutbound() -> [UnsequencedMessage] {
@@ -40,6 +56,8 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
     guard connected else { return }
     connected = false
     outbound.removeAll()
+    onDropOutstanding?()
+    quorum.removeMember(currentClientId)
     for (contents, metadata, _) in outbox {
       clientSequenceNumber += 1
       pendingMessages.append(
@@ -56,6 +74,7 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
     for message in buffered { try process(message) }
     currentClientId = clientId
     clientSequenceNumber = 0
+    quorum.addMember(clientId, .object(JSObject()))
     let pending = pendingMessages
     pendingMessages.removeAll()
     for entry in pending {
@@ -68,7 +87,7 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
       remote.append(message)
       return
     }
-    lastSequenceNumber = message.sequenceNumber
+    mockDeltaManager.lastSequenceNumber = message.sequenceNumber
     let local = message.clientId == currentClientId
     var metadata: C.LocalOpMetadata?
     if local {
@@ -109,30 +128,59 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
     }
   }
   private func send(_ contents: JSONValue, _ metadata: C.LocalOpMetadata, reference: Int) {
-    outbound.append(
-      UnsequencedMessage(
-        clientId: currentClientId, clientSequenceNumber: clientSequenceNumber,
-        referenceSequenceNumber: reference, contents: contents))
+    let message = UnsequencedMessage(
+      clientId: currentClientId, clientSequenceNumber: clientSequenceNumber,
+      referenceSequenceNumber: reference, contents: contents)
+    outbound.append(message)
+    onSend?(message)
     pendingMessages.append(
       Pending(csn: clientSequenceNumber, contents: contents, metadata: metadata))
   }
 }
 
-/// Membership listeners fire synchronously after mutation, in registration order.
-public final class MockQuorumClients {
-  public private(set) var members = JSObject<JSONValue>()
-  public var memberAdded: ((JSString, JSONValue) -> Void)?
-  public var memberRemoved: ((JSString) -> Void)?
+/// Port of `MockDeltaManager` (test-runtime-utils/src/mockDeltas.ts), the members channels read.
+public final class MockDeltaManager: IDeltaManager {
+  public var lastSequenceNumber = 0
+  public var readOnlyInfo = ReadOnlyInfo(readonly: false)
   public init() {}
+}
+
+/// Port of `MockQuorumClients` (test-runtime-utils/src/mocks.ts). Listeners fire synchronously
+/// after the mutation, in registration order.
+public final class MockQuorumClients: IQuorumClients {
+  private var members = JSMap<JSString, JSONValue>()
+  private var addListeners: [(token: Int, listener: (JSString, JSONValue) -> Void)] = []
+  private var removeListeners: [(token: Int, listener: (JSString) -> Void)] = []
+  private var nextToken = 0
+  public init() {}
+  /// `addMember` always emits, even for a client that is already a member (it keeps its position).
   public func addMember(_ id: JSString, _ member: JSONValue) {
-    members[id] = member
-    memberAdded?(id, member)
+    members.set(id, member)
+    for entry in addListeners { entry.listener(id, member) }
   }
+  /// `removeMember` emits only if the client was a member.
   public func removeMember(_ id: JSString) {
-    members[id] = nil
-    memberRemoved?(id)
+    guard members.delete(id) else { return }
+    for entry in removeListeners { entry.listener(id) }
   }
-  public func getMember(_ id: JSString) -> JSONValue? { members[id] }
+  public func getMembers() -> JSMap<JSString, JSONValue> { members }
+  public func getMember(_ clientId: JSString) -> JSONValue? { members.get(clientId) }
+  @discardableResult
+  public func onAddMember(_ listener: @escaping (JSString, JSONValue) -> Void) -> Int {
+    nextToken += 1
+    addListeners.append((nextToken, listener))
+    return nextToken
+  }
+  @discardableResult
+  public func onRemoveMember(_ listener: @escaping (JSString) -> Void) -> Int {
+    nextToken += 1
+    removeListeners.append((nextToken, listener))
+    return nextToken
+  }
+  public func off(_ token: Int) {
+    addListeners.removeAll { $0.token == token }
+    removeListeners.removeAll { $0.token == token }
+  }
 }
 public final class MockAudience {
   public private(set) var members = JSObject<JSONValue>()
