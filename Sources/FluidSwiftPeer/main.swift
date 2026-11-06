@@ -5,6 +5,7 @@ import FluidDriverDefinitions
 import FluidJS
 import FluidMap
 import FluidRegisterCollection
+import FluidSharedSummaryBlock
 import FluidTestRuntimeUtils
 import Foundation
 
@@ -153,6 +154,13 @@ final class Peer {
           ? ConsensusRegisterCollection(id: channelId)
           : try ConsensusRegisterCollection.load(id: channelId, summary: SummaryTree(json: summary))
         clients[id] = registerCollectionAdapter(
+          MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
+      } else if type == SharedSummaryBlockClass.type {
+        let c =
+          summary == .null
+          ? SharedSummaryBlockClass(id: channelId)
+          : try SharedSummaryBlockClass.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = sharedSummaryBlockAdapter(
           MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
       } else {
         throw PeerError(description: "not implemented: \(type)")
