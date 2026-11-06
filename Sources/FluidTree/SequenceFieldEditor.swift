@@ -1,26 +1,52 @@
 import FluidJS
 
-/// feature-libraries/sequence-field/types.ts: editor-produced mark effects.
-public enum SequenceMarkEffect: Equatable, Sendable {
-    case noop
-    case insert(id: Double, revision: RevisionTag?)
-    case remove(id: Double, revision: RevisionTag?, idOverride: ChangeAtomId?)
-    case moveIn(id: Double, revision: RevisionTag?, finalEndpoint: ChangeAtomId?)
-    case moveOut(id: Double, revision: RevisionTag?, finalEndpoint: ChangeAtomId?, idOverride: ChangeAtomId?)
-}
-
 /// feature-libraries/sequence-field/types.ts: a run of cells and its effect.
 public struct SequenceMark: Equatable, Sendable {
     public var count: Int
-    public var effect: SequenceMarkEffect
-    public var cellId: ChangeAtomId?
-    public var changes: ChangeAtomId?
-
-    public init(count: Int, effect: SequenceMarkEffect = .noop, cellId: ChangeAtomId? = nil, changes: ChangeAtomId? = nil) {
+    private var storedEffect: SequenceMarkEffect
+    private var storedCellId: ChangeAtomId?
+    private var storedChanges: ChangeAtomId?
+    public var propertyOrder: [SequenceProperty] {
+        didSet { storedEffect.propertyOrder = propertyOrder.filter(\.isEffect) }
+    }
+    public var effect: SequenceMarkEffect {
+        get { storedEffect }
+        set {
+            storedEffect = newValue
+            if newValue == .noop {
+                propertyOrder = [.count] + (storedCellId == nil ? [] : [.cellId]) + (storedChanges == nil ? [] : [.changes])
+            } else {
+                propertyOrder.removeAll { $0.isEffect && !newValue.propertyOrder.contains($0) }
+                for property in newValue.propertyOrder where !propertyOrder.contains(property) { propertyOrder.append(property) }
+            }
+        }
+    }
+    public var cellId: ChangeAtomId? {
+        get { storedCellId }
+        set {
+            storedCellId = newValue
+            if newValue == nil { propertyOrder.removeAll { $0 == .cellId } }
+            else if !propertyOrder.contains(.cellId) { propertyOrder.append(.cellId) }
+        }
+    }
+    public var changes: ChangeAtomId? {
+        get { storedChanges }
+        set {
+            storedChanges = newValue
+            if newValue == nil { propertyOrder.removeAll { $0 == .changes } }
+            else if !propertyOrder.contains(.changes) { propertyOrder.append(.changes) }
+        }
+    }
+    public init(count: Int, effect: SequenceMarkEffect = .noop, cellId: ChangeAtomId? = nil, changes: ChangeAtomId? = nil, propertyOrder: [SequenceProperty]? = nil) {
         self.count = count
-        self.effect = effect
-        self.cellId = cellId
-        self.changes = changes
+        storedEffect = effect
+        storedCellId = cellId
+        storedChanges = changes
+        self.propertyOrder = propertyOrder ?? (effect.propertyOrder + [.count] + (cellId == nil ? [] : [.cellId]) + (changes == nil ? [] : [.changes]))
+        storedEffect.propertyOrder = self.propertyOrder.filter(\.isEffect)
+    }
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.count == rhs.count && lhs.storedEffect == rhs.storedEffect && lhs.cellId == rhs.cellId && lhs.changes == rhs.changes
     }
 }
 
@@ -45,11 +71,11 @@ public struct SequenceFieldEditor {
     }
 
     public func insert(_ index: Int, count: Int, firstId: ChangeAtomId, revision: RevisionTag?) -> [SequenceMark] {
-        at(index, SequenceMark(count: count, effect: .insert(id: firstId.localId, revision: revision), cellId: firstId))
+        at(index, SequenceMark(count: count, effect: .insert(id: firstId.localId, revision: revision), cellId: firstId, propertyOrder: [.type, .id, .count, .cellId, .revision]))
     }
 
     public func remove(_ index: Int, count: Int, id: Double, revision: RevisionTag?) -> [SequenceMark] {
-        count == 0 ? [] : at(index, SequenceMark(count: count, effect: .remove(id: id, revision: revision, idOverride: nil)))
+        count == 0 ? [] : at(index, SequenceMark(count: count, effect: .remove(id: id, revision: revision, idOverride: nil), propertyOrder: [.type, .count, .id, .revision]))
     }
 
     public func revive(_ index: Int, count: Int, detachEvent: ChangeAtomId, revision: RevisionTag?) throws -> [SequenceMark] {
@@ -60,11 +86,11 @@ public struct SequenceFieldEditor {
     }
 
     public func moveOut(_ index: Int, count: Int, id: Double, revision: RevisionTag?) -> [SequenceMark] {
-        at(index, SequenceMark(count: count, effect: .moveOut(id: id, revision: revision, finalEndpoint: nil, idOverride: nil)))
+        at(index, SequenceMark(count: count, effect: .moveOut(id: id, revision: revision, finalEndpoint: nil, idOverride: nil), propertyOrder: [.type, .id, .count, .revision]))
     }
 
     public func moveIn(_ index: Int, count: Int, moveId: Double, attachCellId: ChangeAtomId, revision: RevisionTag?) -> [SequenceMark] {
-        at(index, SequenceMark(count: count, effect: .moveIn(id: moveId, revision: revision, finalEndpoint: nil), cellId: attachCellId))
+        at(index, SequenceMark(count: count, effect: .moveIn(id: moveId, revision: revision, finalEndpoint: nil), cellId: attachCellId, propertyOrder: [.type, .id, .count, .cellId, .revision]))
     }
 
     public func move(_ index: Int, count: Int, destination: Int, detachCellId: Double, attachCellId: ChangeAtomId, revision: RevisionTag?) -> [SequenceMark] {
@@ -83,8 +109,8 @@ public struct SequenceFieldEditor {
         if count == 0 {
             return []
         }
-        let attach = SequenceMark(count: count, effect: .moveIn(id: id, revision: revision, finalEndpoint: nil), cellId: attachCellId)
-        let detach = SequenceMark(count: count, effect: .moveOut(id: id, revision: revision, finalEndpoint: nil, idOverride: idOverride))
+        let attach = SequenceMark(count: count, effect: .moveIn(id: id, revision: revision, finalEndpoint: nil), cellId: attachCellId, propertyOrder: [.type, .id, .count, .cellId, .revision])
+        let detach = SequenceMark(count: count, effect: .moveOut(id: id, revision: revision, finalEndpoint: nil, idOverride: idOverride), propertyOrder: [.type, .id] + (idOverride == nil ? [] : [.idOverride]) + [.count, .revision])
         var marks: [SequenceMark] = []
         func offset(_ count: Int) {
             if count > 0 {
@@ -109,7 +135,7 @@ public struct SequenceFieldEditor {
             if secondOverride != nil {
                 secondOverride?.localId += Double(length)
             }
-            let second = SequenceMark(count: count - length, effect: .moveOut(id: id + Double(length), revision: revision, finalEndpoint: nil, idOverride: secondOverride))
+            let second = SequenceMark(count: count - length, effect: .moveOut(id: id + Double(length), revision: revision, finalEndpoint: nil, idOverride: secondOverride), propertyOrder: detach.propertyOrder)
             marks.append(first)
             marks.append(attach)
             marks.append(second)

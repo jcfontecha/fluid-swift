@@ -9,6 +9,7 @@
     "fuzz:summarize": "tsx src/summarize/fuzz.ts",
     "fuzz:datastore": "tsx src/datastore/fuzz.ts",
     "fuzz:tree-changes": "tsx src/tree/fuzz.ts",
+    "fuzz:tree-forest": "tsx src/tree-forest/fuzz.ts",
     "fuzz:routing": "tsx src/routing/fuzz.ts",
     "fuzz:pendingstate": "tsx src/pendingstate/fuzz.ts",
     "fuzz:idcompressor": "tsx src/idcompressor/fuzz.ts",

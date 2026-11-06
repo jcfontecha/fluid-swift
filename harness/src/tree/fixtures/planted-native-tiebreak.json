@@ -1,0 +1,977 @@
+{
+  "scenario": {
+    "seed": 0,
+    "edits": [
+      {
+        "kind": "remove",
+        "field": "b",
+        "index": 6,
+        "count": 2,
+        "destination": 1,
+        "base": -1
+      },
+      {
+        "kind": "insert",
+        "field": "a",
+        "index": 4,
+        "count": 3,
+        "destination": 1,
+        "base": 0
+      },
+      {
+        "kind": "crossMove",
+        "field": "b",
+        "index": 4,
+        "count": 2,
+        "destination": 4,
+        "base": 0
+      },
+      {
+        "kind": "insert",
+        "field": "b",
+        "index": 2,
+        "count": 2,
+        "destination": 1,
+        "base": 0
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 5,
+        "count": 1,
+        "destination": 4,
+        "base": 1
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 6,
+        "count": 3,
+        "destination": 7,
+        "base": 1
+      },
+      {
+        "kind": "clear",
+        "field": "b",
+        "index": 5,
+        "count": 3,
+        "destination": 5,
+        "wasEmpty": false,
+        "base": 1
+      },
+      {
+        "kind": "move",
+        "field": "a",
+        "index": 2,
+        "count": 2,
+        "destination": 9,
+        "base": 4
+      },
+      {
+        "kind": "insert",
+        "field": "a",
+        "index": 7,
+        "count": 3,
+        "destination": 7,
+        "base": 4
+      },
+      {
+        "kind": "insert",
+        "field": "a",
+        "index": 0,
+        "count": 1,
+        "destination": 11,
+        "base": 4
+      },
+      {
+        "kind": "revive",
+        "field": "b",
+        "index": 6,
+        "count": 1,
+        "destination": 0,
+        "detach": {
+          "edit": 0,
+          "localId": 0
+        },
+        "cells": [
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 0,
+            "localId": 0
+          },
+          {
+            "live": false,
+            "edit": 0,
+            "localId": 1
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          }
+        ],
+        "base": 7
+      },
+      {
+        "kind": "nested",
+        "field": "a",
+        "index": 1,
+        "count": 3,
+        "destination": 3,
+        "base": 7
+      },
+      {
+        "kind": "clear",
+        "field": "b",
+        "index": 0,
+        "count": 3,
+        "destination": 2,
+        "wasEmpty": false,
+        "base": 7
+      },
+      {
+        "kind": "set",
+        "field": "a",
+        "index": 0,
+        "count": 2,
+        "destination": 12,
+        "wasEmpty": false,
+        "base": 10
+      },
+      {
+        "kind": "crossMove",
+        "field": "b",
+        "index": 0,
+        "count": 3,
+        "destination": 8,
+        "base": 10
+      },
+      {
+        "kind": "clear",
+        "field": "a",
+        "index": 8,
+        "count": 1,
+        "destination": 6,
+        "wasEmpty": false,
+        "base": 10
+      },
+      {
+        "kind": "clear",
+        "field": "a",
+        "index": 8,
+        "count": 1,
+        "destination": 9,
+        "wasEmpty": false,
+        "base": 13
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 8,
+        "count": 3,
+        "destination": 2,
+        "base": 13
+      },
+      {
+        "kind": "crossMove",
+        "field": "b",
+        "index": 3,
+        "count": 2,
+        "destination": 6,
+        "base": 13
+      },
+      {
+        "kind": "crossMove",
+        "field": "a",
+        "index": 8,
+        "count": 2,
+        "destination": 3,
+        "base": 16
+      },
+      {
+        "kind": "set",
+        "field": "b",
+        "index": 0,
+        "count": 2,
+        "destination": 7,
+        "wasEmpty": true,
+        "base": 16
+      },
+      {
+        "kind": "clear",
+        "field": "a",
+        "index": 2,
+        "count": 3,
+        "destination": 12,
+        "wasEmpty": true,
+        "base": 16
+      },
+      {
+        "kind": "nested",
+        "field": "a",
+        "index": 1,
+        "count": 3,
+        "destination": 9,
+        "base": 19
+      },
+      {
+        "kind": "nested",
+        "field": "b",
+        "index": 10,
+        "count": 3,
+        "destination": 2,
+        "base": 19
+      },
+      {
+        "kind": "nested",
+        "field": "b",
+        "index": 9,
+        "count": 1,
+        "destination": 7,
+        "base": 19
+      },
+      {
+        "kind": "move",
+        "field": "b",
+        "index": 3,
+        "count": 3,
+        "destination": 4,
+        "base": 22
+      },
+      {
+        "kind": "insert",
+        "field": "b",
+        "index": 13,
+        "count": 3,
+        "destination": 6,
+        "base": 22
+      },
+      {
+        "kind": "clear",
+        "field": "a",
+        "index": 11,
+        "count": 1,
+        "destination": 10,
+        "wasEmpty": true,
+        "base": 22
+      },
+      {
+        "kind": "insert",
+        "field": "b",
+        "index": 9,
+        "count": 2,
+        "destination": 1,
+        "base": 25
+      },
+      {
+        "kind": "clear",
+        "field": "a",
+        "index": 2,
+        "count": 1,
+        "destination": 10,
+        "wasEmpty": true,
+        "base": 25
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 0,
+        "count": 2,
+        "destination": 10,
+        "base": 25
+      },
+      {
+        "kind": "remove",
+        "field": "b",
+        "index": 11,
+        "count": 2,
+        "destination": 12,
+        "base": 28
+      },
+      {
+        "kind": "crossMove",
+        "field": "b",
+        "index": 8,
+        "count": 1,
+        "destination": 7,
+        "base": 28
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 5,
+        "count": 1,
+        "destination": 8,
+        "base": 28
+      },
+      {
+        "kind": "remove",
+        "field": "b",
+        "index": 4,
+        "count": 1,
+        "destination": 7,
+        "base": 31
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 0,
+        "count": 1,
+        "destination": 11,
+        "base": 31
+      },
+      {
+        "kind": "insert",
+        "field": "a",
+        "index": 4,
+        "count": 1,
+        "destination": 8,
+        "base": 31
+      },
+      {
+        "kind": "revive",
+        "field": "b",
+        "index": 10,
+        "count": 1,
+        "destination": 0,
+        "detach": {
+          "edit": 0,
+          "localId": 1
+        },
+        "cells": [
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 0
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 34,
+            "localId": 0
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 1
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 2
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 0,
+            "localId": 1
+          },
+          {
+            "live": false,
+            "edit": 31,
+            "localId": 0
+          },
+          {
+            "live": false,
+            "edit": 31,
+            "localId": 1
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          }
+        ],
+        "base": 34
+      },
+      {
+        "kind": "remove",
+        "field": "b",
+        "index": 6,
+        "count": 2,
+        "destination": 4,
+        "base": 34
+      },
+      {
+        "kind": "move",
+        "field": "a",
+        "index": 0,
+        "count": 1,
+        "destination": 2,
+        "base": 34
+      },
+      {
+        "kind": "set",
+        "field": "b",
+        "index": 3,
+        "count": 3,
+        "destination": 2,
+        "wasEmpty": true,
+        "base": 37
+      },
+      {
+        "kind": "crossMove",
+        "field": "a",
+        "index": 7,
+        "count": 3,
+        "destination": 3,
+        "base": 37
+      },
+      {
+        "kind": "move",
+        "field": "a",
+        "index": 10,
+        "count": 2,
+        "destination": 3,
+        "base": 37
+      },
+      {
+        "kind": "set",
+        "field": "a",
+        "index": 10,
+        "count": 2,
+        "destination": 5,
+        "wasEmpty": false,
+        "base": 40
+      },
+      {
+        "kind": "set",
+        "field": "a",
+        "index": 5,
+        "count": 2,
+        "destination": 1,
+        "wasEmpty": false,
+        "base": 40
+      },
+      {
+        "kind": "move",
+        "field": "a",
+        "index": 3,
+        "count": 1,
+        "destination": 1,
+        "base": 40
+      },
+      {
+        "kind": "clear",
+        "field": "a",
+        "index": 5,
+        "count": 3,
+        "destination": 5,
+        "wasEmpty": false,
+        "base": 43
+      },
+      {
+        "kind": "set",
+        "field": "b",
+        "index": 9,
+        "count": 1,
+        "destination": 6,
+        "wasEmpty": false,
+        "base": 43
+      },
+      {
+        "kind": "revive",
+        "field": "b",
+        "index": 4,
+        "count": 1,
+        "destination": 0,
+        "detach": {
+          "edit": 34,
+          "localId": 0
+        },
+        "cells": [
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 0
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 34,
+            "localId": 0
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 1
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 2
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 31,
+            "localId": 0
+          },
+          {
+            "live": false,
+            "edit": 31,
+            "localId": 1
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          }
+        ],
+        "base": 43
+      },
+      {
+        "kind": "revive",
+        "field": "b",
+        "index": 4,
+        "count": 1,
+        "destination": 0,
+        "detach": {
+          "edit": 34,
+          "localId": 0
+        },
+        "cells": [
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 0
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 34,
+            "localId": 0
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 1
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 2
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 31,
+            "localId": 0
+          },
+          {
+            "live": false,
+            "edit": 31,
+            "localId": 1
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          }
+        ],
+        "base": 46
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 8,
+        "count": 1,
+        "destination": 10,
+        "base": 46
+      },
+      {
+        "kind": "crossMove",
+        "field": "b",
+        "index": 4,
+        "count": 1,
+        "destination": 5,
+        "base": 46
+      },
+      {
+        "kind": "set",
+        "field": "a",
+        "index": 11,
+        "count": 2,
+        "destination": 8,
+        "wasEmpty": true,
+        "base": 49
+      },
+      {
+        "kind": "crossMove",
+        "field": "b",
+        "index": 7,
+        "count": 3,
+        "destination": 7,
+        "base": 49
+      },
+      {
+        "kind": "set",
+        "field": "a",
+        "index": 7,
+        "count": 1,
+        "destination": 11,
+        "wasEmpty": true,
+        "base": 49
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 9,
+        "count": 3,
+        "destination": 6,
+        "base": 52
+      },
+      {
+        "kind": "nested",
+        "field": "a",
+        "index": 7,
+        "count": 1,
+        "destination": 7,
+        "base": 52
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 11,
+        "count": 1,
+        "destination": 9,
+        "base": 52
+      },
+      {
+        "kind": "insert",
+        "field": "b",
+        "index": 10,
+        "count": 3,
+        "destination": 10,
+        "base": 55
+      },
+      {
+        "kind": "remove",
+        "field": "a",
+        "index": 5,
+        "count": 2,
+        "destination": 7,
+        "base": 55
+      },
+      {
+        "kind": "set",
+        "field": "a",
+        "index": 2,
+        "count": 1,
+        "destination": 3,
+        "wasEmpty": false,
+        "base": 55
+      },
+      {
+        "kind": "nested",
+        "field": "b",
+        "index": 12,
+        "count": 3,
+        "destination": 14,
+        "base": 58
+      },
+      {
+        "kind": "clear",
+        "field": "a",
+        "index": 1,
+        "count": 2,
+        "destination": 7,
+        "wasEmpty": false,
+        "base": 58
+      },
+      {
+        "kind": "nested",
+        "field": "a",
+        "index": 0,
+        "count": 1,
+        "destination": 4,
+        "base": 58
+      },
+      {
+        "kind": "revive",
+        "field": "b",
+        "index": 15,
+        "count": 1,
+        "destination": 0,
+        "detach": {
+          "edit": 31,
+          "localId": 0
+        },
+        "cells": [
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 0
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 1
+          },
+          {
+            "live": false,
+            "edit": 25,
+            "localId": 2
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          },
+          {
+            "live": false,
+            "edit": 31,
+            "localId": 0
+          },
+          {
+            "live": false,
+            "edit": 31,
+            "localId": 1
+          },
+          {
+            "live": true
+          },
+          {
+            "live": true
+          }
+        ],
+        "base": 61
+      },
+      {
+        "kind": "nested",
+        "field": "a",
+        "index": 0,
+        "count": 2,
+        "destination": 1,
+        "base": 61
+      },
+      {
+        "kind": "set",
+        "field": "a",
+        "index": 7,
+        "count": 3,
+        "destination": 7,
+        "wasEmpty": false,
+        "base": 61
+      },
+      {
+        "kind": "clear",
+        "field": "b",
+        "index": 1,
+        "count": 3,
+        "destination": 3,
+        "wasEmpty": false,
+        "base": 64
+      },
+      {
+        "kind": "crossMove",
+        "field": "b",
+        "index": 10,
+        "count": 3,
+        "destination": 3,
+        "base": 64
+      },
+      {
+        "kind": "insert",
+        "field": "b",
+        "index": 8,
+        "count": 1,
+        "destination": 2,
+        "base": 64
+      },
+      {
+        "kind": "clear",
+        "field": "a",
+        "index": 8,
+        "count": 3,
+        "destination": 2,
+        "wasEmpty": true,
+        "base": 67
+      },
+      {
+        "kind": "move",
+        "field": "b",
+        "index": 6,
+        "count": 2,
+        "destination": 13,
+        "base": 67
+      },
+      {
+        "kind": "nested",
+        "field": "b",
+        "index": 12,
+        "count": 2,
+        "destination": 0,
+        "base": 67
+      }
+    ]
+  },
+  "row": 438,
+  "expected": [
+    "{\"maxId\":63,\"revisions\":[{\"revision\":-3}],\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":4},{\"count\":2,\"effect\":{\"moveOut\":{\"revision\":-3,\"id\":0}}}]},{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":4},{\"count\":2,\"effect\":{\"moveIn\":{\"revision\":-3,\"id\":0}},\"cellId\":[8,-3]}]}]}",
+    "[\"object\",[[\"fieldChanges\",[\"map\",[[\"b\",[\"object\",[[\"fieldKind\",\"Sequence\"],[\"change\",[\"array\",[[\"object\",[[\"count\",4]]],[\"object\",[[\"type\",\"MoveOut\"],[\"id\",0],[\"count\",2],[\"revision\",-3]]]]]]]]],[\"a\",[\"object\",[[\"fieldKind\",\"Sequence\"],[\"change\",[\"array\",[[\"object\",[[\"count\",4]]],[\"object\",[[\"type\",\"MoveIn\"],[\"id\",0],[\"count\",2],[\"cellId\",[\"object\",[[\"localId\",8],[\"revision\",-3]]]],[\"revision\",-3]]]]]]]]]]]],[\"nodeChanges\",[\"object\",[[\"_root\",[\"object\",[[\"keys\",[\"array\",[]]],[\"values\",[\"array\",[[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"]]]],[\"isShared\",true]]]],[\"_maxNodeSize\",32],[\"_compare\",null]]]],[\"nodeToParent\",[\"object\",[[\"_root\",[\"object\",[[\"keys\",[\"array\",[]]],[\"values\",[\"array\",[[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"]]]],[\"isShared\",true]]]],[\"_maxNodeSize\",32],[\"_compare\",null]]]],[\"nodeAliases\",[\"object\",[[\"_root\",[\"object\",[[\"keys\",[\"array\",[]]],[\"values\",[\"array\",[[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"]]]],[\"isShared\",true]]]],[\"_maxNodeSize\",32],[\"_compare\",null]]]],[\"crossFieldKeys\",[\"object\",[[\"offsetKey\",null],[\"subtractKeys\",null],[\"offsetValue\",null],[\"tree\",[\"object\",[[\"_root\",[\"object\",[[\"keys\",[\"array\",[[\"object\",[[\"target\",0],[\"revision\",-3],[\"localId\",0]]],[\"object\",[[\"target\",1],[\"revision\",-3],[\"localId\",0]]]]]],[\"values\",[\"array\",[[\"object\",[[\"value\",[\"object\",[[\"nodeId\",[\"undefined\"]],[\"field\",\"b\"]]]],[\"length\",2]]],[\"object\",[[\"value\",[\"object\",[[\"nodeId\",[\"undefined\"]],[\"field\",\"a\"]]]],[\"length\",2]]]]]],[\"isShared\",true]]]],[\"_maxNodeSize\",32],[\"_compare\",null]]]]]]],[\"revisions\",[\"array\",[[\"object\",[[\"revision\",-3]]]]]],[\"maxId\",63]]]"
+  ],
+  "actual": [
+    "{\"maxId\":63,\"revisions\":[{\"revision\":-3}],\"changes\":[{\"fieldKey\":\"b\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":4},{\"count\":2,\"effect\":{\"moveOut\":{\"revision\":-3,\"id\":0}}}]},{\"fieldKey\":\"a\",\"fieldKind\":\"Sequence\",\"change\":[{\"count\":7},{\"count\":2,\"effect\":{\"moveIn\":{\"revision\":-3,\"id\":0}},\"cellId\":[8,-3]}]}]}",
+    "[\"object\",[[\"fieldChanges\",[\"map\",[[\"b\",[\"object\",[[\"fieldKind\",\"Sequence\"],[\"change\",[\"array\",[[\"object\",[[\"count\",4]]],[\"object\",[[\"type\",\"MoveOut\"],[\"id\",0],[\"count\",2],[\"revision\",-3]]]]]]]]],[\"a\",[\"object\",[[\"fieldKind\",\"Sequence\"],[\"change\",[\"array\",[[\"object\",[[\"count\",7]]],[\"object\",[[\"type\",\"MoveIn\"],[\"id\",0],[\"count\",2],[\"cellId\",[\"object\",[[\"localId\",8],[\"revision\",-3]]]],[\"revision\",-3]]]]]]]]]]]],[\"nodeChanges\",[\"object\",[[\"_root\",[\"object\",[[\"keys\",[\"array\",[]]],[\"values\",[\"array\",[[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"]]]],[\"isShared\",true]]]],[\"_maxNodeSize\",32],[\"_compare\",null]]]],[\"nodeToParent\",[\"object\",[[\"_root\",[\"object\",[[\"keys\",[\"array\",[]]],[\"values\",[\"array\",[[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"]]]],[\"isShared\",true]]]],[\"_maxNodeSize\",32],[\"_compare\",null]]]],[\"nodeAliases\",[\"object\",[[\"_root\",[\"object\",[[\"keys\",[\"array\",[]]],[\"values\",[\"array\",[[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"],[\"undefined\"]]]],[\"isShared\",true]]]],[\"_maxNodeSize\",32],[\"_compare\",null]]]],[\"crossFieldKeys\",[\"object\",[[\"offsetKey\",null],[\"subtractKeys\",null],[\"offsetValue\",null],[\"tree\",[\"object\",[[\"_root\",[\"object\",[[\"keys\",[\"array\",[[\"object\",[[\"target\",0],[\"revision\",-3],[\"localId\",0]]],[\"object\",[[\"target\",1],[\"revision\",-3],[\"localId\",0]]]]]],[\"values\",[\"array\",[[\"object\",[[\"value\",[\"object\",[[\"nodeId\",[\"undefined\"]],[\"field\",\"b\"]]]],[\"length\",2]]],[\"object\",[[\"value\",[\"object\",[[\"nodeId\",[\"undefined\"]],[\"field\",\"a\"]]]],[\"length\",2]]]]]],[\"isShared\",true]]]],[\"_maxNodeSize\",32],[\"_compare\",null]]]]]]],[\"revisions\",[\"array\",[[\"object\",[[\"revision\",-3]]]]]],[\"maxId\",63]]]"
+  ],
+  "error": "AssertionError [ERR_ASSERTION]: tree native mismatch seed 0, row 438\n\n438 !== -1\n"
+}

@@ -1,0 +1,11 @@
+Full T1 transport mutation check.
+Clean seed 0 passed immediately before mutation.
+Mutation: native RevisionMetadataSource comparator > changed to <.
+Command: npm run fuzz:tree-changes -- --seeds=1
+Native release build completed; process exit 1.
+AssertionError [ERR_ASSERTION]: tree native mismatch seed 0, row 438
+TS oracle and both comparison contracts were unchanged.
+Source restored byte-for-byte in finally. Final clean 1000-seed native and TS-self reruns both passed.
+Detected seed 0, row 438: wire bytes diverged as well as structural data.
+Scenario and first divergent records: planted-native-tiebreak.json
+Post-revert logs: /tmp/t1-final-native.log and /tmp/t1-final-self.log (both exit 0).

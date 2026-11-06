@@ -2,12 +2,25 @@ import FluidJS
 
 /// core/rebase/types.ts: revision-scoped changeset-local identity.
 public struct ChangeAtomId: Equatable, Hashable, Sendable {
+    public enum PropertyOrder: Sendable { case localIdFirst, revisionFirst }
     public var revision: RevisionTag?
     public var localId: Double
+    public var propertyOrder: PropertyOrder
+    public var includesRevision: Bool
 
-    public init(localId: Double, revision: RevisionTag? = nil) {
+    public init(localId: Double, revision: RevisionTag? = nil, propertyOrder: PropertyOrder = .localIdFirst, includesRevision: Bool? = nil) {
         self.localId = localId
         self.revision = revision
+        self.propertyOrder = propertyOrder
+        self.includesRevision = includesRevision ?? (revision != nil)
+    }
+    public static func == (lhs: Self, rhs: Self) -> Bool { lhs.localId == rhs.localId && lhs.revision == rhs.revision }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(localId)
+        hasher.combine(revision)
+    }
+    func fromTuple() -> Self {
+        Self(localId: localId, revision: revision, propertyOrder: .revisionFirst, includesRevision: true)
     }
 }
 
@@ -35,7 +48,7 @@ public struct ChangeAtomIdCodec {
                 localId: try decodeLocalId(tuple[0]),
                 revision: try revisionTagCodec.decode(tuple[1], originatorId: originatorId))
         }
-        return ChangeAtomId(localId: try decodeLocalId(encoded), revision: revision)
+        return ChangeAtomId(localId: try decodeLocalId(encoded), revision: revision, includesRevision: true)
     }
 
     private func decodeLocalId(_ value: JSONValue) throws -> Double {

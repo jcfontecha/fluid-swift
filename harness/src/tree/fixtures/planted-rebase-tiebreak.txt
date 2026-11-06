@@ -1,0 +1,7 @@
+Native field-level mutation check, not full transport-farm certification.
+Mutation: RevisionMetadataSource.swift comparator newIndex > oldIndex changed to <.
+Build: swift build --scratch-path .build/t1 --target FluidTreeTests (exit 0).
+Tests: xcrun xctest .build/t1/out/Products/Debug/FluidTreeTests.xctest (exit 1).
+􀢄 Test sequenceRebaseMatchesThousandTypeScriptScenarios() failed after 1.689 seconds with 366 issues.
+Source restored byte-for-byte in finally; clean verification follows.
+Clean source restored; subsequent target build and all 20 Swift tests passed.

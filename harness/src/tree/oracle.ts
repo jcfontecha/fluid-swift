@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { runAxioms } from './axioms.js';
+import { MarkListFactory } from '../../node_modules/@fluidframework/tree/lib/feature-libraries/sequence-field/markListFactory.js';
 import { inspect } from 'node:util';
 import { makeMessageCodecBuilder } from '../../node_modules/@fluidframework/tree/lib/shared-tree-core/messageCodecs.js';
 import { createIdCompressor } from '@fluidframework/id-compressor/internal';
@@ -23,6 +25,10 @@ export interface Edit {
     count: number;
     destination: number;
     field: 'a' | 'b';
+    base?: number;
+    detach?: { edit: number; localId: number };
+    wasEmpty?: boolean;
+    cells?: ({ live: true } | { live: false; edit: number; localId: number })[];
 }
 export interface Scenario {
     seed: number;
@@ -33,6 +39,7 @@ export class Oracle {
     readonly options = { jsonValidator: FormatValidatorNoOp, minVersionForCollab: FluidClientVersion.v2_0 };
     readonly codecs = makeModularChangeCodecFamily(fieldKindConfigurations, new RevisionTagCodec(this.compressor), fieldBatchCodecBuilder.build(this.options), this.options);
     readonly family = new ModularChangeFamily(fieldKinds, this.codecs, this.options);
+    readonly editRevisions: RevisionTag[] = [];
     mint(): RevisionTag {
         const revision = this.compressor.generateCompressedId() as RevisionTag;
         return revision;
@@ -42,6 +49,7 @@ export class Oracle {
     }
     build(edit: Edit): TaggedChange<ModularChangeset> {
         const revision = this.mint();
+        this.editRevisions.push(revision);
         const atom: ChangeAtomId = { localId: brand(0), revision };
         const attach: ChangeAtomId = { localId: brand(8), revision };
         const field: FieldUpPath = { parent: undefined, field: brand(edit.field) };
@@ -68,16 +76,29 @@ export class Oracle {
                 changes = [description(field, seq.move(edit.index, edit.count, edit.destination, atom.localId, attach, revision))];
                 break;
             case 'revive':
-                changes = [description(field, seq.revive(edit.index, edit.count, { localId: brand(32), revision: 'root' }, revision))];
+                changes = [description(field, seq.revive(edit.index, edit.count, edit.detach === undefined ? { localId: brand(32), revision: 'root' } : { localId: brand(edit.detach.localId), revision: this.editRevisions[edit.detach.edit] ?? assert.fail('Missing detach revision') }, revision))];
+                if (edit.cells !== undefined) {
+                    const marks = new MarkListFactory();
+                    for (const cell of edit.cells) {
+                        if (cell.live) {
+                            marks.pushOffset(1);
+                            continue;
+                        }
+                        const cellId: ChangeAtomId = { localId: brand(cell.localId), revision: this.editRevisions[cell.edit] ?? assert.fail('Missing tombstone revision') };
+                        const selected = cell.edit === edit.detach?.edit && cell.localId >= edit.detach.localId && cell.localId < edit.detach.localId + edit.count;
+                        marks.push(selected ? { count: 1, cellId, type: 'Insert', id: brand(cell.localId), revision } : { count: 1, cellId });
+                    }
+                    changes = [description(field, marks.list)];
+                }
                 break;
             case 'crossMove':
                 changes = [description(field, seq.moveOut(edit.index, edit.count, atom.localId, revision)), description(other, seq.moveIn(edit.destination, edit.count, atom.localId, attach, revision))];
                 break;
             case 'set':
-                changes = [description({ ...field, field: brand('optional') }, optionalFieldEditor.set(false, { fill: attach, detach: atom }), 'Optional')];
+                changes = [description({ ...field, field: brand('optional') }, optionalFieldEditor.set(edit.wasEmpty ?? false, { fill: attach, detach: atom }), 'Optional')];
                 break;
             case 'clear':
-                changes = [description({ ...field, field: brand('optional') }, optionalFieldEditor.clear(false, atom), 'Optional')];
+                changes = [description({ ...field, field: brand('optional') }, optionalFieldEditor.clear(edit.wasEmpty ?? false, atom), 'Optional')];
                 break;
             case 'nested':
                 changes = [description({ parent: { parent: undefined, parentField: field.field, parentIndex: edit.index }, field: brand('children') }, seq.insert(0, edit.count, atom, revision))];
@@ -157,25 +178,37 @@ export function run(scenario: Scenario): string[][] {
         assert(areEquivalent(overEmpty.change, change.change, fieldKinds, false, true), 'rebase over empty');
         record(overEmpty.change);
     }
-    for (let i = 1; i < edits.length; i++) {
-        const a = edits[i - 1];
-        const b = edits[i];
-        assert(a && b);
-        const rebased = oracle.rebase(b, a);
-        record(rebased.change);
-        const composed = oracle.family.compose([a, rebased]);
-        record(composed);
-        const inverseRevision = oracle.mint();
-        const inverse = { change: oracle.family.invert(a, true, inverseRevision), revision: inverseRevision, rollbackOf: a.revision };
-        record(oracle.rebase(rebased, inverse, [...(a.change.revisions ?? [])]).change);
-        const c = edits[i + 1];
-        if (c) {
-            const sequential = oracle.rebase(oracle.rebase(c, a), rebased);
-            const combined = oracle.rebase(c, oracle.tag(composed));
-            assert(areEquivalent(sequential.change, combined.change, fieldKinds, false, true), 'rebase over composition');
-            record(sequential.change);
-            record(combined.change);
+    const groups = new Map<number | undefined, typeof edits>();
+    for (let i = 0; i < edits.length; i++) {
+        const edit = edits[i];
+        assert(edit !== undefined);
+        const base = scenario.edits[i]?.base;
+        const group = groups.get(base) ?? [];
+        group.push(edit);
+        groups.set(base, group);
+    }
+    for (const edits of groups.values()) {
+        for (let i = 1; i < edits.length; i++) {
+            const a = edits[i - 1];
+            const b = edits[i];
+            assert(a && b);
+            const rebased = oracle.rebase(b, a);
+            record(rebased.change);
+            const composed = oracle.family.compose([a, rebased]);
+            record(composed);
+            const inverseRevision = oracle.mint();
+            const inverse = { change: oracle.family.invert(a, true, inverseRevision), revision: inverseRevision, rollbackOf: a.revision };
+            record(oracle.rebase(rebased, inverse, [...(a.change.revisions ?? [])]).change);
+            const c = edits[i + 1];
+            if (c) {
+                const sequential = oracle.rebase(oracle.rebase(c, a), rebased);
+                const combined = oracle.rebase(c, oracle.tag(composed));
+                assert(areEquivalent(sequential.change, combined.change, fieldKinds, false, true), 'rebase over composition');
+                record(sequential.change);
+                record(combined.change);
+            }
         }
     }
+    runAxioms(oracle, scenario, edits, record);
     return output;
 }

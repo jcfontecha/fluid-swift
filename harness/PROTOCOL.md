@@ -565,59 +565,59 @@ Regression commands can share the isolated H3 build directory:
 `npm run fuzz:oplifecycle -- --scratch-path=.build/h3` and
 `npm run fuzz:idcompressor -- --scratch-path=.build/h3`.
 
-## T1 — SharedTree change-family oracle (not yet native-certified)
+## T1 — native SharedTree change family
 
-`npm run fuzz:tree-changes -- --self --seeds=1000` runs installed 3.11.0
-ModularChangeFamily with real sequence/optional editors. Every seed contains
-insert, remove, move, revive, set, clear, crossMove and nested, plus sixteen
-seeded random edits. `scenario.ts` preserves the previous generator schedule.
+Both `npm run fuzz:tree-changes -- --self --seeds=1000` and
+`npm run fuzz:tree-changes -- --seeds=1000` pass. Native mode builds
+`FluidTreePeer` in release with `--scratch-path .build/t1` and uses NDJSON
+stdin/stdout. It executes every generated operation in Swift, with no TS
+substitute or skipped seeds. Native requests have a 30-second deadline. Failures
+save the scenario, first divergent row and complete record arrays in `traces/tree`.
 
-Two separate comparison contracts apply:
+The generator tracks live nodes, nested children, optional occupancy, detached
+roots and ordered empty cells. Root ownership is distinct from empty-cell
+identity: move sources retain tombstones. Fresh attaches tie-break left of old
+empty cells, and overlapping moves follow the editor's split source ordering.
+Siblings share a declared parent; the chosen first sibling advances the trunk.
+`scenario-check.ts` applies every branch to its parent for 1,000 seeds and checks
+the seed-75, insert-order, move-tombstone and overlapping-move regressions.
 
-1. **Algebra:** compose, undo, rollback, rebase and their chains use byte-exact
-   modular **5**, the newest available codec, with no implicit revision. There
-   is no fallback or seed skipping. Semantic and byte roundtrips are asserted.
-   A direct tagged structural projection also compares all enumerable in-memory
-   data, preserving Maps, Sets and undefined, including metadata codecs omit.
-2. **Wire:** every individual editor change uses its tagged revision as the
-   encoding context. Exact bytes and semantic/byte roundtrips are checked for
-   every modular writer format, selected through the real Message codec builder.
-   `wire-check.ts` independently checks 24,000 edits across 1,000 seeds; it does
-   not claim valid shared histories or Swift differential coverage.
+Two comparison contracts remain distinct and both run in the default native farm:
 
-Writer gating: ContainerRuntime accepts `oldestSupportedClient`, resolves it to
-its internal `minVersionForCollab` (the deprecated alias cannot coexist with the
-new option), and propagates it to SharedTree. `treeFactory.ts` gives an explicit
-Tree `minVersionForCollab` precedence, then the runtime value, then 2.0.0.
-`shared-tree-core/messageCodecs.ts` selects Message 3 at 2.0, 4 at 2.43, 6 at
-2.80 and 7 at 2.117. `shared-tree/sharedTree.ts` maps those to SharedTreeChange
-and modular 3, 4, 5, 5 respectively; sequence formats are 2, 3, 3, 3 and optional
-is 2 throughout. `codec/versioned/codec.ts` chooses the newest compatible format.
-`writeVersionOverrides` can select an older compatible format; incompatible or
-unstable selections throw unless `allowPossiblyIncompatibleWriteVersionOverrides`
-is explicitly true. Experimental SharedBranches maps to modular 4, so introduces
-no additional modular format. Outer Message encoding is not covered by T1.
+1. Algebra uses modular 5 exact bytes, TS semantic/byte roundtrips, native byte
+   roundtrips, and the original tagged structural projection. Maps, sets,
+   undefined, property order, metadata and B-tree/COW internals are retained.
+2. Individual edits use their revision as context and exact bytes at all four
+   actual writer gates: 2.0/2.43/2.80/2.117 -> modular 3/4/5/5,
+   sequence 2/3/3/3, optional 2. `wire-check.ts` independently passes 73,644 edits.
 
-`codec-precondition.ts` remains the seed-17 documentation: modular 3 cannot
-serialize the raw composed Rename (0x996, or 0x964 with an implicit revision),
-while 4/5 can. This is not an ordinary individual-op compatibility failure.
-Seed 17 now passes the split comparison.
+ContainerRuntime propagates oldestSupportedClient as minVersionForCollab;
+explicit Tree configuration wins, then the runtime value, then 2.0.0. Message
+formats 3/4/6/7 map to modular 3/4/5/5. Older compatible writeVersionOverrides
+remain possible; incompatible/unstable versions require the explicit override
+permission. Outer Message encoding is not T1 coverage.
 
-**Full TS farm is still red at seed 75, not certified.** `history-precondition.ts`
-reduces it to remove b[2..5), revive root:32 at b[3], and concurrently revive
-root:32..34 at b[2]. The generator places the same detached cells at inconsistent
-base positions; chained rebase asserts 0x8a0 in compareCellPositionsUsingTombstones.
-A forest-backed valid-history generator is still needed. Failures save
-`traces/tree/<seed>.json`; no seeds are skipped and no expected-failure exception
-is added to the farm.
+The farm additionally checks the enabled upstream rebaser laws: compose identities,
+empty rebase, inverse cancellation, do/undo and undo/redo, left distributivity,
+associativity including rollback sandwiches, and composed sandwich rebase.
+Semantic axiom equality respects delta-defined unordered collections and no-op
+representations; raw differential records are not normalized. Upstream-skipped
+right distributivity is not claimed.
 
-Native FluidTree contains the identity foundation and SequenceFieldEditor only.
-Eight Swift tests pass, including 1,000 identity fixtures and 1,000 sequence
-editor fixtures (7,000 outputs). The sequence tests failed to compile against
-missing native types before implementation. No sequence algebra/codecs,
-optional handler, ModularChangeFamily or native change-family transport exists.
-The default mixed command therefore continues to fail explicitly. The requested
-planted rebase tie-break divergence is not yet exercised. See `src/tree/README.md`.
+Native sequence/optional/generic handlers, modular family/editor/codecs,
+constraints, aliases, cross-field invalidation/amendment and exact B-tree/range
+unions are implemented. Typed provenance preserves JS construction order without
+changing semantic atom identity. The current shared FluidTreeTests target passes
+82 tests (including T2 suites). Supplementary 1,000-scenario fixture sets cover
+all major field algorithms and collection operations. ModularForestCodec uses
+the actual native forest codec, with 4,000 TS-matched build/refresher encodings
+across writer gates, plus summary/op identifier and cancellation tests.
+
+The full native transport caught a planted reversed rebase tie-break at seed 0,
+row 438 with divergent wire bytes. It was reverted byte-for-byte, then both
+1,000-seed gates passed cleanly. Evidence is in
+`src/tree/fixtures/planted-native-tiebreak.{txt,json}`. No git writes were made.
+See `src/tree/README.md` for commands, source mapping and coverage boundaries.
 
 ## H4 — runtime routing, signals and attachment blobs
 
@@ -1177,3 +1177,38 @@ and a planted extra attendee. Failures keep every view and expected view under `
 **Settling.** The harness sleeps 1.5 s after each membership change before it sends notifications. In upstream presence a
 notification sent while a join response is queued is absorbed by it (`queuedData` `sendAll` dominates later partials) and never
 leaves, because notifications are not stored state. This is TS behavior, pinned by the H9 farm, and both sides do it.
+
+## T2: SharedTree forest storage formats
+
+`npm run fuzz:tree-forest -- --self --seeds=1000` runs the real pinned 3.11.0
+codecs against generated stored schemas and trees; `npm run fuzz:tree-forest --
+--seeds=1000` builds `FluidTreeForestPeer` using `.build/t2` and compares Swift.
+No npm installation is needed. Strict lane-local checking is
+`npx tsc --noEmit -p src/tree-forest/tsconfig.json`.
+
+Each seed varies stored type names, object field multiplicities, allowed leaf types,
+map multiplicity, and nested object/map/array/leaf contents. Cases include identifiers
+finalized through the ID compressor, UTF-16 lone surrogates, numeric and prototype-like
+map keys, absent optional fields, and zero-token constant null runs. The record stream
+contains byte-exact JSON strings for field-batch 1, 2, and experimental `text`, each
+uncompressed and schema-compressed; forest payload 1/2 independently crossed with all
+field-batch versions; and schema-index 1/2. Separate cases drive actual TS UniformChunk
+cursors, plus v2/text incremental encoders with recursively encoded chunk references.
+Both peers read the other's field batches, including the incremental reference map.
+The Swift peer communicates through newline-delimited FluidJS JSON, never Foundation JSON.
+
+Oracle quirk: 3.11.0 `getChecked` rejects a literal null stream token. Thus uncompressed
+null-leaf data encodes but fails to decode in TS. Both peers report the narrow
+`decode-error:null-token` result; schema-compressed null constants round-trip normally.
+Other errors fail the run. This is compatibility coverage, not skipped null coverage.
+
+Failures preserve the seed, schema, trees, expected records, and actual records under
+`harness/traces/tree-forest/`. A 30-second response deadline fails a stalled peer.
+T2 does not modify T1's `harness/src/tree/` or its change-family types.
+
+Additional T2 cases cross-read both forest envelopes and both schema envelopes, exercise
+chained `f`-shape field replacement/appending and explicit-clear overlays, and cover
+ordinary string/v5 identifiers plus unfinalized v4 identifiers. Op encoding uses the
+originator session for negative IDs; summaries preserve unfinalized UUID strings.
+A planted empty-array shape index of `999999` was rejected by the byte comparison and
+restored to the dictionary index before the final passing run.
