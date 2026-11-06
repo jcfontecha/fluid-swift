@@ -15,6 +15,12 @@ blob strings) and wire-compatible ops as the TS oracle under seeded fuzzing in *
 TS and Swift clients in one document, each consuming the other's ops. See
 [`harness/PROTOCOL.md`](harness/PROTOCOL.md).
 
+Every lane is **test-first**. Before any implementation, the failing tests land: ported TS unit
+tests, golden fixtures generated from the TS oracle, and harness scenarios. The implementation is
+done when those tests pass, not before. Because a red test suite pins the behavior, mechanical
+porting goes to small, cheap models in well-bounded units, with stronger models writing the tests
+and reviewing.
+
 ### 2. One serial executor per container; DDS code is synchronous
 
 The TS runtime relies on a single-threaded event loop: op processing, local edits and event
