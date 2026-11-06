@@ -51,8 +51,6 @@ with Swift 6.4.
 
 ## Adding the package
 
-The repository is private, so your GitHub account needs access to it.
-
 ```swift
 // Package.swift
 dependencies: [
