@@ -966,11 +966,9 @@ stale-connection resolution after 30 s, and workspace activation order.
 `EphemeralRuntime.swift` ↔ presence-definitions and runtimeTypes.ts. `Testing/` ports `MockEphemeralRuntime`
 and the mock audience/quorum. One target covers the three TS packages (they are one feature with one wire format).
 
-**Not covered.** Telemetry events are not ported. `getPresence` (fluid-static) and
-`getPresenceFromDataStoreContext` are not ported. There is no real-service scenario yet: the M2 `Container` does
-not route inbound signals to `ContainerRuntime.processSignal` nor submit runtime signals, `@fluidframework/presence`
-is not installed under `harness/node_modules`, and a real timer-backed `PresenceClock` on the container executor
-does not exist. See the lane report for the exact gap. The planted-divergence record is
+**Not covered.** Telemetry events are not ported. `getPresenceFromDataStoreContext` is not ported. The
+container-level `getPresence` and the real-service scenario are in "Service mode (presence)" below.
+The planted-divergence record is
 `src/presence/fixtures/planted-divergence.txt`.
 
 Swift Testing ports of the upstream unit tests (`swift test --scratch-path .build/h9 --filter FluidPresenceTests`):
@@ -1113,3 +1111,69 @@ Swift ports `SummarizerClientElection` (3.11.0 has no `OrderedClientElection`; o
 Each upload is compared byte-exact with what TS uploads for the same state (the M3a comparison).
 Shredded uploads run live against tinylicious. Tinylicious 7 answers whole-summary uploads with 404,
 so that path is compared against TS through a recording HTTP endpoint instead.
+
+## Service mode (presence): Swift and TS exchange presence over tinylicious
+
+`npm run service:presence -- --seeds 0..4` builds `FluidServicePeer` with `--scratch-path .build/presence`,
+starts an isolated tinylicious on **7076**, and disposes all clients, server processes and temporary storage when
+finished. Run from `harness/`. `--plant-divergence` corrupts a Swift observation and **must exit nonzero**.
+
+**Code under test.** The TS side is the real 3.11.0 presence reached the way an application reaches it:
+`getPresenceAlpha(fluidContainer)` from `@fluidframework/fluid-static/alpha`, which acquires the presence container
+extension (`fluid-static/src/getPresence.ts`). `@fluidframework/presence` is not installed and is not needed: its
+`getPresence` is a re-export of that function, and `StateFactory`/`Notifications` come from
+`@fluid-internal/presence-runtime/states` (the package the H9 oracle already imports). The Swift side is
+`Container.withPresence`, the native `getPresence`, over `FluidPresence`:
+
+```swift
+let container = try await Container.open(endpoint: "http://localhost:7076", document: id)
+try await container.withPresence { presence, clock in
+    let states = try presence.states.getWorkspace("app:cursors", WorkspaceSchema([
+        ("cursor", LatestFactory(local: cursor, clock: clock))]))
+    try states.latest("cursor").setLocal(next)
+}
+```
+
+`body` runs synchronously on the container's executor, then the signals presence queued are sent. `clock` is the
+container's timer-backed `PresenceClock`, which the state factories read for `Date.now`.
+
+**Native wiring** (all in `FluidContainerLoader`, additive):
+
+- `Container.processSignal` follows container.ts: a signal with no `clientId` and type `clear`/`join`/`leave` is an
+  audience signal (the signal audience takes every client, read and write, like `wrapProtocolHandlerBuilder`; the protocol
+  audience still takes reads only); every other signal goes to `ContainerRuntime.processSignal(message, local)`, with
+  `local = clientId == own clientId`. A new connection resets the signal audience from `initialClients` (the synthesized
+  `clear` then `join` signals of connectionManager.ts) before `initialSignals`.
+- `runtime.onRuntimeDispatch("extension", ...)` reaches `ContainerPresenceManager.processSignal`. `ContainerRuntime.extensions`
+  holds the acquired extension ids, as the TS `extensions` map gates routing; an unacquired extension's signal is dropped
+  (and a local one asserts 0xba0).
+- `runtime.onSubmitSignal` queues; `Container.flushSignals` sends in order on the I/O edge, after the synchronous caller returns.
+- `ContainerExtensionHost` is the `ExtensionHost` of `acquireExtensionInternal`: the signal audience (adapted to presence's
+  `IAudience` by `PresenceAudienceAdapter`), the runtime quorum, `getClientId` from the connection, and
+  `getJoinedStatus` (no connection = `disconnected`; a connection that has not yet seen its own join = `joinedForReading`,
+  TS `CatchingUp`; after it = `joinedForWriting`). `supportedFeatures` is empty, exactly as in 3.11.0
+  (`runtimeCompatDetailsForLoader`), so presence sends no targeted signals even though the driver negotiates `submit_signals_v2`.
+- `ContainerPresenceClock` backs `setTimeout` with `Task.sleep` and runs the callback by hopping back onto the owning
+  `Container`, never on a detached task. A callback that throws, or a presence listener that throws, is held as the
+  container's presence failure and surfaces on the next `withPresence`, as a thrown TS listener would surface at the raiser.
+- Disconnect (explicit, or a failed socket) raises presence's `disconnected` event.
+
+**Scenario.** Both sides register the same workspaces: states `app:cursors` with `latest` `cursor` (`{x, y}`) and
+`latestMap` `items`; notifications `app:events` with `ping(label, count, tag)`. Per seed: TS creator `ts0` and Swift
+`swift0` join; seeded edits (set, map set, map delete, notify) on random connected clients; late joiners `ts1` and `swift1`
+learn the existing state from join responses, in random order; more edits; `ts1` and `swift0` leave (audience removal, state is kept);
+both edit offline, which stays local; both reconnect, which publishes the offline state through a new `ClientJoin`; final edits.
+Each checkpoint polls (30 s) until **every connected client's** view equals a model that the harness maintains from the
+commands it issued. A view is `{attendees: [label, status], cursor: {local, remotes: [label, value, revision]}, items:
+{local, remotes}, notifications: {sender: [name, args]}}`, with session IDs replaced by labels. So TS observes Swift's
+attendees, states and notifications exactly as Swift observes TS's, and both equal the model. Timestamps are not compared: a
+workspace that registers after the data arrives shifts them (specs/presence.md, "State merge").
+
+At the end, every presence signal that Swift received is byte-identical to the one `ts0` received (`deltaManager.inboundSignal`),
+and every signal sent by a Swift connection has the address `/ext/dis:bb89f4c0-80fd-4f0c-8469-4f2848ee7f4a/` and a
+`Pres:ClientJoin` or `Pres:DatastoreUpdate` message. The comparator is also checked against a planted wrong cursor value
+and a planted extra attendee. Failures keep every view and expected view under `harness/traces/service-presence-<seed>.jsonl`.
+
+**Settling.** The harness sleeps 1.5 s after each membership change before it sends notifications. In upstream presence a
+notification sent while a join response is queued is absorbed by it (`queuedData` `sendAll` dominates later partials) and never
+leaves, because notifications are not stored state. This is TS behavior, pinned by the H9 farm, and both sides do it.

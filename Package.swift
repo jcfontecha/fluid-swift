@@ -47,7 +47,7 @@ let package = Package(
         .target(name: "FluidTinyliciousDriver", dependencies: ["FluidJS", "FluidRouterliciousDriver", "FluidDriverDefinitions"]),
         .target(name: "FluidAqueduct", dependencies: ["FluidDatastore", "FluidMap", "FluidJS"]),
         .target(name: "FluidStatic", dependencies: ["FluidDatastoreDefinitions", "FluidAqueduct", "FluidContainerRuntime", "FluidDatastore", "FluidMap", "FluidJS"]),
-        .target(name: "FluidContainerLoader", dependencies: ["FluidContainerRuntime", "FluidDatastore", "FluidDatastoreDefinitions", "FluidMap", "FluidStatic", "FluidJS", "FluidDriverDefinitions", "FluidSocketIO", "FluidDriverBase", "FluidRouterliciousDriver", "FluidTinyliciousDriver"]),
+        .target(name: "FluidContainerLoader", dependencies: ["FluidContainerRuntime", "FluidPresence", "FluidDatastore", "FluidDatastoreDefinitions", "FluidMap", "FluidStatic", "FluidJS", "FluidDriverDefinitions", "FluidSocketIO", "FluidDriverBase", "FluidRouterliciousDriver", "FluidTinyliciousDriver"]),
         .executableTarget(name: "FluidServicePeer", dependencies: ["FluidJS", "FluidContainerLoader"]),
         .testTarget(name: "FluidContainerLoaderTests", dependencies: ["FluidContainerRuntime", "FluidDatastore", "FluidTestRuntimeUtils", "FluidDatastoreDefinitions", "FluidMap", "FluidStatic", "FluidJS", "FluidContainerLoader", "FluidTinyliciousDriver", "FluidDriverDefinitions", "FluidDriverBase"], resources: [.copy("Fixtures")]),
         .target(name: "FluidSocketIO", dependencies: ["FluidJS"]),

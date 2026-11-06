@@ -27,6 +27,7 @@
     "service:m2": "tsx src/service-m2.ts",
     "matrix:check": "tsx src/matrix-check.ts",
     "service:m3": "tsx src/service-m3.ts",
+    "service:presence": "tsx src/service-presence.ts",
     "service": "tsx src/service.ts",
     "lz4-fixtures": "tsx src/lz4-fixtures.ts",
     "lz4-check": "tsx src/lz4-check.ts"

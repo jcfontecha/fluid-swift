@@ -1,6 +1,7 @@
 import FluidContainerRuntime
 import FluidDatastore
 import FluidMap
+import FluidPresence
 import FluidStatic
 import FluidDriverBase
 import FluidDriverDefinitions
@@ -15,7 +16,21 @@ import Foundation
 public actor Container {
     private final class Outbound {
         var messages: [IDocumentMessage] = []
+        var signals: [(content: String, target: String?)] = []
     }
+    /// Presence is a container extension (containerRuntime.ts `acquireExtension`). These live on
+    /// this actor's executor; closures capture the holder so they never capture the actor.
+    private final class PresenceState {
+        var manager: ContainerPresenceManager?
+        var host: ContainerExtensionHost?
+        var clock: ContainerPresenceClock?
+        var failure: (any Error)?
+    }
+    private let presence = PresenceState()
+    /// container.ts `signalAudience`: every client the service reports through join/leave/clear
+    /// signals, read and write, unlike `ProtocolOpHandler.audience`, which writers join by op.
+    private let signalAudience = Audience()
+    private var flushingSignals = false
     private let outbound = Outbound()
     private var runtime: ContainerRuntime?
     private var rootDataObject: RootDataObject?
@@ -96,6 +111,17 @@ public actor Container {
                 ])
                 runtime.referenceSequenceNumber = loaded.sequenceNumber
                 rootDataObject = try RootDataObject(runtime: runtime)
+                runtime.onSubmitSignal = { [outbound] envelope, target in
+                    outbound.signals.append((JSON.stringify(envelope), target?.description))
+                }
+                runtime.onRuntimeDispatch = { [presence] name, arguments in
+                    guard name == "extension", let manager = presence.manager else { return }
+                    let parts = try arguments.asArray()
+                    guard parts.count == 3 else { throw JSONDecodingError("invalid extension dispatch") }
+                    try manager.processSignal(
+                        addressChain: parts[0].asArray().map { try $0.asString() },
+                        message: InboundExtensionMessage(json: parts[1]), local: parts[2] == .bool(true))
+                }
                 runtime.onSubmitBatch = { [deltaManager, outbound] messages in
                     var last = 0
                     for message in messages {
@@ -128,8 +154,10 @@ public actor Container {
         deltaManager.connect(
             details, lastSequenceNumber: protocolHandler?.sequenceNumber ?? snapshotSequenceNumber)
         try protocolHandler?.initialClients(details.initialClients)
+        try resetSignalAudience(details.initialClients)
         deltaManager.enqueueMessages(details.initialMessages)
         for signal in details.initialSignals { try processSignal(signal) }
+        try await flushSignals()
         guard let connection = connectionManager.connection else {
             throw JSONDecodingError("disconnected")
         }
@@ -142,6 +170,7 @@ public actor Container {
                     self.finishSummaryWait(error: error)
                     self.connectionManager.connectionFailed()
                     self.deltaManager.disconnect(String(describing: error), error: error)
+                    self.raisePresenceDisconnected()
                 }
             }
         }
@@ -166,6 +195,7 @@ public actor Container {
             let batch: [JSONValue]
             if case .array(let values) = value { batch = values } else { batch = [value] }
             for value in batch { try processSignal(ISignalMessage(json: value)) }
+            try await flushSignals()
         case "nack": throw DriverError("nack", .array(event.arguments))
         default: break
         }
@@ -177,7 +207,111 @@ public actor Container {
             return
         }
         signals.append(signal)
-        try protocolHandler?.processSignal(signal)
+        guard let content = try signalContent(signal) else {
+            try protocolHandler?.processSignal(signal)
+            return
+        }
+        // container.ts processSignal: only the service's clear/join/leave signals are audience
+        // signals; everything else, including other system signals, goes to the runtime.
+        if signal.clientId == nil, case .string(let type) = try content.member("type"),
+            ["clear", "join", "leave"].contains(type.description)
+        {
+            try processAudienceSignal(type: type.description, content: content)
+            try protocolHandler?.processSignal(signal)
+        } else if let runtime {
+            var message = try signal.json.asObject()
+            message["content"] = content
+            try runtime.processSignal(.object(message), local: signal.clientId == connectionManager.clientId)
+        }
+    }
+
+    /// Signal contents arrive as JSON text from the driver.
+    private func signalContent(_ signal: ISignalMessage) throws -> JSONValue? {
+        guard let content = signal.content else { return nil }
+        if case .string(let text) = content { return try JSON.parse(text.description) }
+        return content
+    }
+
+    /// protocol.ts `wrapProtocolHandlerBuilder`: the signal audience takes every client, whatever its mode.
+    private func processAudienceSignal(type: String, content: JSONValue) throws {
+        switch type {
+        case "clear": removeAllSignalAudienceMembers()
+        case "join":
+            let entry = try ISignalClient(json: content.member("content"))
+            try signalAudience.addMember(entry.clientId, entry.client)
+        default: signalAudience.removeMember(try content.member("content").asString())
+        }
+    }
+
+    private func removeAllSignalAudienceMembers() {
+        for member in signalAudience.getMembers() { signalAudience.removeMember(member.clientId) }
+    }
+
+    /// connectionManager.ts: a new connection synthesizes a `clear` signal, then a `join` per initial client.
+    private func resetSignalAudience(_ clients: [ISignalClient]) throws {
+        removeAllSignalAudienceMembers()
+        for entry in clients { try signalAudience.addMember(entry.clientId, entry.client) }
+    }
+
+    /// Sends queued runtime signals in order. Signals are queued by synchronous runtime code and leave here,
+    /// the I/O edge; only one flush runs at a time so concurrent callers can not reorder them.
+    private func flushSignals() async throws {
+        guard !flushingSignals else { return }
+        flushingSignals = true
+        defer { flushingSignals = false }
+        while !outbound.signals.isEmpty {
+            guard let connection = connectionManager.connection else {
+                throw JSONDecodingError("disconnected")
+            }
+            let signal = outbound.signals.removeFirst()
+            try await connection.submitSignal(signal.content, target: signal.target)
+        }
+    }
+
+    private func raisePresenceDisconnected() {
+        do { try presence.host?.raiseDisconnected() } catch { presence.failure = error }
+    }
+
+    private func firePresenceTimer(_ handle: Int) async {
+        guard let callback = presence.clock?.takeCallback(handle) else { return }
+        do {
+            try callback()
+            try await flushSignals()
+        } catch { presence.failure = error }
+    }
+
+    /// Native equivalent of fluid-static `getPresence(container)`: acquires the presence container
+    /// extension (containerRuntime.ts `acquireExtensionInternal`) and runs `body` against it
+    /// synchronously on this container's executor, then sends the signals presence queued. `clock`
+    /// is the container's timer-backed `PresenceClock`, which the state factories read (`Date.now`).
+    public func withPresence<Result: Sendable>(
+        _ body: @Sendable (_ presence: any Presence, _ clock: any PresenceClock) throws -> Result
+    ) async throws -> Result {
+        if let failure = presence.failure { throw failure }
+        let manager = try acquirePresence()
+        guard let clock = presence.clock else { throw JSONDecodingError("presence clock missing") }
+        let outcome = Swift.Result { try body(manager.interface, clock) }
+        try await flushSignals()
+        if let failure = presence.failure { throw failure }
+        return try outcome.get()
+    }
+
+    private func acquirePresence() throws -> ContainerPresenceManager {
+        if let manager = presence.manager {
+            manager.onNewUse()
+            return manager
+        }
+        guard let runtime else { throw JSONDecodingError("presence requires a loaded runtime") }
+        let clock = ContainerPresenceClock { [weak self] handle in await self?.firePresenceTimer(handle) }
+        let adapter = PresenceAudienceAdapter(audience: signalAudience) { [presence] in presence.failure = $0 }
+        let host = ContainerExtensionHost(
+            runtime: runtime, connectionManager: connectionManager, audience: adapter, clock: clock)
+        presence.clock = clock
+        presence.host = host
+        let manager = try ContainerPresenceFactory.instantiateExtension(host: host)
+        presence.manager = manager
+        runtime.extensions.insert(presenceExtensionId)
+        return manager
     }
 
     private func drain() throws -> [IDocumentMessage] {
@@ -656,6 +790,7 @@ public actor Container {
         reader?.cancel()
         reader = nil
         await connectionManager.disconnect()
+        raisePresenceDisconnected()
         automaticSummaries = resumeAutomaticSummaries
         if let summarizerHost, let summarizerGeneration {
             self.summarizerHost = nil

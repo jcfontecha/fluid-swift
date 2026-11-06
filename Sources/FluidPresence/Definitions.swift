@@ -9,8 +9,8 @@ import FluidJS
 ///
 /// Not ported: telemetry events (`PresenceInstantiated`, `JoinRequested`, `JoinResponse`,
 /// `JoinResponseWhenAlone`), because the Swift port has no telemetry layer yet, and the
-/// fluid-static / data-store-context `getPresence` entry points, because they need a container
-/// extension registry that the Swift runtime does not have.
+/// data-store-context `getPresenceFromDataStoreContext`. fluid-static `getPresence` is
+/// `Container.withPresence` in `FluidContainerLoader`, which hosts presence as a container extension.
 
 /// Ports presence-definitions/src/baseTypes.ts `ClientConnectionId`.
 public typealias ClientConnectionId = JSString

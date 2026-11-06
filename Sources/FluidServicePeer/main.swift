@@ -8,6 +8,7 @@ import Foundation
 @main struct ServicePeer {
     static func main() async {
         var containers: [String: Container] = [:]
+        var presenceLogs: [String: PresenceLog] = [:]
         while let line = readLine() {
             var id: JSONValue = .null
             var response = JSObject<JSONValue>()
@@ -76,7 +77,10 @@ import Foundation
                     case "signal":
                         try await container.signal(params.member("content").asString().description)
                         result = .null
-                    default: throw JSONDecodingError("unknown method")
+                    default:
+                        guard let presence = try await presenceMethod(method.description, params, key, container, &presenceLogs)
+                        else { throw JSONDecodingError("unknown method") }
+                        result = presence
                     }
                 }
                 response["result"] = result
