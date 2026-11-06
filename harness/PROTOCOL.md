@@ -769,3 +769,77 @@ Existing service/routing/datastore farms accept `--scratch-path=.build/m2` so M2
 verification does not use or disturb another lane's build directory. Defaults are
 unchanged. M1 retains the equal-sequence checkpoint views before awaiting storage
 reads, so later ops cannot race a comparison against an older TS observation.
+
+## Presence (H9) — `@fluidframework/presence` differential
+
+`npm run fuzz:presence -- --self` runs the real `@fluid-internal/presence-runtime` 3.11.0 twice per seed and
+requires identical traces (and that the generator reached every required behavior). `npm run fuzz:presence`
+builds `FluidPresencePeer` (`--scratch-path .build/h9`, release) and compares 1,000 seeds as raw JSON text;
+`--seeds=N` selects fewer. Requests are newline-delimited scenarios, responses one trace line each. Mismatches
+keep scenario, expected and actual rows in `traces/presence/<seed>.json`. Peer requests have a 30-second deadline.
+
+**Code under test.** The oracle (`src/presence/oracle.ts`) drives the real `createPresenceManager`, the real
+`latest`/`latestMap`/`Notifications` factories, and the real `MockAudience`/`MockQuorumClients` from
+`@fluidframework/test-runtime-utils`. The Swift mirror is `Sources/FluidPresencePeer/Simulation.swift` over
+`FluidPresence`. Both read the scenario after a JSON round trip, so they see identical data.
+
+**Scenario** `{seed, slots (2-4), network[64]: {delay, drop}, randoms[16], commands[]}`. Time starts at 1,000,000 ms
+and moves only through `advance` commands: the oracle replaces `Date.now`, `setTimeout`/`clearTimeout` and
+`Math.random` (`src/presence/clock.ts`); Swift uses `ManualPresenceClock`. Both fire due timers earliest-first, ties
+by creation order, with `now` set to each timer's due time. Every non-`advance` command is followed by
+`advance(0)`. A timer callback that throws is recorded as `{t, error:"timer"}`. `randoms` is the `Math.random`
+sequence (cycled); the only consumer is the backup join-responder offset for a client not in the quorum.
+
+**Signal bus.** A submitted signal is recorded (`{t, slot, signal}`, after a JSON round trip, so NaN is `null`),
+then delivered to every connected slot (the sender included, `local = true`) or only to `targetClientId`. The
+delivery to destination `d` for event number `k` uses `network[(3k + 11d) % 64]`: `delay` ms later, or dropped.
+Audience add/remove for other slots uses the same table (delay only). A delivery whose destination has
+disconnected, or reconnected under another ID, is discarded. The driver adds `clientId`; `local` is `sender ==
+destination`. Connecting follows `MockEphemeralRuntime.connect` (members cleared, then re-added, then self) with
+the service's current membership; quorum views are immediate and write members get `sequenceNumber = 10 * n`.
+
+**Commands**: `create`, `connect {write, interactive}`, `disconnect`, `workspace {space, address, schema[], latency?}`
+(repeated calls ensure content, including type conflicts), `arm` (register a workspace from inside the
+`workspaceActivated` listener), `set`, `mapSet`, `mapDelete`, `mapClear`, `notify {name, args, target?}`,
+`controls {latency?, refresh?}`, `inject {from, local, addressChain, message}` (Ack, unknown types with and without
+the `?` optional marker, `acknowledgementId` updates), `advance {ms}`. Schemas use `latest` (optionally validated),
+`latestMap` (optionally validated, optionally rejecting keys that start with `bad`) and `Notifications`. A logging
+validator emits `{t, validate}` each time it runs.
+
+**Trace rows**: signals; listener events (`attendeeConnected`/`attendeeDisconnected`, `workspaceActivated`,
+`localUpdated`, `remoteUpdated`, `localItemUpdated`, `localItemRemoved`, `remoteItemUpdated`, `remoteItemRemoved`,
+named `notification`, `unattended`) with attendee, revision and timestamp; command and delivery failures as
+`{error: <command>}` / `{error:"processSignal"}` (the decision to throw is compared, not the message); and after
+every command a state snapshot of every created slot: attendees (ID, status, connection ID or `"error"`),
+and per registered manager the local state, `getRemotes()`, `getStateAttendees()` and `getRemote(a)` for every
+attendee (self included), with timestamps. Keys are compared in JS insertion order.
+
+**Upstream behavior the farm pins** (all from specs/presence.md): `Pres:Ack` (a local echo makes the average latency
+NaN, so later `avgLatency` is `null`; a remote Ack throws); "unicast" notifications are broadcast; registered
+states keep the sender's timestamps while unregistered ones are shifted by the time modifier; `size` undercounts
+after a tombstone is set again; `clear` throws; late partial map updates keep newer keys; the validated-value
+cache (`validatedValue`) is stored on the state object, so reading a getter over the *local* state caches there,
+partial updates serialize it, and a receiver that finds `validatedValue` present returns it without running its own
+validator (this is not in the spec; seed 2 found it); full sends strip it; join-response election, `joinResponseFor`,
+stale-connection resolution after 30 s, and workspace activation order.
+
+**Native source map** (all under `Sources/FluidPresence`): `PresenceManager.swift` ↔ presenceManager.ts;
+`PresenceDatastoreManager.swift` ↔ presenceDatastoreManager.ts; `SystemWorkspace.swift` ↔ systemWorkspace.ts;
+`PresenceStates.swift` ↔ workspace/presenceStates.ts (merge rules); `LatestValueManager.swift`,
+`LatestMapValueManager.swift`, `NotificationsManager.swift`, `ValidatedGetter.swift` ↔ states/*;
+`TimerManager.swift`, `BroadcastControls.swift` ↔ utils/*; `Protocol.swift` ↔ runtime/protocol.ts;
+`ContainerPresence.swift` ↔ runtime/extension/containerPresence.ts; `Definitions.swift`, `InternalTypes.swift`,
+`EphemeralRuntime.swift` ↔ presence-definitions and runtimeTypes.ts. `Testing/` ports `MockEphemeralRuntime`
+and the mock audience/quorum. One target covers the three TS packages (they are one feature with one wire format).
+
+**Not covered.** Telemetry events are not ported. `getPresence` (fluid-static) and
+`getPresenceFromDataStoreContext` are not ported. There is no real-service scenario yet: the M2 `Container` does
+not route inbound signals to `ContainerRuntime.processSignal` nor submit runtime signals, `@fluidframework/presence`
+is not installed under `harness/node_modules`, and a real timer-backed `PresenceClock` on the container executor
+does not exist. See the lane report for the exact gap. The planted-divergence record is
+`src/presence/fixtures/planted-divergence.txt`.
+
+Swift Testing ports of the upstream unit tests (`swift test --scratch-path .build/h9 --filter FluidPresenceTests`):
+TimerManager, join response election (preferred, backup, fully and partially answered), `workspaceActivated`
+cases, acknowledgement, unrecognized messages, attendee lifecycle (connect, disconnect, rejoin, stale after 30 s),
+latest, latestMap, notifications, batching, and the upstream behaviors above.

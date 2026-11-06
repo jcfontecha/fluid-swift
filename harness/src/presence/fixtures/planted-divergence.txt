@@ -1,0 +1,4 @@
+Mutation: mergeUntrackedDatastore (Sources/FluidPresence/PresenceStates.swift) merged unregistered remote state with timeDelta 0 instead of the time modifier, i.e. normalized all timestamps uniformly (the divergence specs/presence.md warns about).
+Command: npm run fuzz:presence -- --seeds=1000
+Result: AssertionError [ERR_ASSERTION]: seed 1
+Mutation reverted by restoring the original file; clean 1,000-seed Swift differential rerun passed.

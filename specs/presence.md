@@ -131,6 +131,12 @@ broadcast/unicast both make rev=0,timestamp=0, value{name,args:copiedArgsArray},
 
 ## 6. JS-semantics hazards
 
+- **`validatedValue` leaks onto the wire.** Found by the H9 differential harness, seed 2. Reading a
+  validating getter over the client's own local state caches `validatedValue` on that state object.
+  A later partial update serializes it, and a receiver that finds `validatedValue` returns it
+  without running its own validator. The Swift port reproduces this in
+  `Sources/FluidPresence/InternalTypes.swift`, and two tests pin it.
+
 Use Double revisions/timestamps/latency and preserve NaN consequences of Ack; Date.now is wall-clock epoch ms, not monotonic time. Keep object insertion order for system-before-values and manager events; Maps/Sets use identity and insertion order. `items in object`, `ignoreUnmonitored in value`, and `validatedValue in value` distinguish absent property from undefined. Undefined map value means tombstone, null means a defined value. Opaque JSON/read-only casts are identity casts, not serialization or copies; local values and queued map item references may alias mutable objects. Latest initial value only shallow clones; manager factory captures one state object reused if same factory is registered more than once. Do not add retry, TTL, reconciliation op or reliable delivery: signals are ephemeral. (reference/fluidframework-3.11.0/packages/framework/presence-runtime/src/utils/internalUtils.ts:142-145, reference/fluidframework-3.11.0/packages/framework/presence-runtime/src/workspace/presenceStates.ts:162-225, reference/fluidframework-3.11.0/packages/framework/presence-runtime/src/states/validatedGetter.ts:24-29, reference/fluidframework-3.11.0/packages/framework/presence-runtime/src/states/latestValueManager.ts:164-194, reference/fluidframework-3.11.0/packages/framework/presence-runtime/src/states/latestMapValueManager.ts:94-106, reference/fluidframework-3.11.0/packages/framework/presence-runtime/src/runtime/presenceDatastoreManager.ts:657-672.)
 
 ## 7. Test assets to reuse
