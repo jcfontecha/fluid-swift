@@ -1085,3 +1085,22 @@ for native ODSP source. The ordinary full-package filtered command can still fai
 concurrent edits (observed: ContainerRuntime `SummaryManagerTests` referencing a missing `Throttler`).
 
 The green REST/codec farms must not be presented as whole-driver certification.
+
+## Service mode (M3b): Swift as the summarizing client
+
+`npm run service:m3 -- --seeds 0..N` runs tinylicious 7.0.1 with mixed Swift and 3.11.0 TS clients.
+Swift ports `SummarizerClientElection` (3.11.0 has no `OrderedClientElection`; ordering lives there),
+`SummaryManager`, `RunningSummarizer`, `SummarizeHeuristicData` with its exact constants,
+`SummaryGenerator`, `Throttler`, and the routerlicious `SummaryTreeUploadManager` and
+`WholeSummaryUploadManager`. Seeded scenarios, on deterministic clocks:
+
+- a Swift summarizer is elected, schedules by the heuristics, and uploads; TS acks it;
+- a fresh TS client loads from Swift's summary and matches state;
+- election handover between Swift and TS summarizers when the summarizer leaves;
+- a summaryNack path;
+- incremental summaries against the acked baseline;
+- a graceful-stop summary.
+
+Each upload is compared byte-exact with what TS uploads for the same state (the M3a comparison).
+Shredded uploads run live against tinylicious. Tinylicious 7 answers whole-summary uploads with 404,
+so that path is compared against TS through a recording HTTP endpoint instead.

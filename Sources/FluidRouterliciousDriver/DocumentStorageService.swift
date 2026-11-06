@@ -17,9 +17,9 @@ public struct DocumentStorageService: Sendable {
         RestClient(endpoint: endpoint, document: document, tokens: tokens)
     }
     /// Tinylicious 7 uses shredded git summaries (the 3.11 default driver policy).
-    public func snapshot() async throws -> SummaryTree {
+    public func snapshot(version: JSString? = nil) async throws -> SummaryTree {
         let commits = try await rest.get(
-            "/repos/tinylicious/commits?count=1&sha=\(encodeURIComponent(document))"
+            "/repos/tinylicious/commits?count=1&sha=\(encodeURIComponent(version?.description ?? document))"
         ).asArray().map { try Git.ICommitDetails(json: $0) }
         guard let latest = commits.first else { throw JSONDecodingError("no document version") }
         let treeID = latest.commit.tree.sha.description

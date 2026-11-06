@@ -20,6 +20,28 @@ public actor Container {
     private var runtime: ContainerRuntime?
     private var rootDataObject: RootDataObject?
     private let loadRuntime: Bool
+    private let isSummarizer: Bool
+    private let wholeSummary: Bool
+    private let summaryMode: SummaryManager.Mode
+    private var election: SummarizerClientElection?
+    private var summaryGenerator: SummaryGenerator?
+    private var summaryPaused = false
+    private var pausedSignals: [ISignalMessage] = []
+    private var summarizerChild: Container?
+    private let summaryManager = SummaryManager()
+    private var summarizer: Summarizer?
+    private var summaryTimer: Task<Void, Never>?
+    private var automaticSummaries = false
+    private var summaryRequested = false
+    private var summaryWorkRunning = false
+    private var summaryWaiter: CheckedContinuation<Void, Error>?
+    private var summaryAckTimer: Task<Void, Never>?
+    private var summarizerHost: Container?
+    private var summarizerGeneration: Int?
+    private var summarizerParentId: JSString?
+    private var summaryActive = false
+    private var summaryCompletionWaiters: [CheckedContinuation<Void, Never>] = []
+    private var summaryFailure: String?
     private let service: DocumentService
     private var protocolHandler: ProtocolOpHandler?
     private let deltaManager: DeltaManager
@@ -33,8 +55,12 @@ public actor Container {
     private var noopTimer: Task<Void, Never>?
     private var fetching = false
 
-    public init(endpoint: String, document: String, loadRuntime: Bool = false) {
+    public init(endpoint: String, document: String, loadRuntime: Bool = false, summarizer: Bool = false, wholeSummary: Bool = false, summaryMode: SummaryManager.Mode = .enabled) {
         self.loadRuntime = loadRuntime
+        isSummarizer = summarizer
+        self.wholeSummary = wholeSummary
+        self.summaryMode = summaryMode
+        automaticSummaries = loadRuntime && !summarizer && (summaryMode == .enabled || summaryMode == .disableHeuristics)
         let connectionManager = ConnectionManager()
         self.connectionManager = connectionManager
         deltaManager = DeltaManager(active: { connectionManager.connected })
@@ -56,7 +82,8 @@ public actor Container {
 
     public func connect() async throws {
         if protocolHandler == nil {
-            let snapshot = try await service.storage.snapshot()
+            let loadedVersion = try await service.storage.latestVersion()
+            let snapshot = try await service.storage.snapshot(version: loadedVersion)
             let loaded = try ProtocolOpHandler(state: DocumentStorageService.protocolState(snapshot))
             deltaManager.lastSequenceNumber = loaded.sequenceNumber
             deltaManager.minimumSequenceNumber = loaded.minimumSequenceNumber
@@ -84,6 +111,12 @@ public actor Container {
                     return last
                 }
                 self.runtime = runtime
+                election = try SummarizerClientElection(members: loaded.quorum.getMembers(), sequenceNumber: loaded.sequenceNumber, initialState: runtime.electedSummarizerData)
+                summaryGenerator = SummaryGenerator(ackHandle: loadedVersion)
+                if let summarizerParentId {
+                    summarizer = Summarizer(parentClientId: summarizerParentId, sequenceNumber: loaded.sequenceNumber,
+                        now: Date().timeIntervalSince1970 * 1000)
+                }
             }
             loaded.quorum.events.on { [quorumEvents] in quorumEvents.emit($0) }
             loaded.audience.events.on { [audienceEvents] in audienceEvents.emit($0) }
@@ -91,7 +124,7 @@ public actor Container {
             deltaManager.lastSequenceNumber = loaded.sequenceNumber
             protocolHandler = loaded
         }
-        let details = try await connectionManager.connect(service)
+        let details = try await connectionManager.connect(service, summarizer: isSummarizer)
         deltaManager.connect(
             details, lastSequenceNumber: protocolHandler?.sequenceNumber ?? snapshotSequenceNumber)
         try protocolHandler?.initialClients(details.initialClients)
@@ -106,12 +139,14 @@ public actor Container {
             } catch {
                 if !Task.isCancelled {
                     self.failure = String(describing: error)
+                    self.finishSummaryWait(error: error)
                     self.connectionManager.connectionFailed()
                     self.deltaManager.disconnect(String(describing: error), error: error)
                 }
             }
         }
         try await catchUp(fetchUnbounded: true)
+        scheduleSummaryWork()
     }
 
     private func receive(_ event: SocketEvent) async throws {
@@ -123,6 +158,7 @@ public actor Container {
             deltaManager.enqueueMessages(
                 try event.arguments[1].asArray().map { try ISequencedDocumentMessage(json: $0) })
             try await catchUp()
+            scheduleSummaryWork()
         case "signal":
             guard let value = event.arguments.first else {
                 throw JSONDecodingError("missing signal")
@@ -136,12 +172,17 @@ public actor Container {
     }
 
     private func processSignal(_ signal: ISignalMessage) throws {
+        if summaryPaused {
+            pausedSignals.append(signal)
+            return
+        }
         signals.append(signal)
         try protocolHandler?.processSignal(signal)
     }
 
     private func drain() throws -> [IDocumentMessage] {
         guard let protocolHandler else { throw JSONDecodingError("no protocol state") }
+        if summaryPaused { return [] }
         while let entry = try deltaManager.nextMessage(
             sequenceNumber: protocolHandler.sequenceNumber)
         {
@@ -152,6 +193,27 @@ public actor Container {
             deltaManager.lastSequenceNumber = message.sequenceNumber
             deltaManager.minimumSequenceNumber = message.minimumSequenceNumber
             let result = try protocolHandler.processMessage(message)
+            if message.type == "join" {
+                let join = try IClientJoin(json: systemData(message))
+                if let member = protocolHandler.quorum.getMembers().first(where: { $0.clientId == join.clientId }) {
+                    election?.addMember(member, sequenceNumber: message.sequenceNumber)
+                }
+            } else if message.type == "leave" {
+                election?.removeMember(try systemData(message).asString(), sequenceNumber: message.sequenceNumber)
+            }
+            election?.process(type: message.type, sequenceNumber: message.sequenceNumber)
+            runtime?.electedSummarizerData = election?.serialize()
+            if try summaryGenerator?.process(message) == true {
+                runtime?.refreshLatestSummary()
+                summarizer?.runningSummarizer.complete(acknowledged: true)
+                finishSummaryWait(error: nil)
+            } else if let nack = summaryGenerator?.lastNack {
+                summarizer?.runningSummarizer.complete(acknowledged: false)
+                finishSummaryWait(error: try SummaryNackError(nack))
+            }
+            if summarizer?.runningSummarizer.process(message, now: Date().timeIntervalSince1970 * 1000) != nil {
+                summaryRequested = true
+            }
             let wasConnected = connectionManager.connected
             try connectionManager.receivedJoin(message)
             try runtime?.recordSummaryMessage(message.json)
@@ -187,6 +249,7 @@ public actor Container {
     }
     private func catchUp(fetchUnbounded: Bool = false) async throws {
         try await sendMessages(drain())
+        if summaryPaused { return }
         if !fetching && (fetchUnbounded || !deltaManager.pending.isEmpty) {
             fetching = true
             defer { fetching = false }
@@ -283,6 +346,9 @@ public actor Container {
             })
             view["runtime"] = .object(state)
         }
+        view["election"] = election?.serialize()
+        view["summaryFailure"] = summaryFailure.map { .string(JSString($0)) }
+        view["summaryAckCount"] = .number(Double(summaryGenerator?.acknowledgedCount ?? 0))
         view["connected"] = .bool(connectionManager.connected)
         return .object(view)
     }
@@ -319,7 +385,262 @@ public actor Container {
         return result
     }
 
+    public func generateSummary() throws -> JSONValue {
+        guard let runtime else { throw JSONDecodingError("runtime not loaded") }
+        return try runtime.summarize(fullTree: true, trackState: false).summary.json
+    }
+
+    public func submitSummarizerMessage(_ contents: JSONValue) async throws {
+        guard let summarizerChild else { throw JSONDecodingError("no running summarizer") }
+        try await summarizerChild.submit(type: "summarize", contents: contents)
+    }
+
+    private var loaded: Bool { protocolHandler != nil }
+
+    public func summarizerView() async throws -> JSONValue {
+        guard let summarizerChild, await summarizerChild.loaded else { return .null }
+        return try await summarizerChild.view()
+    }
+    public func stopSummarizer() async {
+        automaticSummaries = false
+        summaryTimer?.cancel()
+        summaryTimer = nil
+        await summarizerChild?.disconnect()
+        summarizerChild = nil
+        _ = summaryManager.cleanup(generation: summaryManager.generation)
+    }
+
+    public func enableSummaries() {
+        automaticSummaries = true
+        scheduleSummaryWork()
+    }
+
+    private func scheduleSummaryWork(immediate: Bool = true) {
+        guard automaticSummaries, !summaryWorkRunning else { return }
+        let now = Date().timeIntervalSince1970 * 1000
+        let deadline: Double
+        if immediate || summaryRequested { deadline = now }
+        else if isSummarizer, let idle = summarizer?.runningSummarizer.heuristicRunner.idleDeadline { deadline = idle }
+        else if let start = summaryManager.startDeadline { deadline = start }
+        else { return }
+        summaryTimer?.cancel()
+        summaryTimer = Task {
+            do {
+                try await Task.sleep(for: .milliseconds(max(0, deadline - now)))
+                try Task.checkCancellation()
+                try await self.runSummaryWork()
+            } catch is CancellationError {} catch {
+                self.failure = String(describing: error)
+                await self.disconnect()
+            }
+        }
+    }
+
+    private func runSummaryWork() async throws {
+        summaryTimer = nil
+        summaryWorkRunning = true
+        defer {
+            summaryWorkRunning = false
+            scheduleSummaryWork(immediate: false)
+        }
+        guard automaticSummaries, connectionManager.connected, let election else { return }
+        let now = Date().timeIntervalSince1970 * 1000
+        if isSummarizer {
+            guard election.electedClientId == connectionManager.clientId else {
+                try await stopGracefully(reason: "notElectedClient")
+                return
+            }
+            guard summaryMode != .disableHeuristics, let running = summarizer?.runningSummarizer else { return }
+            if !running.summarizing && (summaryRequested || running.heuristicRunner.timerFired(now: now) != nil) {
+                summaryRequested = false
+                var attempt = 0
+                while true {
+                    attempt += 1
+                    do {
+                        _ = try await summarize()
+                        break
+                    } catch let error as SummaryNackError {
+                        guard attempt < 2, let retryAfter = error.nack.retryAfter else { throw error }
+                        if retryAfter > 0 { try await Task.sleep(for: .seconds(retryAfter)) }
+                    }
+                }
+            }
+        } else {
+            summaryManager.refresh(clientId: connectionManager.clientId, connected: connectionManager.connected,
+                election: election, now: now, opsSinceLastAck: deltaManager.lastSequenceNumber - snapshotSequenceNumber)
+            if let generation = summaryManager.beginCreation(now: now) {
+                guard summaryManager.shouldSummarize(clientId: connectionManager.clientId, connected: connectionManager.connected, election: election) else {
+                    _ = summaryManager.cleanup(generation: generation)
+                    return
+                }
+                guard let parentId = connectionManager.clientId else { throw JSONDecodingError("missing parent id") }
+                let child = Container(endpoint: service.storage.endpoint, document: service.storage.document,
+                    loadRuntime: true, summarizer: true, wholeSummary: wholeSummary, summaryMode: summaryMode)
+                summarizerChild = child
+                do {
+                    await child.startSummarizer(parentClientId: parentId, host: self, generation: generation)
+                    try await child.connect()
+                    guard generation == summaryManager.generation else {
+                        await child.disconnect()
+                        return
+                    }
+                    summaryManager.refresh(clientId: connectionManager.clientId, connected: connectionManager.connected,
+                        election: election, now: Date().timeIntervalSince1970 * 1000,
+                        opsSinceLastAck: deltaManager.lastSequenceNumber - snapshotSequenceNumber)
+                } catch {
+                    await child.disconnect()
+                    if summaryManager.cleanup(generation: generation) { summarizerChild = nil }
+                    throw error
+                }
+            }
+            if summaryManager.state == .stopping {
+                let generation = summaryManager.generation
+                if let child = summarizerChild {
+                    try await stopChild(child, reason: summaryManager.pendingStopReason ?? "notElectedParent")
+                }
+                if summaryManager.cleanup(generation: generation) { summarizerChild = nil }
+            }
+        }
+    }
+
+    private func startSummarizer(parentClientId: JSString, host: Container, generation: Int) {
+        summarizerHost = host
+        summarizerGeneration = generation
+        summarizerParentId = parentClientId
+        enableSummaries()
+    }
+
+    /// The interactive host owns a separate non-interactive summarizer container, as in
+    /// summaryManager.ts/createSummarizer.ts. Its runtime has no local application edits.
+    public func summarize() async throws -> JSONValue {
+        if !isSummarizer {
+            if summarizerChild == nil {
+                let child = Container(endpoint: service.storage.endpoint, document: service.storage.document,
+                    loadRuntime: true, summarizer: true, wholeSummary: wholeSummary, summaryMode: summaryMode)
+                summarizerChild = child
+                try await child.connect()
+            }
+            guard let summarizerChild else { throw JSONDecodingError("missing summarizer child") }
+            return try await summarizerChild.summarize()
+        }
+        guard let runtime, let summaryGenerator, let protocolHandler,
+            connectionManager.connected, runtime.pendingStateManager.pendingMessagesCount == 0,
+            outbound.messages.isEmpty, !summaryActive, summaryGenerator.pendingHandle == nil
+        else { throw JSONDecodingError("summary preconditions failed") }
+        summaryActive = true
+        defer {
+            summaryActive = false
+            let waiters = summaryCompletionWaiters
+            summaryCompletionWaiters.removeAll()
+            for waiter in waiters { waiter.resume() }
+            if summarizer?.runningSummarizer.runAfterSummary(now: Date().timeIntervalSince1970 * 1000) != nil {
+                summaryRequested = true
+            }
+            scheduleSummaryWork(immediate: false)
+        }
+        summaryPaused = true
+        let reference = protocolHandler.sequenceNumber
+        let minimum = protocolHandler.minimumSequenceNumber
+        let before = summaryGenerator.acknowledgedCount
+        do {
+            try summarizer?.runningSummarizer.begin(now: Date().timeIntervalSince1970 * 1000, referenceSequenceNumber: reference)
+            let summary = try runtime.summarize()
+            let handle = try await service.storage.uploadSummaryWithContext(summary.summary,
+                context: summaryGenerator.context(referenceSequenceNumber: reference), wholeSummary: wholeSummary)
+            let contents = try summaryGenerator.submitted(handle: handle,
+                referenceSequenceNumber: reference, minimumSequenceNumber: minimum)
+            try await submit(type: "summarize", contents: .string(JSString(JSON.stringify(contents))))
+        } catch {
+            summaryPaused = false
+            summaryGenerator.failAttempt()
+            summarizer?.runningSummarizer.complete(acknowledged: false)
+            try await catchUp()
+            throw error
+        }
+        summaryPaused = false
+        let signals = pausedSignals
+        pausedSignals.removeAll(keepingCapacity: true)
+        for signal in signals { try processSignal(signal) }
+        try await catchUp()
+        if let nack = summaryGenerator.lastNack { throw try SummaryNackError(nack) }
+        if let failure { throw JSONDecodingError(failure) }
+        if summaryGenerator.acknowledgedCount == before {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                summaryWaiter = continuation
+                summaryAckTimer = Task {
+                    do {
+                        try await Task.sleep(for: .milliseconds(180000))
+                        self.finishSummaryWait(error: JSONDecodingError("summary ack timeout"))
+                    } catch is CancellationError {} catch { self.finishSummaryWait(error: error) }
+                }
+            }
+        }
+        return .string(summaryGenerator.ackHandle ?? "")
+    }
+
+    private func stopChild(_ child: Container, reason: String) async throws {
+        let timeout = Task {
+            do {
+                try await Task.sleep(for: .milliseconds(120000))
+                await child.disconnect()
+            } catch is CancellationError {} catch { self.summaryFailure = String(describing: error) }
+        }
+        defer { timeout.cancel() }
+        do { try await child.stopGracefully(reason: reason) }
+        catch {
+            await child.disconnect()
+            throw error
+        }
+    }
+
+    private func stopGracefully(reason: String) async throws {
+        automaticSummaries = false
+        summaryTimer?.cancel()
+        summaryTimer = nil
+        _ = summarizer?.stop(reason)
+        if summaryActive {
+            await withCheckedContinuation { summaryCompletionWaiters.append($0) }
+        }
+        if reason == "parentNotConnected", connectionManager.connected,
+            summarizer?.runningSummarizer.heuristicRunner.shouldRunLastSummary() == true {
+            _ = try await summarize()
+        }
+        await disconnect()
+    }
+
+    private func summarizerStopped(generation: Int) {
+        guard summaryManager.cleanup(generation: generation) else { return }
+        summarizerChild = nil
+        scheduleSummaryWork()
+    }
+
+    private func finishSummaryWait(error: Error?) {
+        let waiter = summaryWaiter
+        summaryWaiter = nil
+        summaryAckTimer?.cancel()
+        summaryAckTimer = nil
+        if let error {
+            summaryGenerator?.failAttempt()
+            summarizer?.runningSummarizer.complete(acknowledged: false)
+            waiter?.resume(throwing: error)
+        }
+        else { waiter?.resume() }
+    }
+
     public func disconnect() async {
+        let resumeAutomaticSummaries = automaticSummaries
+        automaticSummaries = false
+        if !isSummarizer, let child = summarizerChild, summaryManager.state == .running {
+            summaryManager.stop(reason: "parentNotConnected", now: Date().timeIntervalSince1970 * 1000)
+            do { try await stopChild(child, reason: "parentNotConnected") }
+            catch { summaryFailure = String(describing: error) }
+        }
+        _ = summaryManager.cleanup(generation: summaryManager.generation)
+        finishSummaryWait(error: JSONDecodingError("summarizer disconnected"))
+        summaryTimer?.cancel()
+        summaryTimer = nil
+        await summarizerChild?.disconnect()
+        summarizerChild = nil
         runtime?.connected = false
         if let runtime {
             for id in runtime.channelCollection.datastoreIds {
@@ -335,5 +656,11 @@ public actor Container {
         reader?.cancel()
         reader = nil
         await connectionManager.disconnect()
+        automaticSummaries = resumeAutomaticSummaries
+        if let summarizerHost, let summarizerGeneration {
+            self.summarizerHost = nil
+            self.summarizerGeneration = nil
+            await summarizerHost.summarizerStopped(generation: summarizerGeneration)
+        }
     }
 }

@@ -1,4 +1,7 @@
 import FluidContainerLoader
+import FluidRouterliciousDriver
+import FluidTinyliciousDriver
+import FluidDriverDefinitions
 import FluidJS
 import Foundation
 
@@ -16,10 +19,19 @@ import Foundation
                 let key = try params.member("client").asString().description
                 let method = try request.member("method").asString()
                 let result: JSONValue
-                if method == "open" || method == "openM2" {
+                if method == "uploadSummary" {
+                    let storage = DocumentStorageService(endpoint: try params.member("endpoint").asString().description,
+                        document: "summary-test", tokens: InsecureTinyliciousTokenProvider())
+                    let handle = try await storage.uploadSummaryWithContext(SummaryTree(json: params.member("summary")),
+                        context: ISummaryContext(json: params.member("context")), wholeSummary: true)
+                    result = .string(handle)
+                } else if method == "summaryTrace" {
+                    result = try summaryTrace(params)
+                } else if method == "open" || method == "openM2" {
                     let container = Container(
                         endpoint: try params.member("endpoint").asString().description,
-                        document: try params.member("document").asString().description, loadRuntime: method == "openM2")
+                        document: try params.member("document").asString().description, loadRuntime: method == "openM2",
+                        wholeSummary: try params.asObject()["wholeSummary"] == .bool(true), summaryMode: .disabled)
                     containers[key] = container
                     try await container.connect()
                     result = try await container.view()
@@ -28,6 +40,18 @@ import Foundation
                         throw JSONDecodingError("unknown service client")
                     }
                     switch method {
+                    case "generateSummary": result = try await container.generateSummary()
+                    case "summarizerView": result = try await container.summarizerView()
+                    case "stopSummarizer":
+                        await container.stopSummarizer()
+                        result = .null
+                    case "submitSummary":
+                        try await container.submitSummarizerMessage(params.member("contents"))
+                        result = .null
+                    case "enableSummaries":
+                        await container.enableSummaries()
+                        result = .null
+                    case "summarize": result = try await container.summarize()
                     case "mapView": result = try await container.mapEntries()
                     case "mapEdit":
                         let operation = try params.member("op").asString()

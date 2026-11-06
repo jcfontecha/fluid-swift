@@ -13,12 +13,12 @@ public final class ConnectionManager {
 
     public init() {}
 
-    public nonisolated(nonsending) func connect(_ service: DocumentService) async throws
+    public nonisolated(nonsending) func connect(_ service: DocumentService, summarizer: Bool = false) async throws
         -> IConnected
     {
         let connection = DocumentDeltaConnection()
         self.connection = connection
-        let details = try await service.connectToDeltaStream(connection)
+        let details = try await service.connectToDeltaStream(connection, summarizer: summarizer)
         clientId = details.clientId
         connected = false
         return details

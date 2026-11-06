@@ -13,7 +13,7 @@ public struct DocumentService: Sendable {
         deltaStorage = DeltaStorageService(endpoint: endpoint, document: document, tokens: tokens)
     }
 
-    public func connectToDeltaStream(_ connection: DocumentDeltaConnection) async throws
+    public func connectToDeltaStream(_ connection: DocumentDeltaConnection, summarizer: Bool = false) async throws
         -> IConnected
     {
         guard let url = URL(string: storage.endpoint) else {
@@ -22,7 +22,8 @@ public struct DocumentService: Sendable {
         let token = try await storage.tokens.fetchOrdererToken(
             tenantId: "tinylicious", documentId: storage.document, refresh: false)
         let client = try IClient(
-            json: JSON.parse(
+            json: JSON.parse(summarizer ?
+                #"{"mode":"write","details":{"capabilities":{"interactive":false},"type":"summarizer"},"permission":[],"scopes":[],"user":{"id":""}}"# :
                 #"{"mode":"write","details":{"capabilities":{"interactive":true}},"permission":[],"scopes":[],"user":{"id":""}}"#
             ))
         let request = try R11sDocumentDeltaConnection.message(

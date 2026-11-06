@@ -9,10 +9,21 @@ struct RestClient: Sendable {
     let document: String
     let tokens: any ITokenProvider
     public func get(_ path: String, storage: Bool = true) async throws -> JSONValue {
+        try await request(path, storage: storage)
+    }
+    public func post(_ path: String, body: JSONValue) async throws -> JSONValue {
+        try await request(path, body: body)
+    }
+    private func request(_ path: String, storage: Bool = true, body: JSONValue? = nil) async throws -> JSONValue {
         guard let url = URL(string: endpoint + path) else {
             throw JSONDecodingError("invalid REST URL")
         }
         var request = URLRequest(url: url)
+        if let body {
+            request.httpMethod = "POST"
+            request.httpBody = Data(JSON.stringify(body).utf8)
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
         let tokenResponse =
             try await storage
             ? tokens.fetchStorageToken(

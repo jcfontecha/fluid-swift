@@ -24,6 +24,7 @@
     "fixtures": "tsx src/fixtures.ts",
     "check": "tsc --noEmit",
     "service:m2": "tsx src/service-m2.ts",
+    "service:m3": "tsx src/service-m3.ts",
     "service": "tsx src/service.ts",
     "lz4-fixtures": "tsx src/lz4-fixtures.ts",
     "lz4-check": "tsx src/lz4-check.ts"

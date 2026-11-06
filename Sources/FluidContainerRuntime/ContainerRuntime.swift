@@ -14,7 +14,7 @@ public final class ContainerRuntime: IFluidParentContext {
   public var blobManager = BlobManager()
   public let signalTelemetryManager = SignalTelemetryManager()
   public internal(set) var metadata: JSONValue?
-  public internal(set) var electedSummarizerData: JSONValue?
+  public var electedSummarizerData: JSONValue?
   public internal(set) var gcSnapshot: SummaryTree?
   public internal(set) var aliases: JSONValue = .array([])
   public var closed = false
