@@ -1,3 +1,4 @@
+import FluidDatastoreDefinitions
 import FluidDriverDefinitions
 import FluidJS
 
@@ -124,4 +125,35 @@ public final class Quorum {
         try proposals.updateMinimumSequenceNumber(message)
     }
 
+}
+
+/// `QuorumClients` as the `IQuorumClients` that `ContainerRuntime.getQuorum()` hands to datastores.
+public final class QuorumClientsView: IQuorumClients {
+    private let clients: QuorumClients
+
+    public init(_ clients: QuorumClients) { self.clients = clients }
+
+    public func getMembers() -> JSMap<JSString, JSONValue> {
+        var members = JSMap<JSString, JSONValue>()
+        for member in clients.getMembers() { members.set(member.clientId, member.client.json) }
+        return members
+    }
+
+    public func getMember(_ clientId: JSString) -> JSONValue? { clients.getMember(clientId)?.json }
+
+    @discardableResult
+    public func onAddMember(_ listener: @escaping (JSString, JSONValue) -> Void) -> Int {
+        clients.events.on { event in
+            if case .addMember(let clientId, let client) = event { listener(clientId, client.json) }
+        }
+    }
+
+    @discardableResult
+    public func onRemoveMember(_ listener: @escaping (JSString) -> Void) -> Int {
+        clients.events.on { event in
+            if case .removeMember(let clientId) = event { listener(clientId) }
+        }
+    }
+
+    public func off(_ token: Int) { clients.events.off(token) }
 }

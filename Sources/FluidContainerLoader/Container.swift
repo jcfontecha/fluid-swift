@@ -22,8 +22,8 @@ public actor Container {
     private let loadRuntime: Bool
     private let service: DocumentService
     private var protocolHandler: ProtocolOpHandler?
-    private let deltaManager = DeltaManager()
-    private let connectionManager = ConnectionManager()
+    private let deltaManager: DeltaManager
+    private let connectionManager: ConnectionManager
     private let quorumEvents = ListenerList<QuorumEvent>()
     private let audienceEvents = ListenerList<AudienceEvent>()
     private var snapshotSequenceNumber = 0
@@ -35,6 +35,9 @@ public actor Container {
 
     public init(endpoint: String, document: String, loadRuntime: Bool = false) {
         self.loadRuntime = loadRuntime
+        let connectionManager = ConnectionManager()
+        self.connectionManager = connectionManager
+        deltaManager = DeltaManager(active: { connectionManager.connected })
         service = DocumentService(
             endpoint: endpoint, document: document, tokens: InsecureTinyliciousTokenProvider())
     }
@@ -55,8 +58,11 @@ public actor Container {
         if protocolHandler == nil {
             let snapshot = try await service.storage.snapshot()
             let loaded = try ProtocolOpHandler(state: DocumentStorageService.protocolState(snapshot))
+            deltaManager.lastSequenceNumber = loaded.sequenceNumber
+            deltaManager.minimumSequenceNumber = loaded.minimumSequenceNumber
             if loadRuntime {
-                let runtime = try ContainerRuntime(sessionId: UUID().uuidString.lowercased(), clientId: "")
+                let runtime = try ContainerRuntime(sessionId: UUID().uuidString.lowercased(), clientId: "",
+                    deltaManager: deltaManager, quorum: QuorumClientsView(loaded.quorum.clients))
                 try runtime.loadSnapshot(snapshot, factories: [
                     ChannelFactory(SharedMap.self, snapshotFormatVersion: "0.2"),
                     ChannelFactory(SharedDirectory.self, snapshotFormatVersion: "0.1"),
@@ -82,6 +88,7 @@ public actor Container {
             loaded.quorum.events.on { [quorumEvents] in quorumEvents.emit($0) }
             loaded.audience.events.on { [audienceEvents] in audienceEvents.emit($0) }
             snapshotSequenceNumber = loaded.sequenceNumber
+            deltaManager.lastSequenceNumber = loaded.sequenceNumber
             protocolHandler = loaded
         }
         let details = try await connectionManager.connect(service)
@@ -142,9 +149,12 @@ public actor Container {
             let message = entry.message
             try deltaManager.validate(
                 message, protocolHandler: protocolHandler, clientId: connectionManager.clientId)
+            deltaManager.lastSequenceNumber = message.sequenceNumber
+            deltaManager.minimumSequenceNumber = message.minimumSequenceNumber
             let result = try protocolHandler.processMessage(message)
             let wasConnected = connectionManager.connected
             try connectionManager.receivedJoin(message)
+            try runtime?.recordSummaryMessage(message.json)
             if message.type == "op" { _ = try runtime?.process(message.json) }
             runtime?.referenceSequenceNumber = message.sequenceNumber
             if !wasConnected && connectionManager.connected, let id = connectionManager.clientId {

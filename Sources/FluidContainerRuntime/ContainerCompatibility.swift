@@ -42,3 +42,9 @@ public func validateRuntimeOptions(_ version: String, options: JSONValue) throws
     try require(parts[0] > 2 || parts[1] >= 40, "createBlobPayloadPending requires 2.40.0")
   }
 }
+
+/// containerRuntime.ts selects V3 ID serialization at the 3.4 collaboration floor.
+func idCompressorWriteVersion(_ version: String) throws -> Int {
+  let parts = try parseCompatibilityVersion(version)
+  return parts[0] > 3 || (parts[0] == 3 && parts[1] >= 4) ? 3 : 2
+}

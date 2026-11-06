@@ -1,10 +1,11 @@
+import FluidDatastoreDefinitions
 import FluidDriverBase
 import FluidDriverDefinitions
 import FluidJS
 
 /// Ports container-loader/src/deltaManager.ts: inbound queue, validation and storage gap ranges.
 /// REST fetching is performed by Container only after this synchronous queue has drained.
-public final class DeltaManager {
+public final class DeltaManager: IDeltaManager {
     public struct Pending {
         public let message: ISequencedDocumentMessage
         public let source: String
@@ -20,7 +21,22 @@ public final class DeltaManager {
     private var clientSequence = 0
     private var heuristicConfigured = false
 
-    public init() {}
+    /// `lastProcessedSequenceNumber`: set to the snapshot's sequence number at load, then to each message
+    /// before it is processed.
+    public var lastSequenceNumber = 0
+    public var minimumSequenceNumber = 0
+
+    /// Connected in write mode and in the quorum (container.ts `activeConnection`).
+    public var active: Bool { activeConnection() }
+
+    /// The loader connects in write mode only, so it never reports read-only.
+    public var readOnlyInfo: ReadOnlyInfo { ReadOnlyInfo(readonly: false) }
+
+    private let activeConnection: () -> Bool
+
+    public init(active: @escaping () -> Bool) {
+        activeConnection = active
+    }
 
     public func connect(_ details: IConnected, lastSequenceNumber: Int) {
         clientSequence = 0

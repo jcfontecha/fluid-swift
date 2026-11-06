@@ -1,3 +1,5 @@
+import { SharedString } from "@fluidframework/sequence/internal";
+import { sharedStringAdapter, generateSharedString } from "./sequence.js";
 import { MockHandle } from "@fluidframework/test-runtime-utils/internal";
 import {
   isFluidHandle,
@@ -42,10 +44,11 @@ import type {
   IChannelServices,
   IFluidDataStoreRuntime,
 } from "@fluidframework/datastore-definitions/internal";
-import type { Edit } from "./protocol.js";
+import type { Edit, Message, Outbound } from "./protocol.js";
 import { Random } from "./random.js";
 
 export const factories = {
+  "shared-string": SharedString.getFactory(),
   counter: SharedCounter.getFactory(),
   map: SharedMap.getFactory(),
   directory: SharedDirectory.getFactory(),
@@ -90,6 +93,8 @@ export async function createAdapter(
   const events: unknown[] = [];
   const keys = ["a", "b", "c", "0", "10", "constructor"];
   switch (name) {
+    case "shared-string":
+      return sharedStringAdapter(await load(factories[name], store, id, services, existing));
     case "counter": {
       const c = await load(factories[name], store, id, services, existing);
       c.on("incremented", (amount, value) =>
@@ -446,6 +451,7 @@ function directoryState(c: IDirectory): unknown {
 }
 /** DDSes whose generator chooses operations from the client's own `queries`. */
 export const queryDrivenGenerators: readonly DDSName[] = [
+  "shared-string",
   "task-manager",
   "shared-array",
 ];
@@ -507,11 +513,18 @@ const queueValuePool = ["qvalu", "rvalu", "svalu"];
  * fuzz model, this follows its operations, weights and acceptance conditions; `queries` is the
  * acting client's own `queries` result, required by `queryDrivenGenerators`.
  */
-export function generate(name: DDSName, r: Random, queries?: unknown): Edit {
+export function generate(
+  name: DDSName,
+  r: Random,
+  queries?: unknown,
+  history?: SessionHistory,
+): Edit {
   const key = r.pick(["a", "b", "c", "0", "10", "constructor"]);
   const value = r.int(5) === 0 ? "x".repeat(8200) : r.int(1000);
   const p = r.int(10);
   switch (name) {
+    case "shared-string":
+      return generateSharedString(r, queries);
     case "counter":
       return { kind: "increment", amount: r.int(201) - 100 };
     case "map":
@@ -575,23 +588,126 @@ export function generate(name: DDSName, r: Random, queries?: unknown): Edit {
         ? { kind: "add", value: r.pick(queueValuePool) }
         : { kind: "acquire", result: r.pick(["complete", "release"]) };
     case "shared-array":
-      return arrayEdit(r, sharedArrayQueries.parse(queries));
+      if (history === undefined) throw new Error("shared-array needs the session history");
+      return arrayEdit(r, sharedArrayQueries.parse(queries), history);
     case "shared-signal":
       return { kind: "notify", value };
   }
 }
 
-/** legacy-dds/src/test/array/fuzzUtils.ts makeSharedArrayOperationGenerator, default weights. */
+/**
+ * What the session knows beyond the acting client's own view: every sequenced message, every
+ * message still waiting to be sequenced, and how many sequenced messages the acting client has
+ * processed, so a generator can tell which other clients' operations are concurrent with its own.
+ */
+export interface SessionHistory {
+  log: readonly Message[];
+  queue: readonly Outbound[];
+  cursor: number;
+  wireId: string;
+}
+
+const arrayOperation = z.union([
+  z.object({ type: z.literal(0), entryId: z.string(), value: z.string() }).loose(),
+  z.object({ type: z.literal(1), entryId: z.string() }).loose(),
+  z.object({ type: z.literal(2), entryId: z.string(), changedToEntryId: z.string() }).loose(),
+  z.object({ type: z.literal(3), entryId: z.string() }).loose(),
+  z.object({ type: z.literal(4), entryId: z.string(), changedToEntryId: z.string() }).loose(),
+]);
+
+/** The kinds of SharedArray operation that can conflict with a concurrent one on the same entry. */
+type ArrayConflictKind = "delete" | "move" | "toggleMove";
+
+/**
+ * For each kind of operation, the SharedArray values on which another client has a concurrent
+ * operation, from the acting client's point of view. A value stands for its whole entry chain: a
+ * move gives the entry a new ID but keeps its value, and every ID's value is known from the
+ * insert (or move) that created it. Two entries sharing a value only make the exclusion stricter.
+ * `delete` covers delete and toggle, `move` covers move, `toggleMove` covers toggleMove.
+ */
+function arrayConcurrency(history: SessionHistory): {
+  concurrent: Record<ArrayConflictKind, Set<string>>;
+  valueOfEntry: (entryId: string) => string | undefined;
+} {
+  const valueOfEntry = new Map<string, string>();
+  const valueOf = (entryId: string): string => {
+    const value = valueOfEntry.get(entryId);
+    if (value === undefined) throw new Error(`Unknown SharedArray entry ${entryId}`);
+    return value;
+  };
+  const unprocessed = new Set<unknown>();
+  for (const message of history.log.slice(history.cursor))
+    if (message.clientId !== history.wireId) unprocessed.add(message);
+  for (const message of history.queue)
+    if (message.clientId !== history.wireId) unprocessed.add(message);
+  const concurrent: Record<ArrayConflictKind, Set<string>> = {
+    delete: new Set(),
+    move: new Set(),
+    toggleMove: new Set(),
+  };
+  for (const message of [...history.log, ...history.queue]) {
+    const op = arrayOperation.parse(message.contents);
+    if (op.type === 0) valueOfEntry.set(op.entryId, op.value);
+    if (op.type === 2) valueOfEntry.set(op.changedToEntryId, valueOf(op.entryId));
+    if (!unprocessed.has(message)) continue;
+    if (op.type === 1 || op.type === 3) concurrent.delete.add(valueOf(op.entryId));
+    if (op.type === 2) concurrent.move.add(valueOf(op.entryId));
+    if (op.type === 4) concurrent.toggleMove.add(valueOf(op.entryId));
+  }
+  return { concurrent, valueOfEntry: (entryId) => valueOfEntry.get(entryId) };
+}
+
+/**
+ * Which concurrent operations (other clients', not yet processed by the acting client) on an entry
+ * rule out an operation of each kind. Delete and toggle clash with move and toggleMove (the
+ * documented counterexample); toggleMove also clashes with a concurrent move, delete, toggle or
+ * toggleMove, and move with a concurrent toggleMove. Without those, `--seeds 138` of the upstream
+ * model fails: a remote move arriving while an undo-move is pending leaves a dead entry at the end
+ * of the chain (`updateDeadEntry`), which later operations then resolve to.
+ */
+const arrayConflicts: Record<ArrayConflictKind, readonly ArrayConflictKind[]> = {
+  delete: ["move", "toggleMove"],
+  move: ["delete", "toggleMove"],
+  toggleMove: ["delete", "move", "toggleMove"],
+};
+
+/**
+ * legacy-dds/src/test/array/fuzzUtils.ts makeSharedArrayOperationGenerator, default weights, with
+ * one exclusion (`arrayConflicts`): this client does not delete, toggle, move or toggleMove an
+ * entry on which another client has a concurrent operation that SharedArray cannot reconcile.
+ *
+ * Upstream hits the same interaction in this very fuzz suite and skips seeds instead:
+ * packages/dds/legacy-dds/src/test/array/arrayFuzzTests.spec.ts:29-33 skips seed 3 ("Concurrent
+ * move/undo-move and delete can resurrect a deleted entry") and seeds 14 and 42 ("Concurrent move
+ * and delete/toggle undo can restore an entry at its old position"). A skipped seed does not carry
+ * over to this generator, so the interaction is excluded where it is generated.
+ * `oracle-array-precondition-check.ts` still reproduces it, and "SharedArray convergence
+ * counterexample" in PROTOCOL.md explains it.
+ */
 function arrayEdit(
   r: Random,
   state: z.infer<typeof sharedArrayQueries>,
+  history: SessionHistory,
 ): Edit {
+  const { concurrent, valueOfEntry } = arrayConcurrency(history);
+  const allowed = (kind: ArrayConflictKind, value: string | undefined): boolean =>
+    value === undefined || arrayConflicts[kind].every((other) => !concurrent[other].has(value));
   const length = state.length;
+  // Live indices whose entry has no concurrent operation that rules out a delete, or a move.
+  const indices = Array.from({ length }, (_, index) => index);
+  const deletableIndices = indices.filter((index) => allowed("delete", state.values[index]));
+  const movableIndices = indices.filter((index) => allowed("move", state.values[index]));
+  // An entry absent from the history was created by an offline edit of this client, made after
+  // every client was drained, so no other client has any operation on it.
+  const toggleableIds = [...state.insertIds, ...state.deleteIds].filter((entryId) =>
+    allowed("delete", valueOfEntry(entryId)),
+  );
+  const movedIds = state.moveIds.filter(([oldEntryId]) =>
+    allowed("toggleMove", valueOfEntry(oldEntryId)),
+  );
   // Upstream conditions index-based operations on insertIds alone, but that bookkeeping can drift
   // (non-empty insertIds over an empty array), which makes delete(0) throw. Also require entries.
   const hasEnoughInsertLength = state.insertIds.length > 0 && length > 0;
-  const hasEnoughToggleLength =
-    state.insertIds.length + state.deleteIds.length > 0;
   const hasEnoughMoveLength = state.moveIds.length > 2;
   return weighted<Edit>(r, [
     [
@@ -606,20 +722,20 @@ function arrayEdit(
     [
       () => ({
         kind: "delete",
-        index: integer(r, 0, Math.max(0, length - 1)),
+        index: r.pick(deletableIndices),
         key: "",
       }),
       3,
-      hasEnoughInsertLength,
+      hasEnoughInsertLength && deletableIndices.length > 0,
     ],
     [
       () => ({
         kind: "move",
-        oldIndex: integer(r, 0, Math.max(0, length - 1)),
+        oldIndex: r.pick(movableIndices),
         newIndex: integer(r, 0, length),
       }),
       3,
-      hasEnoughInsertLength,
+      hasEnoughInsertLength && movableIndices.length > 0,
     ],
     [
       () => {
@@ -637,18 +753,18 @@ function arrayEdit(
     [
       () => ({
         kind: "toggle",
-        entryId: r.pick([...state.insertIds, ...state.deleteIds]),
+        entryId: r.pick(toggleableIds),
       }),
       1,
-      hasEnoughToggleLength,
+      toggleableIds.length > 0,
     ],
     [
       () => {
-        const [oldEntryId, newEntryId] = r.pick(state.moveIds);
+        const [oldEntryId, newEntryId] = r.pick(movedIds);
         return { kind: "toggleMove", oldEntryId, newEntryId };
       },
       1,
-      hasEnoughMoveLength,
+      hasEnoughMoveLength && movedIds.length > 0,
     ],
   ]);
 }

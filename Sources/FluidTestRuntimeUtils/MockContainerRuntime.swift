@@ -30,9 +30,9 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
   /// Called for every message the runtime sends, in submission order. A
   /// `MockContainerRuntimeFactory` uses it to build its shared queue.
   public var onSend: ((UnsequencedMessage) -> Void)?
-  /// Called when a disconnect drops the runtime's unsequenced messages
+  /// Called with the runtime's current client ID when a disconnect drops its unsequenced messages
   /// (`MockContainerRuntimeFactory.clearOutstandingClientMessages`).
-  public var onDropOutstanding: (() -> Void)?
+  public var onDropOutstanding: ((JSString) -> Void)?
   private var remote: [SequencedMessage] = []
 
   public init(
@@ -56,7 +56,7 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
     guard connected else { return }
     connected = false
     outbound.removeAll()
-    onDropOutstanding?()
+    onDropOutstanding?(currentClientId)
     quorum.removeMember(currentClientId)
     for (contents, metadata, _) in outbox {
       clientSequenceNumber += 1
@@ -88,6 +88,7 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
       return
     }
     mockDeltaManager.lastSequenceNumber = message.sequenceNumber
+    mockDeltaManager.minimumSequenceNumber = message.minimumSequenceNumber
     let local = message.clientId == currentClientId
     var metadata: C.LocalOpMetadata?
     if local {
@@ -141,7 +142,9 @@ public final class MockContainerRuntime<C: Channel>: IFluidDataStoreRuntime {
 /// Port of `MockDeltaManager` (test-runtime-utils/src/mockDeltas.ts), the members channels read.
 public final class MockDeltaManager: IDeltaManager {
   public var lastSequenceNumber = 0
+  public var minimumSequenceNumber = 0
   public var readOnlyInfo = ReadOnlyInfo(readonly: false)
+  public var active = true
   public init() {}
 }
 

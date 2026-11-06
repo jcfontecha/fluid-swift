@@ -15,6 +15,8 @@ extension ContainerRuntime {
     /// Ports containerRuntime.ts loadRuntime and channelCollection.ts snapshot initialization.
     /// Storage resolves git handles before entering this synchronous load path.
     public func loadSnapshot(_ snapshot: SummaryTree, factories: [ChannelFactory]) throws {
+        metadata = nil
+        summaryState.baseline = snapshot
         guard case .tree(let tree) = snapshot else { throw JSONDecodingError("unresolved snapshot") }
         if tree.tree[".metadata"] != nil {
             let metadata = try snapshot.readAndParse(".metadata")
@@ -29,7 +31,12 @@ extension ContainerRuntime {
         if tree.tree[".electedSummarizer"] != nil {
             electedSummarizerData = try snapshot.readAndParse(".electedSummarizer")
         }
-        if case .tree(let gc) = tree.tree["gc"] ?? tree.tree[".gc"] { gcSnapshot = .tree(gc) }
+        if case .tree(let gc) = tree.tree["gc"] ?? tree.tree[".gc"] {
+            gcSnapshot = .tree(gc)
+            if gc.tree["__gc_root"] != nil, try metadata.flatMap({ try field($0, "gcFeature") }) == .number(3) {
+                try garbageCollector.initializeBaseState(try SummaryTree.tree(gc).readAndParse("__gc_root"))
+            }
+        }
         if case .tree(let blobs) = tree.tree[".blobs"] {
             var ids: [JSString] = []
             var redirects: [(JSString, JSString)] = []
@@ -47,7 +54,7 @@ extension ContainerRuntime {
         }
         blobManager.attachState = .attached
         if tree.tree[".idCompressor"] != nil {
-            idCompressor = try IdCompressor.deserialize(snapshot.readAndParse(".idCompressor").asString().description, newSessionId: idCompressor.localSessionId)
+            idCompressor = try IdCompressor.deserialize(snapshot.readAndParse(".idCompressor").asString().description, newSessionId: idCompressor.localSessionId, requestedWriteVersion: idCompressorWriteVersion(oldestSupportedClient))
         }
         if tree.tree[".recentBatchInfo"] != nil {
             duplicateBatchDetector = try DuplicateBatchDetector(batchIdsFromSnapshot: snapshot.readAndParse(".recentBatchInfo"))
@@ -58,11 +65,12 @@ extension ContainerRuntime {
         for (id, value) in stores.tree.entries {
             guard case .tree(let store) = value else { throw JSONDecodingError("unresolved datastore") }
             let storeSummary = SummaryTree.tree(store)
-            _ = try storeSummary.readAndParse(".component")
+            let component = try storeSummary.readAndParse(".component")
+            summaryState.datastoreAttributes[id] = component
             guard case .tree(let channels) = store.tree[".channels"] else {
                 throw JSONDecodingError("missing datastore .channels")
             }
-            let runtime = try FluidDataStoreRuntime(id: id)
+            let runtime = try FluidDataStoreRuntime(id: id, context: self)
             for factory in factories { try runtime.register(factory) }
             try runtime.load(.tree(channels))
             try runtime.setAttachState(.attaching)

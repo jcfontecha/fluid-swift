@@ -94,13 +94,13 @@ service come later and extend this protocol.
 
 - Unsequenced messages enter a FIFO queue in submission order. A *sequence* step pops the head,
   assigns `sequenceNumber = ++seq`, and appends to the log.
-- `minimumSequenceNumber` = min over connected clients of that client's latest
+- `minimumSequenceNumber` = min over editing clients of that client's latest
   `referenceSequenceNumber` (initialized to the client's join `sequenceNumber`), matching deli.
 - Each client has a **cursor** into the log. A *deliver* step advances one client's cursor by k,
   calling `process` for each message. Clients therefore lag independently, so edits carry varied
   `referenceSequenceNumber`s — the concurrency that conflict resolution must handle.
-- *Join*: a new client is created from `summarize` of an existing client with **no pending local
-  messages**, starting at that client's cursor. Clients may join on either peer regardless of
+- *Join*: a new client is created from `summarize` of a **non-editing summarizer replica**,
+  starting at that replica's cursor. Clients may join on either peer regardless of
   which peer produced the summary.
 
 ## Checks
@@ -127,8 +127,18 @@ At a *checkpoint*, the driver sequences everything and delivers to every client,
 1. **Across replicas:** `state` of every client is deep-equal.
 2. **Against the twin:** each subject's `state`, `summarize` output and recorded events equal
    its twin's, byte-exact as JSON text.
-3. **Cross-load:** each client's summary, loaded by a fresh TS client and by a fresh Swift client,
+3. **Cross-load:** each summarizer replica's summary, loaded by a fresh TS client and by a fresh Swift client,
    yields that same `state`. The fresh clients are discarded afterwards.
+
+One summarizer per peer joins before the editors, consumes every sequenced operation,
+and is never selected for generated edits or reconnects. Read-only replicas do not
+constrain MSN, since they never submit reference updates (upstream
+`test-runtime-utils/src/mocks.ts:630,645` records these only on submission). Editor summaries still undergo
+exact twin comparison; they are not load sources. This mirrors upstream
+`packages/dds/test-dds-utils/src/ddsFuzzHarness.ts:954-959` (non-editing summarizer),
+`:733-740` (joins), and `:1502-1514` (summary source). SharedSummaryBlock has no
+sequenced edits: its existing local-only fixture writes are mirrored to every replica,
+including summarizers, so its local state remains comparable.
 
 In `--peers ts,ts` self-check runs, the second TS peer plays the subject, so the twin machinery
 itself is exercised against TS.
@@ -166,6 +176,7 @@ Sorted means JS `<` on keys, which compares UTF-16 code units.
 | pact-map | `set{key,value,valueKind?:"undefined"}` → `set`; `delete{key}` | for keys `a,b,c,0,10,constructor`: `{key, value: get, details: getWithDetails, pending: isPending, proposal: getPending}` | `{}` | `pending key`; `accepted key` |
 | shared-summary-block | `set{key,value}`, issued to every client identically | `[key, get(key)][]` for the six keys | `{}` | none |
 | shared-array | `insert{index,value}`; `delete{index}`; `move{oldIndex,newIndex}`; `toggle{entryId}`; `toggleMove{oldEntryId,newEntryId}`; `insertBulkAfter{ref?,values}`, each applied as given | `get()` | `{length, values: get(), insertIds, deleteIds, moveIds: [old,new][]}`, the upstream fuzzUtils entry bookkeeping driven by `valueChanged` | `valueChanged op, local` |
+| shared-string | `insertText{position,text,props?}`; `insertMarker{position,props}` (Tile); `removeRange{start,end}`; `annotateRange{start,end,props}`; `addInterval{collection,id,start,end,props?}`; `changeInterval{collection,id,start?,end?,props?}`; `deleteInterval{collection,id}` | `{text: UTF-16 units, positions: [{properties,marker}], collections: [{label,intervals:[{id,start,end,properties}]}]}`; labels, IDs and property keys sorted by UTF-16; absent property bags mean `{}` | `{length,collections}` | `sequenceDelta`/`maintenance operation,local,ranges`; `createIntervalCollection label`; `addInterval`/`deleteInterval label,interval,local`; `changeInterval label,interval,previous,local,slide`; `propertyChanged label,interval,delta,local` |
 | shared-signal | `notify{value}` | `{persistent:false}`; notifications are checked through events, never invented as persistent state | `{}` | `notify value, local` |
 
 TaskManager and ConsensusQueue have no public read API for their global state, so their
@@ -212,6 +223,41 @@ live replica keeps arrival order: 17 of `ts,ts` seeds 0..19 failed cross-load on
 Upstream `assertEqualConsensusRegisterCollections` compares `keys()` in order, but its key pool
 has no index keys. The canonical state is sorted; `queries.keys` holds the order against the twin.
 
+SharedString interval endpoints accept numbers, `"start"`/`"end"`, or `{pos,side}` (Before=0,
+After=1). The default generator covers all three shapes; stickiness is enabled on both peers.
+Maintenance events are compared alongside sequence and interval events, including intermediate
+split positions. `src/sequence-lifecycle.ts` separately covers turn-based rollback, stash, and
+repeated reconnect without changing the shared Session scheduler.
+
+### SharedString oracle precondition (F2, default legacy summaries)
+
+`npx tsx src/sequence-oracle-precondition.ts` reproduces a pinned 3.11.0 legacy
+summary defect using only upstream mocks and two concurrent text insertions:
+A inserts "A", B inserts "B", both converge to "BA", but B's legacy summary
+loads as "A". `sequence.ts:965-990` transforms a non-current-reference local
+ack through `sequenceDelta`; local acknowledgements emit no text delta, so the
+catchup op becomes an empty group. V1 preserves "BA" in the same test.
+The repro also creates a non-editing summarizer and proves its summary reloads as
+"BA" under both legacy and V1. Production defaults remain legacy (`sequence.ts:497,532-536`).
+Upstream explicitly keeps the attached summarizer free of edits
+(`packages/dds/test-dds-utils/src/ddsFuzzHarness.ts:954-959`) and loads joins from it
+(`:733-740`, `:1502-1514`). Session follows that precondition; it does not skip
+seeds or normalize editor summary bytes. This is not an interval fuzz exclusion. See `src/sequence-README.md` for scope and
+execution evidence. The Swift SharedString peer passes 500/500 mixed seeds with sided/sentinel
+intervals and maintenance events, 200/200 TS/TS seeds, and the planted/reverted sliding-divergence
+check. Legacy remains the default; both legacy and V1 layouts have byte-exact upstream fixtures.
+
+SharedString summaries require recursive tree nodes; the transport now accepts
+nested trees while retaining exact blob strings. Its loader uses upstream
+`MockStorage` because the flat `MockObjectStorageService.list()` returns full
+paths rather than the child-relative names expected by the scoped loader.
+A loaded runtime takes its minimum sequence from snapshot metadata, independently
+of its current cursor, so joining does not artificially advance merge-tree's
+minimum beyond the service minimum. Semantic state treats an absent property bag
+as empty; queries, events, outbound operations and summary bytes retain their
+separate exact twin checks.
+
+
 ### SharedArray convergence counterexample (expanded E1)
 
 `tsx src/oracle-array-precondition-check.ts` proves a separate problem in one TS
@@ -235,8 +281,33 @@ With the upstream fuzz model, `--dds shared-array --peers ts,ts --seeds 0..199` 
 trace processes a remote op that this suppression swallows: a remote move against a local
 pending delete (56, 121, 189), or a remote toggle against a local pending move (78).
 Comparisons are not loosened and no seeds are skipped; the reference TS client is
-read-only. SharedArray cannot be certified green until the coordinator decides how the
-harness treats this upstream behavior.
+read-only.
+
+**Decision: the generator avoids the interaction.** Upstream skips by seed
+(`packages/dds/legacy-dds/src/test/array/arrayFuzzTests.spec.ts:29-33`: seed 3, "Concurrent
+move/undo-move and delete can resurrect a deleted entry", and seeds 14 and 42, "Concurrent move
+and delete/toggle undo can restore an entry at its old position"), which does not carry over to
+this generator. Only the SharedArray generator (`arrayEdit` in `src/dds.ts`) changed; the oracle,
+every comparison and every other op stay as they were, and `src/oracle-array-precondition-check.ts`
+still reproduces the defect. The session passes `generate` a `SessionHistory` (the sequenced log,
+the unsequenced queue, and the acting client's cursor and wire ID), so a client can tell which
+operations of other clients it has not processed yet, those it would be concurrent with. A chain
+of moved entries keeps its value, so the exclusion is by value (two entries that share a value only
+make it stricter). For an entry that another client concurrently:
+
+- deletes or toggles, this client does not move or toggleMove it;
+- moves or toggleMoves, this client does not delete or toggle it;
+- moves, deletes or toggles, this client does not toggleMove it, and
+- toggleMoves, this client does not toggleMove or move it.
+
+The last two rules go beyond the documented counterexample. Seed 138 of `--peers ts,ts` with only
+the first two fails on cross-replica state: a remote move arriving while the receiver's undo-move
+(toggleMove) is pending leaves a dead entry at the end of the chain through `updateDeadEntry`, and
+later operations resolve to it. Concurrent moves with moves, deletes with deletes, and everything a
+single client does to its own entries stay enabled, as do inserts and insertBulkAfter. Entries
+created by an offline edit (made after every client drained) are not in the history, so no other
+client has an operation on them. With this generator `--dds shared-array --peers ts,ts --seeds 0..499`
+passes.
 
 ## Harness generation
 
@@ -260,6 +331,9 @@ and acceptance conditions:
   also require a non-empty array: upstream's insertIds bookkeeping can drift non-empty over
   an empty array (`ts,ts` seed 24), and its own generator would then emit a throwing
   `delete(0)`.
+  Operations on an entry that another client is concurrently moving, deleting or toggling are
+  excluded where upstream's fuzz suite skips seeds instead (see "SharedArray convergence
+  counterexample").
 
 Cell, PactMap, SharedSummaryBlock and SharedSignal have no upstream fuzz model; their
 generators cover the unit-test surface: Cell plain and handle values; PactMap set,
@@ -360,6 +434,7 @@ allocation, resubmit and pending-registration hooks; RemoteMessageProcessor take
 sequenced JSON envelopes and returns the same result shapes as TS. Loader wiring,
 legacy loader submission, historical initial-partial-stream recovery, summarizer,
 GC and datastores are not implemented by this lane. Live chunk processing is strict.
+
 
 ## Merge-tree mode (F1)
 
@@ -619,6 +694,7 @@ schema/GC services, datastore materialization, extension acquisition/version
 negotiation, and telemetry logging/latency statistics are not reimplemented by
 this routing lane. The signal counter and all wire-tracking fields are native.
 
+
 ## H5 — datastore runtime and channel contexts
 
 `npm run fuzz:datastore -- --self` runs independent real 3.11.0
@@ -770,6 +846,55 @@ verification does not use or disturb another lane's build directory. Defaults ar
 unchanged. M1 retains the equal-sequence checkpoint views before awaiting storage
 reads, so later ops cannot race a comparison against an older TS observation.
 
+## Summary generation (M3a)
+
+Run `npm run fuzz:summarize -- --self --seeds=1000`, then
+`npm run fuzz:summarize -- --seeds=1000`. The native peer builds exclusively in
+`.build/m3`. No service, npm install, upload, election loop or summary-op flow is
+needed. `--plant-divergence --seeds=1` corrupts `__gc_root` in a native response
+and must fail at seed 0; omit the flag to remove the injection.
+
+The oracle is the installed 3.11.0 **ContainerRuntime**, not an independently
+written container-tree formatter. A typed mock loader/storage context hosts real
+FluidDataStoreRuntime instances with SharedMap, SharedDirectory and SharedCounter.
+Two datastores include cyclic channel handles, root aliases, a real uploaded blob
+handle and finalized compressor allocations. One datastore is alternately reachable
+or unreferenced. Creation metadata and UUID entropy are inputs: the TS attach
+snapshot seeds both non-editing summarizer replicas, so generated wall-clock
+creation timestamps are shared rather than normalized out of summary blobs.
+
+Three real TS editor runtimes submit through the DDS public APIs. The driver owns
+their sequenced log, delivered
+identically to both summarizers. At each checkpoint it compares the complete
+summary tree, every blob string and stats as exact JSON text, and GC data and
+observable DDS state. Full generation starts from the attach snapshot; incremental
+generation starts from the acknowledged full baseline. The TS harness starts a
+real SummarizerNodeWithGC tracking pass (checked by instanceof at the private
+runtime seam); native generation uses its acked baseline and change trackers.
+Storage-owned handle materialization resolves paths against that baseline, never
+normalizing blob contents. Both generated summaries are then cross-loaded into
+the opposite implementation, with full regenerated trees, stats, GC and DDS state
+compared again. The TS self-check exercises the same load/summary/cross-load paths.
+
+Independent GC vectors use the actual upstream graph algorithm and
+GCSummaryStateTracker: graph-order mark results, cycles/missing targets, numeric,
+case and Unicode node ordering, unreferenced timestamps, no reuse before ack,
+whole-GC handle reuse after ack, and forced full generation. Native Swift Testing
+also covers transient references resetting ages, UTF-8 stats, nonmutating graph
+sorting and changes arriving between generation and acknowledgment.
+
+Native ports: ContainerSummary.swift composes runtime state; SummarizerNode.swift
+tracks changes without treating reverted content as unchanged;
+GarbageCollector.swift implements mark/reference tracking and GC summary state;
+SummaryStats.swift counts authored tree/blob/handle nodes and unreferenced bytes.
+SnapshotLoad.swift retains datastore package/root attributes and initializes GC
+and summary baselines. The container loader forwards protocol-only messages for
+last-message metadata as well as runtime operations.
+
+Scope boundaries remain M3b's election, heuristics, summarize/summaryAck op flow
+and uploads. Sweep and tombstone processing are not implemented by M3a.
+
+
 ## Presence (H9) — `@fluidframework/presence` differential
 
 `npm run fuzz:presence -- --self` runs the real `@fluid-internal/presence-runtime` 3.11.0 twice per seed and
@@ -843,3 +968,4 @@ Swift Testing ports of the upstream unit tests (`swift test --scratch-path .buil
 TimerManager, join response election (preferred, backup, fully and partially answered), `workspaceActivated`
 cases, acknowledgement, unrecognized messages, attendee lifecycle (connect, disconnect, rejoin, stale after 30 s),
 latest, latestMap, notifications, batching, and the upstream behaviors above.
+

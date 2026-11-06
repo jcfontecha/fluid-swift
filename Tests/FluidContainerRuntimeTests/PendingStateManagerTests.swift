@@ -1,6 +1,7 @@
 import Testing
 import FluidJS
 @testable import FluidContainerRuntime
+import FluidTestRuntimeUtils
 
 struct PendingStateManagerTests {
   @Test func serializedStateAndExactAck() throws {
@@ -33,7 +34,7 @@ struct PendingStateManagerTests {
     }
   }
   @Test func allocationRegeneratesOnReconnect() throws {
-    let runtime = try ContainerRuntime(sessionId: "00000000-0000-4000-8000-000000000001", clientId: "a")
+    let runtime = try ContainerRuntime(sessionId: "00000000-0000-4000-8000-000000000001", clientId: "a", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
     var wire: [[JSONValue]] = []
     runtime.onSubmit = { batch, _, _ in wire.append(batch) }
     _ = try runtime.idCompressor.generateCompressedId()

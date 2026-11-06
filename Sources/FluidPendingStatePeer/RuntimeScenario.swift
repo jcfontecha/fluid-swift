@@ -1,5 +1,6 @@
 import FluidJS
 import FluidContainerRuntime
+import FluidTestRuntimeUtils
 
 private func object(_ entries: [(JSString, JSONValue?)]) -> JSONValue {
   var value = JSObject<JSONValue>()
@@ -39,7 +40,7 @@ func runRuntime(_ scenario: JSONValue) throws -> JSONValue {
     }
   }
   for index in 0..<3 {
-    let client = try ContainerRuntime(sessionId: "\(index + 1)0000000-0000-4000-8000-000000000001", clientId: "client\(index)-0")
+    let client = try ContainerRuntime(sessionId: "\(index + 1)0000000-0000-4000-8000-000000000001", clientId: "client\(index)-0", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
     configure(client)
     clients.append(client)
   }
@@ -86,7 +87,7 @@ func runRuntime(_ scenario: JSONValue) throws -> JSONValue {
     case "reload":
       let state = try client.getLocalState(snapshotSequenceNumber: client.referenceSequenceNumber)
       output.append(object([("stash", state)]))
-      let loaded = try ContainerRuntime(sessionId: client.idCompressor.localSessionId, clientId: client.clientId, stash: state)
+      let loaded = try ContainerRuntime(sessionId: client.idCompressor.localSessionId, clientId: client.clientId, deltaManager: MockDeltaManager(), quorum: MockQuorumClients(), stash: state)
       configure(loaded)
       loaded.referenceSequenceNumber = client.referenceSequenceNumber
       loaded.connected = false

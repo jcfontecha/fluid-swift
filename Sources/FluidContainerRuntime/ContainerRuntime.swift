@@ -1,13 +1,16 @@
+import FluidDatastoreDefinitions
 import FluidDriverDefinitions
 import FluidJS
 import FluidIdCompressor
 
 /// Ports containerRuntime.ts pending/op-lifecycle integration. Datastore payloads remain opaque.
 /// The owning container serial executor must serialize all calls into this synchronous layer.
-public final class ContainerRuntime {
+public final class ContainerRuntime: IFluidParentContext {
   public let oldestSupportedClient: String
   public let createBlobPayloadPending: Bool
   public let channelCollection = ChannelCollection()
+  public let garbageCollector = GarbageCollector()
+  let summaryState = ContainerSummaryState()
   public var blobManager = BlobManager()
   public let signalTelemetryManager = SignalTelemetryManager()
   public internal(set) var metadata: JSONValue?
@@ -23,6 +26,9 @@ public final class ContainerRuntime {
   public let pendingStateManager: PendingStateManager
   public internal(set) var idCompressor: IdCompressor
   public private(set) var clientId: String
+  /// `ContainerRuntime.deltaManager`: the container context's delta manager.
+  public let deltaManager: any IDeltaManager
+  private let quorum: any IQuorumClients
   public var connected = true
   public var referenceSequenceNumber = 0
   public private(set) var clientSequenceNumber = 0
@@ -51,22 +57,31 @@ public final class ContainerRuntime {
     }
     return value
   }()
-  public init(sessionId: String, clientId: String, stash: JSONValue? = nil, oldestSupportedClient: String? = nil, minVersionForCollab: String? = nil, runtimeOptions: JSONValue? = nil) throws {
+  public init(sessionId: String, clientId: String, deltaManager: any IDeltaManager, quorum: any IQuorumClients, stash: JSONValue? = nil, oldestSupportedClient: String? = nil, minVersionForCollab: String? = nil, runtimeOptions: JSONValue? = nil) throws {
     try require(oldestSupportedClient == nil || minVersionForCollab == nil, "oldestSupportedClient and minVersionForCollab cannot both be supplied")
     let version = oldestSupportedClient ?? minVersionForCollab ?? "2.0.0"
     try validateMinimumVersionForCollab(version)
     if let runtimeOptions { try validateRuntimeOptions(version, options: runtimeOptions) }
+    metadata = try initialSummaryMetadata(minVersionForCollab: version, runtimeOptions: runtimeOptions)
     self.oldestSupportedClient = version
     createBlobPayloadPending = try runtimeOptions.flatMap { try field($0, "createBlobPayloadPending") } == .bool(true)
     self.clientId = clientId
+    // deltaManagerProxies.ts: DeltaManagerPendingOpsProxy forwards minimumSequenceNumber unchanged.
+    self.deltaManager = deltaManager
+    self.quorum = quorum
     duplicateBatchDetector = try DuplicateBatchDetector()
     if let stash {
       pendingStateManager = try PendingStateManager(stashedLocalState: stash.member("pending"))
-      idCompressor = try IdCompressor.deserialize(stash.member("pendingIdCompressorState").asString().description)
+      idCompressor = try IdCompressor.deserialize(stash.member("pendingIdCompressorState").asString().description, requestedWriteVersion: idCompressorWriteVersion(version))
       try blobManager.restorePendingBlobs(field(stash, "pendingAttachmentBlobs"))
     } else {
       pendingStateManager = PendingStateManager()
-      idCompressor = try IdCompressor(sessionId)
+      idCompressor = try IdCompressor(sessionId, writeVersion: idCompressorWriteVersion(version))
+    }
+    channelCollection.onDatastoreChannelDirty = { [weak self] store, channel in
+      guard let self else { return }
+      self.summaryState.node(store).recordChange()
+      self.summaryState.node(JSString(store.description + "/" + channel.description)).recordChange()
     }
     channelCollection.onSubmitDatastoreSignal = { [weak self] id, type, content, target in
       guard let self else { throw JSONDecodingError("container host released") }
@@ -77,6 +92,8 @@ public final class ContainerRuntime {
       try self.submit(object([("type", string("blobAttach"))]), metadata: metadata)
     }
   }
+  /// `ContainerRuntime.getQuorum`.
+  public func getQuorum() -> any IQuorumClients { quorum }
   public func uploadBlob(_ bytes: [UInt8], completion: @escaping (BlobHandle) throws -> Void) throws {
     try require(!closed, "runtime closed")
     try blobManager.createBlob(bytes, payloadPending: createBlobPayloadPending, completion: completion)
@@ -84,6 +101,7 @@ public final class ContainerRuntime {
   public func submit(_ runtimeOp: JSONValue, localOpMetadata: JSONValue? = nil, metadata: JSONValue? = nil) throws {
     try require(!closed, "runtime closed")
     try require(!pendingStateManager.isApplyingStashedOps, "cannot submit while applying stash")
+    try recordSummaryChange(runtimeOp)
     try outbox.submit(.init(runtimeOp: runtimeOp, referenceSequenceNumber: referenceSequenceNumber, metadata: metadata, localOpMetadata: localOpMetadata), blobAttach: runtimeOp.member("type") == string("blobAttach"))
   }
   public func flush(batchId: String? = nil, staged: Bool = false) throws {
@@ -141,6 +159,7 @@ public final class ContainerRuntime {
     }
   }
   public func process(_ message: JSONValue) throws -> JSONValue? {
+    try recordSummaryMessage(message)
     referenceSequenceNumber = max(referenceSequenceNumber, try message.member("sequenceNumber").asInt())
     guard let inbound = try remoteMessageProcessor.process(message) else { return nil }
     if let start = try field(inbound, "batchStart"),
@@ -207,6 +226,7 @@ extension ContainerRuntime {
     let contents = try messagesContent.map { try field($0, "contents") ?? .null }
     switch ContainerMessageType(rawValue: type) {
     case .fluidDataStoreOp, .attach, .alias:
+      for content in contents { try recordSummaryChange(object([("type", string(type)), ("contents", content)])) }
       try channelCollection.processMessages(envelope: envelope, messagesContent: messagesContent, local: local)
     case .blobAttach:
       try blobManager.processBlobAttachMessage(envelope.member("metadata"))

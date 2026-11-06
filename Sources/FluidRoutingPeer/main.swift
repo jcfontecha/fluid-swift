@@ -1,6 +1,7 @@
 import FluidJS
 import FluidContainerRuntime
 import Foundation
+import FluidTestRuntimeUtils
 
 func obj(_ entries: [(JSString, JSONValue?)]) -> JSONValue {
   var object = JSObject<JSONValue>()
@@ -40,7 +41,7 @@ func run(_ scenario: JSONValue) throws -> JSONValue {
     return manager
   }
   var blobs = try manager()
-  let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self")
+  let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
   runtime.extensions = ["presence"]
   runtime.channelCollection.contexts = ["a", "b", ""]
   runtime.channelCollection.deleted = ["deleted"]

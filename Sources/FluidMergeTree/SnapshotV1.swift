@@ -25,7 +25,7 @@ public final class SnapshotV1 {
       let removals = segment.removals.filter { $0.sequence != -1 }
       if segment.insertion.sequence <= client.minimumSequence && removals.isEmpty {
         if let previous = candidate, previous.canAppend(segment),
-          previous.properties == segment.properties,
+          matchProperties(previous.properties, segment.properties),
           let lhs = previous.text, let rhs = segment.text
         {
           previous.text = JSString(utf16: lhs.utf16 + rhs.utf16)

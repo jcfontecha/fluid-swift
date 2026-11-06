@@ -4,8 +4,6 @@ import FluidRegisterCollection
 import FluidTestRuntimeUtils
 import Testing
 
-extension MockContainerRuntime: LastSequenceNumberRuntime {}
-
 /// One observed event, in journal order.
 private struct RegisterEvent: Equatable {
   let name: String

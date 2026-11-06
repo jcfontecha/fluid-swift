@@ -3,12 +3,13 @@ import FluidDatastoreDefinitions
 import FluidDriverDefinitions
 import FluidJS
 import FluidSharedObjectBase
+import FluidTestRuntimeUtils
 import Testing
 
 @Test func counterStashAndRollback() throws {
   let counter = SharedCounter(id: "c")
   var submissions: [(JSONValue, Int)] = []
-  let runtime = TestDataStoreRuntime()
+  let runtime = MockFluidDataStoreRuntime(clientId: nil)
   counter.connect(runtime) { submissions.append(($0, $1)) }
   let op = try JSON.parse(#"{"type":"increment","incrementAmount":7}"#)
   try counter.applyStashedOp(op)
@@ -57,7 +58,9 @@ private final class BunchProbe: SharedObject<Int> {
   #expect(probe.order == ["pre", "pre", "core:2"])
 }
 
-/// A datastore runtime that never connected; channels hold it weakly.
-private final class TestDataStoreRuntime: IFluidDataStoreRuntime {
-  var clientId: JSString? { nil }
+@Test func defaultRollbackThrowsUnsupportedDDSFeature() throws {
+  let probe = BunchProbe(id: "probe")
+  let error = try #require(throws: LoggingError.self) { try probe.rollback(.null, localOpMetadata: 0) }
+  #expect(error.message == "Unsupported DDS feature")
+  #expect(error.props["featureName"] == .string("rollback"))
 }

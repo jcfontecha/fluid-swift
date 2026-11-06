@@ -1,13 +1,14 @@
 import FluidDriverDefinitions
 import FluidJS
 import FluidMap
+import FluidTestRuntimeUtils
 import Testing
 
 @Test func mapPendingClearAndRollback() throws {
   let map = SharedMap(id: "map")
   try map.set("a", .number(1))
   var submissions: [(JSONValue, PendingLocalOpMetadata)] = []
-  let runtime = TestDataStoreRuntime(clientId: "local")
+  let runtime = MockFluidDataStoreRuntime(clientId: "local")
   map.connect(runtime) { submissions.append(($0, $1)) }
   try map.clear()
   try map.set("a", .number(2))

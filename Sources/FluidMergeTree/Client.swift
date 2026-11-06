@@ -2,24 +2,63 @@ import FluidJS
 
 /// Synchronous segment engine. Callers serialize access on their container executor.
 public final class Client {
-  public let id: JSString
-  let referencesCanSlideToEndpoint: Bool
+  public private(set) var id: JSString
+  public private(set) var collaborating: Bool
+  public var pendingOperationCount: Int { pendingMessages.count }
+  public var latestLocalSequence: Int { localSequence }
+  public func nextLocalSequence() -> Int {
+    localSequence += 1
+    return localSequence
+  }
+  public var referencesCanSlideToEndpoint: Bool
   public private(set) var currentSequence = 0
   public private(set) var minimumSequence = 0
+  public internal(set) var normalizingSquashed = false
+  public var beforeNormalize: (() throws -> Void)?
+  public internal(set) var rollingBack = false
+  public var maintenance: ((MergeTreeMaintenanceType, [MergeTreeDeltaSegment], JSONValue?) -> Void)?
+  public var delta: ((JSONValue, [MergeTreeDeltaSegment], Bool) throws -> Void)?
   let mergeTree = MergeTree()
   let startOfTree = Marker(refType: 0, insertion: Stamp(sequence: 0, client: ""))
   let endOfTree = Marker(refType: 0, insertion: Stamp(sequence: 0, client: ""))
   public var segments: ContiguousArray<BaseSegment> { mergeTree.segments }
   var localSequence = 0
-  var lastNormalization: (sequence: Int, localSequence: Int)?
+  var lastNormalization: (sequence: Int, localSequence: Int, squash: Bool)?
   var pending: [SegmentGroup] = []
   var pendingHead = 0
   var pendingMessages: [Int] = []
 
-  public init(id: JSString, referencesCanSlideToEndpoint: Bool = false) {
+  public init(id: JSString, referencesCanSlideToEndpoint: Bool = false, collaborating: Bool = true) {
     self.id = id
+    self.collaborating = collaborating
     self.referencesCanSlideToEndpoint = referencesCanSlideToEndpoint
+    startOfTree.endpointType = .start
+    endOfTree.endpointType = .end
+    mergeTree.maintenance = { [weak self] type, segments in self?.maintenance?(type, segments, nil) }
   }
+  /// Ports client.ts startOrUpdateCollaboration. Detached segments already have universal stamps.
+  public func startOrUpdateCollaboration(_ clientId: JSString) {
+    if id != clientId {
+      // TS retains one local short-client identity across reconnecting long IDs.
+      // Wire-facing stamps use long IDs here, so retag still-local stamps before changing identity.
+      for segment in segments {
+        let before = segment.clone()
+        var changed = false
+        if segment.insertion.sequence == -1 && segment.insertion.client == id {
+          segment.insertion.client = clientId
+          changed = true
+        }
+        for index in segment.removals.indices where segment.removals[index].sequence == -1 && segment.removals[index].client == id {
+          segment.removals[index].client = clientId
+          changed = true
+        }
+        if changed { mergeTree.update(segment, before: before) }
+      }
+    }
+    id = clientId
+    collaborating = true
+  }
+
   func loadHeader(_ segments: [BaseSegment], minimum: Int, sequence: Int) {
     mergeTree.reload(segments)
     minimumSequence = minimum
@@ -29,7 +68,7 @@ public final class Client {
     let sequence = try message.member("sequenceNumber").asInt()
     let sender = try message.member("clientId").asString()
     let reference = try message.member("referenceSequenceNumber").asInt()
-    guard sequence > currentSequence, reference >= minimumSequence, reference < sequence else {
+    guard sequence >= currentSequence, sequence > minimumSequence, reference >= minimumSequence, reference < sequence else {
       throw JSONDecodingError("invalid catchup sequence window")
     }
     func replay(_ operation: JSONValue) throws {
@@ -46,6 +85,10 @@ public final class Client {
     currentSequence = sequence
     try advanceMinimum(to: message.member("minimumSequenceNumber").asInt())
   }
+  public func getPosition(_ segment: BaseSegment) -> Int {
+    mergeTree.position(of: segment, perspective: .local)
+  }
+
   public var length: Int {
     mergeTree.root.localLength
   }
@@ -84,12 +127,16 @@ public final class Client {
       let end = try operation.member("pos2").asInt()
       guard start < length, end > start else { throw JSONDecodingError("RangeOutOfBounds") }
     }
+    if !collaborating {
+      try apply(operation, perspective: .local, stamp: Stamp(sequence: 0, client: ""))
+      return operation
+    }
     localSequence += 1
     let stamp = Stamp(sequence: -1, client: id, localSequence: localSequence)
     let group = SegmentGroup(localSequence: localSequence, operation: operation)
-    try apply(operation, perspective: .local, stamp: stamp, group: group)
     pending.append(group)
     pendingMessages.append(localSequence)
+    try apply(operation, perspective: .local, stamp: stamp, group: group)
     return operation
   }
   public func process(
@@ -117,6 +164,7 @@ public final class Client {
       return
     }
     var removed: [BaseSegment] = []
+    var acknowledged: [MergeTreeDeltaSegment] = []
     if sender == id {
       guard pendingHead < pending.count else {
         throw JSONDecodingError("ack without pending operation")
@@ -125,6 +173,7 @@ public final class Client {
       let local = group.localSequence
       pendingHead += 1
       for segment in group.segments {
+        acknowledged.append(MergeTreeDeltaSegment(segment: segment))
         let before = segment.clone()
         group.unlink(segment)
         mergeTree.schedule(segment, sequence: sequence, current: currentSequence)
@@ -154,8 +203,17 @@ public final class Client {
         stamp: Stamp(sequence: sequence, client: sender))
     }
     slideReferences(on: removed)
+    if sender == id { maintenance?(.acknowledged, acknowledged, operation) }
     mergeTree.zamboni(minimum: minimumSequence)
   }
+  public func updateSequenceNumbers(minimum: Int, sequence: Int) throws {
+    guard sequence >= currentSequence, minimum >= minimumSequence, minimum <= sequence else {
+      throw JSONDecodingError("invalid sequence window")
+    }
+    currentSequence = sequence
+    try advanceMinimum(to: minimum)
+  }
+
   public func advanceMinimum(to sequence: Int) throws {
     guard sequence >= minimumSequence, sequence <= currentSequence else {
       throw JSONDecodingError("invalid minimum sequence")
@@ -170,7 +228,10 @@ public final class Client {
   ) throws {
     let removed = try mergeTree.apply(
       operation, perspective: perspective, stamp: stamp, group: group,
-      minimumSequence: minimumSequence, currentSequence: currentSequence)
+      minimumSequence: minimumSequence, currentSequence: currentSequence,
+      delta: { [self] segments in
+        try delta?(operation, segments, stamp.sequence == -1 || !collaborating)
+      }, slideBeforeDelta: { [self] segments in slideReferences(on: segments) })
     slideReferences(on: removed)
   }
 }

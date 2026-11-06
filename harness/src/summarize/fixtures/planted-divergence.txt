@@ -1,0 +1,4 @@
+Command: npm run fuzz:summarize -- --seeds=1 --plant-divergence
+Expected and observed: exit 1, AssertionError: summary seed 0.
+Mutation: the native response's __gc_root key becomes __wrong_gc_root.
+The normal command omits the injection; no persisted source mutation remains.

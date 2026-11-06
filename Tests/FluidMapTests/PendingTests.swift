@@ -1,11 +1,12 @@
 import FluidDriverDefinitions
 import FluidJS
 import FluidMap
+import FluidTestRuntimeUtils
 import Testing
 
 @Test func mapSummaryExcludesOptimisticOverlay() throws {
   let map = SharedMap(id: "map")
-  let runtime = TestDataStoreRuntime(clientId: "local")
+  let runtime = MockFluidDataStoreRuntime(clientId: "local")
   map.connect(runtime) { _, _ in }
   try map.set("pending", .number(7))
   #expect(map.get("pending") == .number(7))
@@ -15,7 +16,7 @@ import Testing
 @Test func mapRollbackRevealsInterveningRemoteValue() throws {
   let map = SharedMap(id: "map")
   var saved: (JSONValue, PendingLocalOpMetadata)?
-  let runtime = TestDataStoreRuntime(clientId: "local")
+  let runtime = MockFluidDataStoreRuntime(clientId: "local")
   map.connect(runtime) { saved = ($0, $1) }
   try map.set("key", .number(7))
   let remote = try SequencedMessage(

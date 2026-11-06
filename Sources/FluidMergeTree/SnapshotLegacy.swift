@@ -21,7 +21,7 @@ public final class SnapshotLegacy {
       segment.properties = segment.propertyManager.getAtSeq(segment.properties)
       if segment.properties?.isEmpty == true { segment.properties = nil }
       if let previous = candidate, previous.canAppend(segment),
-        previous.properties == segment.properties,
+        matchProperties(previous.properties, segment.properties),
         let lhs = previous.text, let rhs = segment.text
       {
         previous.text = JSString(utf16: lhs.utf16 + rhs.utf16)

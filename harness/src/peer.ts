@@ -15,6 +15,7 @@ import {
   MockContainerRuntimeFactory,
   MockFluidDataStoreRuntime,
   MockSharedObjectServices,
+  MockStorage,
 } from "@fluidframework/test-runtime-utils/internal";
 import { FlushMode } from "@fluidframework/runtime-definitions/internal";
 import type { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/internal";
@@ -109,6 +110,10 @@ async function handle(request: Request): Promise<unknown> {
     if (p.summary === null && p.sequenceNumber !== 0)
       throw new Error("Empty client must join at zero");
     const store = new MockFluidDataStoreRuntime({ clientId: p.clientId });
+    if (p.ddsType === factories["shared-string"].type) {
+      store.options.intervalStickinessEnabled = true;
+      store.options.mergeTreeEnableObliterate = false;
+    }
     store.idCompressor = undefined; // The mock creates one by default, even without an override.
     const factory = new CaptureFactory(); // Default is Immediate, without grouped batching.
     for (const id of p.members ?? [p.clientId])
@@ -126,18 +131,35 @@ async function handle(request: Request): Promise<unknown> {
         minimumSequenceNumber: p.sequenceNumber,
       },
     );
+    if (p.ddsType === factories["shared-string"].type && p.summary !== null) {
+      const content = p.summary.tree.content;
+      const header = content?.type === 1 ? content.tree.header : undefined;
+      if (header?.type !== 2) throw new Error("Missing sequence content header");
+      const metadata = z.object({
+        headerMetadata: z.object({
+          minSequenceNumber: z.number().int().optional(),
+          sequenceNumber: z.number().int(),
+        }),
+      }).parse(JSON.parse(header.content)).headerMetadata;
+      runtime.deltaManager.minimumSequenceNumber = metadata.minSequenceNumber ?? metadata.sequenceNumber;
+    }
     const services =
       p.summary === null
         ? new MockSharedObjectServices({})
         : MockSharedObjectServices.createFromSummary(p.summary);
-    services.deltaConnection = store.createDeltaConnection();
+    // MockObjectStorageService.list returns full paths; sequence's scoped loader needs
+    // child-relative names, supplied by the upstream tree-backed MockStorage.
+    const channelServices = p.ddsType === factories["shared-string"].type && p.summary !== null
+      ? { objectStorage: MockStorage.createFromSummary(p.summary), deltaConnection: store.createDeltaConnection() }
+      : services;
+    if (channelServices === services) services.deltaConnection = store.createDeltaConnection();
     const name = names.find((name) => factories[name].type === p.ddsType);
     if (!name) throw Error(`Unknown DDS ${p.ddsType}`);
     const adapter = await createAdapter(
       name,
       store,
       p.channelId,
-      services,
+      channelServices,
       p.summary !== null,
     );
     if (factory.drain().length !== 0)
@@ -163,10 +185,8 @@ async function handle(request: Request): Promise<unknown> {
       c.runtime.rollback?.();
       return { outbound: c.factory.drain() };
     case "stash":
-      c.store.applyStashedOp({
-        address: c.adapter.channel.id,
-        contents: request.params.contents,
-      });
+      // MockFluidDataStoreRuntime forwards this value directly to the channel delta connection.
+      await c.store.applyStashedOp(request.params.contents);
       return { outbound: c.factory.drain() };
     case "disconnect":
       c.runtime.connected = false;

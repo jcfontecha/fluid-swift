@@ -6,12 +6,13 @@ import FluidContainerRuntime
 import FluidDatastore
 import FluidMap
 import FluidStatic
+import FluidTestRuntimeUtils
 
 struct M2SnapshotTests {
     @Test func loadsCapturedTypeScriptSummary() throws {
         let url = try #require(Bundle.module.url(forResource: "m2-summary", withExtension: "json", subdirectory: "Fixtures"))
         let snapshot = try SummaryTree(json: JSON.parse(String(contentsOf: url, encoding: .utf8)))
-        let runtime = try ContainerRuntime(sessionId: "00000000-0000-4000-8000-000000000001", clientId: "test")
+        let runtime = try ContainerRuntime(sessionId: "00000000-0000-4000-8000-000000000001", clientId: "test", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
         try runtime.loadSnapshot(snapshot, factories: [
             ChannelFactory(SharedMap.self, snapshotFormatVersion: "0.2"),
             ChannelFactory(SharedDirectory.self, snapshotFormatVersion: "0.1"),
@@ -32,7 +33,7 @@ extension M2SnapshotTests {
     }
 
     private func runtime() throws -> ContainerRuntime {
-        try ContainerRuntime(sessionId: "00000000-0000-4000-8000-000000000001", clientId: "test")
+        try ContainerRuntime(sessionId: "00000000-0000-4000-8000-000000000001", clientId: "test", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
     }
 
     private var factories: [ChannelFactory] {

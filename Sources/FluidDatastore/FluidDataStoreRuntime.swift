@@ -23,6 +23,9 @@ public struct DatastoreMessage {
 /// Ports packages/runtime/datastore/src/dataStoreRuntime.ts on the container's synchronous executor.
 public final class FluidDataStoreRuntime: IFluidDataStoreRuntime {
     public let id: JSString
+    /// `deltaManagerInternal`, read from the hosting context at construction.
+    public let deltaManager: any IDeltaManager
+    private let quorum: any IQuorumClients
     public var clientId: JSString? = "client"
     public private(set) var connected = true
     public private(set) var attachState: AttachState = .detached
@@ -54,14 +57,19 @@ public final class FluidDataStoreRuntime: IFluidDataStoreRuntime {
         return try createChannel(JSString(utf16: ContiguousArray([95] + encoded)), type: type, generated: true)
     }
     public var onSubmit: (DatastoreMessage) -> Void = { _ in }
+    public var onChannelDirty: (JSString) -> Void = { _ in }
     public var onSignal: (JSONValue, Bool) -> Void = { _, _ in }
     public var onSubmitSignal: (JSString, JSONValue, JSString?) throws -> Void = { _, _, _ in }
     public var onOp: (JSONValue) -> Void = { _ in }
     public var onBunch: (JSString, Int) -> Void = { _, _ in }
     public var absolutePath: JSString { id.length == 0 ? "" : datastorePath("", id) }
-    public init(id: JSString) throws {
+    public func getQuorum() -> any IQuorumClients { quorum }
+    public init(id: JSString, context: any IFluidParentContext) throws {
         try check(!id.utf16.contains(47), "0x30e: datastore id cannot contain slashes")
         self.id = id
+        // The parent delta manager forwards MSN unchanged (container-runtime/deltaManagerProxies.ts).
+        deltaManager = context.deltaManager
+        quorum = context.getQuorum()
     }
     public func register(_ factory: ChannelFactory) throws {
         factories[try factory.attributes.member("type").asString()] = factory
@@ -138,6 +146,7 @@ public final class FluidDataStoreRuntime: IFluidDataStoreRuntime {
         onSubmit(DatastoreMessage(type: type, content: content, metadata: metadata))
     }
     func submitChannelOp(_ address: JSString, _ content: JSONValue, _ metadata: any ChannelOpMetadata) {
+        onChannelDirty(address)
         submit("op", dsObject([("address", .string(address)), ("contents", content)]), metadata)
     }
     public func processMessages(envelope: JSONValue, messages: [ChannelMessage], local: Bool) throws {

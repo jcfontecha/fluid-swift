@@ -9,6 +9,7 @@ public final class ChannelCollection {
   var datastores: [JSString: FluidDataStoreRuntime] = [:]
   var datastoreOrder: [JSString] = []
   public var onSubmitDatastoreSignal: (JSString, JSString, JSONValue, JSString?) throws -> Void = { _, _, _, _ in }
+  public var onDatastoreChannelDirty: (JSString, JSString) -> Void = { _, _ in }
   var datastoreOutbound: [(JSString, DatastoreMessage)] = []
   var datastoreMetadata: [Int: any ChannelOpMetadata] = [:]
   var nextDatastoreMetadata = 0

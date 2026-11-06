@@ -3,10 +3,12 @@ import FluidCounter
 import FluidDatastoreDefinitions
 import FluidDriverDefinitions
 import FluidJS
+import FluidLegacyDDS
 import FluidMap
 import FluidOrderedCollection
 import FluidPactMap
 import FluidRegisterCollection
+import FluidSequence
 import FluidSharedSummaryBlock
 import FluidTaskManager
 import FluidTestRuntimeUtils
@@ -61,7 +63,12 @@ final class RuntimeClient<C: Channel>: PeerClient {
     try runtime.reconnect(clientId: id)
   }
   func takeOutbound() -> [UnsequencedMessage] { runtime.takeOutbound() }
-  func process(_ message: SequencedMessage) throws { try runtime.process(message) }
+  func process(_ message: SequencedMessage) throws {
+    // harness/src/peer.ts supplies timestamp=0 before invoking the TS mock runtime.
+    var fields = try message.json.asObject()
+    if fields["timestamp"] == nil { fields["timestamp"] = .number(0) }
+    try runtime.process(SequencedMessage(json: .object(fields)))
+  }
   func edit(_ value: JSONValue) throws { try editChannel(runtime.channel, value) }
   func state() throws -> JSONValue { try stateChannel(runtime.channel) }
   func queries() throws -> JSONValue { try queriesChannel(runtime.channel) }
@@ -70,7 +77,7 @@ final class RuntimeClient<C: Channel>: PeerClient {
 final class Peer {
   private var clients: [JSString: any PeerClient] = [:]
   private let ddsTypes: [JSString] = [
-    SharedCounter.type, SharedMap.type,
+    SharedString.type, SharedCounter.type, SharedMap.type,
     SharedDirectory.type, "https://graph.microsoft.com/types/cell",
     "https://graph.microsoft.com/types/task-manager",
     "https://graph.microsoft.com/types/consensus-register-collection",
@@ -131,6 +138,11 @@ final class Peer {
           client?.events.append(.array([.string("incremented"), .number(amount), .number(value)]))
         }
         clients[id] = client
+      } else if type == SharedString.type {
+        let channel = summary == .null ? SharedString(id: channelId)
+          : try SharedString.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = sharedStringAdapter(MockContainerRuntime(clientId: id, channel: channel,
+          lastSequenceNumber: seq, flushMode: mode))
       } else if type == SharedMap.type {
         let c =
           summary == .null
@@ -152,19 +164,19 @@ final class Peer {
           : try SharedCell.load(id: channelId, summary: SummaryTree(json: summary))
         clients[id] = cellAdapter(
           MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
-      } else if type == ConsensusRegisterCollection.type {
-        let c =
-          summary == .null
-          ? ConsensusRegisterCollection(id: channelId)
-          : try ConsensusRegisterCollection.load(id: channelId, summary: SummaryTree(json: summary))
-        clients[id] = registerCollectionAdapter(
-          MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
       } else if type == SharedSummaryBlockClass.type {
         let c =
           summary == .null
           ? SharedSummaryBlockClass(id: channelId)
           : try SharedSummaryBlockClass.load(id: channelId, summary: SummaryTree(json: summary))
         clients[id] = sharedSummaryBlockAdapter(
+          MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
+      } else if type == ConsensusRegisterCollection.type {
+        let c =
+          summary == .null
+          ? ConsensusRegisterCollection(id: channelId)
+          : try ConsensusRegisterCollection.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = registerCollectionAdapter(
           MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
       } else if type == PactMapClass.type {
         let c =
@@ -193,6 +205,21 @@ final class Peer {
           MockContainerRuntime(
             clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode,
             quorum: try initialQuorum(params)), clientId: id)
+      } else if type == SharedArrayClass.type {
+        let c =
+          summary == .null
+          ? SharedArrayClass(id: channelId)
+          : try SharedArrayClass.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = sharedArrayAdapter(
+          MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode),
+          clientId: id)
+      } else if type == SharedSignalClass.type {
+        let c =
+          summary == .null
+          ? SharedSignalClass(id: channelId)
+          : try SharedSignalClass.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = sharedSignalAdapter(
+          MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
       } else {
         throw PeerError(description: "not implemented: \(type)")
       }

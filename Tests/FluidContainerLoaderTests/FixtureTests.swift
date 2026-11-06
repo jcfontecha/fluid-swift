@@ -1,3 +1,4 @@
+import FluidDatastoreDefinitions
 import FluidDriverBase
 import FluidDriverDefinitions
 import FluidJS
@@ -41,7 +42,7 @@ private func replacing(_ message: ISequencedDocumentMessage, _ key: JSString, _ 
 @Test func capturedProposalLifecyclePublishesBeforeApprovalAndRemovesAfterEvent() throws {
     let messages = try capturedMessages()
     let handler = try emptyProtocol()
-    let delta = DeltaManager()
+    let delta = DeltaManager(active: { true })
     var order: [String] = []
     handler.quorum.events.on { event in
         switch event {
@@ -112,7 +113,7 @@ func deltaValidationRejectsCorruptedCaptures(_ corruption: String) throws {
     let messages = try capturedMessages()
     let original = try #require(messages.first { $0.type == "op" })
     let handler = try emptyProtocol()
-    let delta = DeltaManager()
+    let delta = DeltaManager(active: { true })
     for message in messages where message.sequenceNumber < original.sequenceNumber {
         try delta.validate(message, protocolHandler: handler, clientId: nil)
         _ = try handler.processMessage(message)
@@ -159,7 +160,7 @@ func deltaValidationRejectsCorruptedCaptures(_ corruption: String) throws {
 
 @Test func duplicateFingerprintIgnoresContentsButRejectsChangedTimestamp() throws {
     let message = try #require(capturedMessages().first)
-    let delta = DeltaManager()
+    let delta = DeltaManager(active: { true })
     delta.enqueueMessages([message])
     let entry = try #require(try delta.nextMessage(sequenceNumber: 0))
     delta.recordProcessed(entry)
@@ -196,4 +197,33 @@ func deltaValidationRejectsCorruptedCaptures(_ corruption: String) throws {
     heuristic.notifyMessageProcessed(op)
     let wantsNoop4 = heuristic.takeWantsNoop()
     #expect(!wantsNoop4)
+}
+
+@Test func quorumClientsViewReportsMembersAndEventsToDatastores() throws {
+    let handler = try emptyProtocol()
+    let view = QuorumClientsView(handler.quorum.clients)
+    var added: [JSString] = []
+    var removed: [JSString] = []
+    let token = view.onAddMember { clientId, _ in added.append(clientId) }
+    view.onRemoveMember { clientId in removed.append(clientId) }
+    let delta = DeltaManager(active: { true })
+    for message in try capturedMessages() {
+        try delta.validate(message, protocolHandler: handler, clientId: nil)
+        _ = try handler.processMessage(message)
+    }
+    #expect(!added.isEmpty)
+    let members = handler.quorum.getMembers()
+    #expect(Array(view.getMembers().keys).count == members.count)
+    for member in members { #expect(view.getMember(member.clientId) == member.client.json) }
+    view.off(token)
+    #expect(removed.count == (try capturedMessages().filter { $0.type == "leave" }.count))
+}
+
+@Test func deltaManagerReportsActiveFromItsConnection() {
+    var connected = false
+    let delta = DeltaManager(active: { connected })
+    #expect(!delta.active)
+    connected = true
+    #expect(delta.active)
+    #expect(delta.readOnlyInfo == ReadOnlyInfo(readonly: false))
 }

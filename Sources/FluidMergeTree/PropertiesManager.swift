@@ -15,11 +15,14 @@ public struct PropertiesManager: Sendable {
 
   public init() {}
 
+  @discardableResult
   public mutating func handleProperties(
     _ updates: JSObject<JSONValue>, properties: inout JSObject<JSONValue>?, stamp: Stamp
-  ) {
+  ) -> JSObject<JSONValue> {
+    var deltas = JSObject<JSONValue>()
     var values = properties ?? JSObject<JSONValue>()
     for (key, value) in updates.entries {
+      let previous = values[key] ?? .null
       var history = changes[key] ?? History(consensus: values[key] ?? .null)
       if stamp.sequence == -1 {
         history.local.append(Change(localSequence: stamp.localSequence ?? 0, value: value))
@@ -29,10 +32,12 @@ public struct PropertiesManager: Sendable {
         history.consensus = value
       }
       let current = history.local.last?.value ?? history.consensus
+      if stamp.sequence == -1 || history.local.isEmpty || current != previous { deltas[key] = previous }
       values[key] = current == .null ? nil : current
       changes[key] = history.local.isEmpty ? nil : history
     }
     properties = values
+    return deltas
   }
 
   public mutating func ack(localSequence: Int) {

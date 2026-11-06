@@ -275,6 +275,17 @@ open class ConsensusOrderedCollection<Storage: IOrderedCollection>: SharedObject
     }
   }
 
+  /// `isActive`: `this.runtime.connected && this.deltaManager.active`.
+  private func isActive() throws -> Bool {
+    guard connected else {
+      return false
+    }
+    guard let runtime else {
+      throw SharedObjectError("ConsensusOrderedCollection is connected but has no runtime")
+    }
+    return runtime.deltaManager.active
+  }
+
   /// `complete`: an attached complete is applied when sequenced. If the client is not connected, the job was
   /// already released to the queue, as other clients observed, so nothing is sent.
   private func complete(_ acquireId: JSString, onSettled: @escaping Settled) throws {
@@ -283,8 +294,7 @@ open class ConsensusOrderedCollection<Storage: IOrderedCollection>: SharedObject
       settle(onSettled)
       return
     }
-    // TS also checks `deltaManager.active`, which IDeltaManager does not expose. The mock always reports it active.
-    guard connected else {
+    guard try isActive() else {
       settle(onSettled)
       return
     }
@@ -302,7 +312,7 @@ open class ConsensusOrderedCollection<Storage: IOrderedCollection>: SharedObject
       return
     }
     // Not connected: the job was already released to the queue, as other clients observed.
-    guard connected else {
+    guard try isActive() else {
       return
     }
     try submitLocalMessage(releaseOp(acquireId), ConsensusLocalOpMetadata(deserializedValue: nil) { _ in })

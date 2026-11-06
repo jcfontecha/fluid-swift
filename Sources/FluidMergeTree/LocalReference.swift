@@ -21,7 +21,7 @@ public final class LocalReference {
   func retainDetachedSegment() { retainedSegment = weakSegment }
   public internal(set) var offset: Int
   public let trackingCollection = TrackingGroupCollection()
-  public let refType: Int
+  public private(set) var refType: Int
   public let slidingPreference: SlidingPreference
   public let canSlideToEndpoint: Bool
   public var properties: JSObject<JSONValue>?
@@ -43,5 +43,25 @@ public final class LocalReference {
     self.canSlideToEndpoint = canSlideToEndpoint
     self.segment = segment
   }
+  private init(transient reference: LocalReference) {
+    offset = reference.offset
+    refType = (reference.refType & ~(64 | 128)) | 256
+    slidingPreference = reference.slidingPreference
+    canSlideToEndpoint = reference.canSlideToEndpoint
+    properties = reference.properties
+    segment = reference.segment
+  }
+
+  public func transientClone() -> LocalReference { LocalReference(transient: self) }
+
+  public func setReferenceType(_ value: Int) throws {
+    guard [64, 128, 256].filter({ value & $0 != 0 }).count <= 1 else {
+      throw JSONDecodingError("Reference types can only be one of Transient, SlideOnRemove, and StayOnRemove")
+    }
+    let current = segment
+    refType = value
+    retainedSegment = includes(256) ? current : nil
+  }
+
   public func includes(_ flag: Int) -> Bool { refType & flag != 0 }
 }

@@ -20,7 +20,8 @@ import { Random } from './random.js';
 
 const root = resolve(import.meta.dirname, '../..');
 const endpoint = 'http://localhost:7074';
-execFileSync('swift', ['build', '--scratch-path', '.build/m2', '--product', 'FluidServicePeer'], { cwd: root, stdio: 'inherit' });
+const scratchPath = process.argv.find(arg => arg.startsWith('--scratch-path='))?.slice('--scratch-path='.length) ?? '.build/m2';
+execFileSync('swift', ['build', '--scratch-path', scratchPath, '--product', 'FluidServicePeer'], { cwd: root, stdio: 'inherit' });
 const objectSchema = z.record(z.string(), z.unknown());
 const opSchema = objectSchema.and(z.object({ sequenceNumber: z.number() }));
 const runtimeSchema = z.object({
@@ -51,7 +52,7 @@ async function until(test: () => boolean | Promise<boolean>, label: string): Pro
   throw new Error(`Timeout: ${label}`);
 }
 class Swift {
-  readonly child = spawn(resolve(root, '.build/m2/debug/FluidServicePeer'), [], { cwd: root });
+  readonly child = spawn(resolve(root, scratchPath, 'debug/FluidServicePeer'), [], { cwd: root });
   readonly lines = createInterface({ input: this.child.stdout })[Symbol.asyncIterator]();
   id = 0;
   constructor(readonly trace: unknown[]) {

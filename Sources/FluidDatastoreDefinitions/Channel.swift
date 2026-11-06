@@ -49,14 +49,12 @@ public protocol IFluidDataStoreRuntime: AnyObject {
     var deltaManager: any IDeltaManager { get }
 }
 
-/// Runtimes that predate quorum-dependent channels (PactMap, TaskManager) do not provide these
-/// members yet; using them there is a programming error.
-extension IFluidDataStoreRuntime {
-    public func getQuorum() -> any IQuorumClients {
-        preconditionFailure("this IFluidDataStoreRuntime does not provide a quorum")
-    }
+/// The part of `IFluidParentContext` (runtime-definitions/src/dataStoreContext.ts) that a datastore
+/// runtime reads from the context hosting it: the container runtime, or a datastore context.
+public protocol IFluidParentContext: AnyObject {
+    /// `deltaManager`.
+    var deltaManager: any IDeltaManager { get }
 
-    public var deltaManager: any IDeltaManager {
-        preconditionFailure("this IFluidDataStoreRuntime does not provide a delta manager")
-    }
+    /// `getQuorum()`.
+    func getQuorum() -> any IQuorumClients
 }

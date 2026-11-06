@@ -3,6 +3,7 @@ import FluidJS
 /// Ports mergeTree.ts structural insertion and zamboni.ts block reclamation.
 /// Client owns operation sequencing; this type owns physical segment membership.
 public final class MergeTree {
+  var maintenance: ((MergeTreeMaintenanceType, [MergeTreeDeltaSegment]) -> Void)?
   private(set) var root = MergeBlock()
   private struct Scour {
     var segment: BaseSegment?
@@ -362,7 +363,9 @@ public final class MergeTree {
       }
       if let removal = segment.removals.first {
         if removal.sequence != -1, removal.sequence <= minimum, segment.trackingCollection.empty {
+          maintenance?(.unlink, [MergeTreeDeltaSegment(segment: segment)])
           segment.localRefs.detachOwner()
+          segment.detachedOrdinal = segment.referenceOrdinal
           segment.parent = nil
         } else {
           result.append(child)
@@ -370,14 +373,16 @@ public final class MergeTree {
         previous = nil
       } else if segment.insertion.sequence != -1, segment.insertion.sequence <= minimum {
         if let left = previous, left.canAppend(segment),
-          (left.properties ?? JSObject()) == (segment.properties ?? JSObject()),
+          matchProperties(left.properties, segment.properties),
           left.trackingCollection.matches(segment.trackingCollection),
           let lhs = left.text, let rhs = segment.text
         {
           left.localRefs.append(segment.localRefs)
           left.text = JSString(utf16: lhs.utf16 + rhs.utf16)
+          maintenance?(.append, [MergeTreeDeltaSegment(segment: left), MergeTreeDeltaSegment(segment: segment)])
           segment.trackingCollection.unlinkAll(segment)
           segment.localRefs.detachOwner()
+          segment.detachedOrdinal = segment.referenceOrdinal
           segment.parent = nil
         } else {
           result.append(child)

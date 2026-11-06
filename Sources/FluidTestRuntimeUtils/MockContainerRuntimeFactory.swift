@@ -21,13 +21,16 @@ public final class MockContainerRuntimeFactory<C: Channel> {
       clientId: clientId, channel: channel, lastSequenceNumber: sequenceNumber,
       flushMode: flushMode, quorum: quorum)
     runtime.onSend = { [unowned self] message in messages.append(message) }
-    runtime.onDropOutstanding = { [unowned self] in
-      messages.removeAll { $0.clientId == clientId }
-    }
+    runtime.onDropOutstanding = { [unowned self] clientId in clearOutstandingClientMessages(clientId) }
     // Messages the channel sent while attaching (connect) predate the hooks.
     messages.append(contentsOf: runtime.takeOutbound())
     runtimes.append(runtime)
     return runtime
+  }
+
+  /// `clearOutstandingClientMessages` (mocksForReconnection.ts): drops every unsequenced message from `clientId`.
+  public func clearOutstandingClientMessages(_ clientId: JSString) {
+    messages.removeAll { $0.clientId == clientId }
   }
 
   /// `outstandingMessageCount`.

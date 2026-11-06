@@ -108,12 +108,22 @@ open class SharedObjectCore<Metadata>: Channel {
     try submitLocalMessage(content, localOpMetadata)
   }
   open func rollback(_ content: JSONValue, localOpMetadata: Metadata) throws {
-    throw SharedObjectError("rollback not supported")
+    try throwUnsupported("rollback")
   }
   open func applyStashedOp(_ content: JSONValue) throws {
     throw SharedObjectError("stash not implemented")
   }
   open func summarize() -> SummaryTree { SummaryTree() }
+  private func throwUnsupported(_ featureName: String) throws -> Never {
+    var props = JSObject<JSONValue>()
+    props["featureName"] = .string(JSString(featureName))
+    // `tagCodeArtifacts({ ddsType })`.
+    var ddsType = JSObject<JSONValue>()
+    ddsType["value"] = .string(Self.type)
+    ddsType["tag"] = .string("CodeArtifact")
+    props["ddsType"] = .object(ddsType)
+    throw LoggingError("Unsupported DDS feature", props)
+  }
 }
 /// Port of `packages/dds/shared-object-base/src/sharedObject.ts` SharedObject.
 open class SharedObject<Metadata>: SharedObjectCore<Metadata> {}

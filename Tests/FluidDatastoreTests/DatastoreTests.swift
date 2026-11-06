@@ -1,13 +1,14 @@
 import Testing
 import FluidJS
 import FluidDatastore
+import FluidTestRuntimeUtils
 
 /// dataStoreRuntime.spec.ts: constructor validation and empty GC graph.
 @Test func rejectsSlashInDatastoreID() throws {
-    #expect(throws: (any Error).self) { try FluidDataStoreRuntime(id: "before/after") }
+    #expect(throws: (any Error).self) { try FluidDataStoreRuntime(id: "before/after", context: MockFluidDataStoreContext()) }
 }
 @Test func emptyGCDataContainsRoot() throws {
-    let runtime = try FluidDataStoreRuntime(id: "store")
+    let runtime = try FluidDataStoreRuntime(id: "store", context: MockFluidDataStoreContext())
     #expect(try runtime.getGCData() == JSON.parse("{\"gcNodes\":{\"/\":[]}}"))
 }
 
@@ -16,7 +17,7 @@ import FluidMap
 import FluidDriverDefinitions
 
 func counterRuntime() throws -> FluidDataStoreRuntime {
-    let runtime = try FluidDataStoreRuntime(id: "store")
+    let runtime = try FluidDataStoreRuntime(id: "store", context: MockFluidDataStoreContext())
     try runtime.register(ChannelFactory(SharedCounter.self, snapshotFormatVersion: "0.1"))
     return runtime
 }
@@ -139,7 +140,7 @@ import FluidContainerRuntime
 }
 @Test func handlePathsPreserveLoneSurrogates() throws {
     let id = JSString(utf16: [0xd800])
-    let runtime = try FluidDataStoreRuntime(id: id)
+    let runtime = try FluidDataStoreRuntime(id: id, context: MockFluidDataStoreContext())
     try runtime.register(ChannelFactory(SharedCounter.self, snapshotFormatVersion: "0.1"))
     _ = try runtime.createChannel(id, type: SharedCounter.type)
     let handle = try runtime.handle(id)
@@ -151,7 +152,7 @@ import FluidContainerRuntime
     try store.bindChannel("counter")
     try store.setAttachState(.attaching)
     try store.setAttachState(.attached)
-    let container = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "client")
+    let container = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "client", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
     try container.channelCollection.registerDatastore(store)
     var wire: [JSONValue] = []
     container.onSubmit = { batch, _, _ in wire.append(contentsOf: batch) }
@@ -193,9 +194,22 @@ import FluidContainerRuntime
     #expect(try runtime.getAttachGCData().member("gcNodes").member("/map") == JSON.parse("[\"/store/counter\",\"/store\"]"))
 }
 @Test func emptyHandlePathUsesItsRoutingContext() throws {
-    let root = try FluidDataStoreRuntime(id: "")
+    let root = try FluidDataStoreRuntime(id: "", context: MockFluidDataStoreContext())
     #expect(root.absolutePath == "")
     let runtime = try counterRuntime()
     _ = try runtime.createChannel("", type: SharedCounter.type)
     #expect(try runtime.handle("").absolutePath == "/store")
+}
+
+@Test func runtimeReadsDeltaManagerAndQuorumFromItsContext() throws {
+    let context = MockFluidDataStoreContext()
+    context.mockDeltaManager.lastSequenceNumber = 5
+    context.mockDeltaManager.minimumSequenceNumber = 2
+    let runtime = try FluidDataStoreRuntime(id: "store", context: context)
+    #expect(runtime.deltaManager.lastSequenceNumber == 5)
+    #expect(runtime.deltaManager.minimumSequenceNumber == 2)
+    context.mockDeltaManager.minimumSequenceNumber = 4
+    #expect(runtime.deltaManager.minimumSequenceNumber == 4)
+    #expect(runtime.deltaManager.active)
+    #expect(runtime.getQuorum() === context.quorum)
 }

@@ -1,6 +1,7 @@
 import FluidDriverDefinitions
 import FluidJS
 import FluidMap
+import FluidTestRuntimeUtils
 import Testing
 
 /// directory.ts registerEventsOnSubDirectory adds bubbling listeners on every create, even when
@@ -21,7 +22,7 @@ import Testing
 /// pending set was submitted last.
 @Test func remoteClearEmitsPendingLifetimesInLifetimeOrder() throws {
   let directory = SharedDirectory(id: "directory")
-  let runtime = TestDataStoreRuntime(clientId: "local")
+  let runtime = MockFluidDataStoreRuntime(clientId: "local")
   var submitted: [(JSONValue, DirectoryLocalOpMetadata)] = []
   directory.connect(runtime) { submitted.append(($0, $1)) }
   try directory.set("10", .number(1))

@@ -4,6 +4,8 @@ import FluidJS
 /// Snapshot clones intentionally do not share local reference collections.
 /// Markers occupy one position, but never contribute a character to text extraction.
 public class BaseSegment {
+  public internal(set) var endpointType: SequencePosition?
+  var detachedOrdinal: [Int]?
   weak var parent: MergeBlock?
   private struct PendingLink { weak var group: SegmentGroup? }
   private var pendingLinks: [PendingLink] = []

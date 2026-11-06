@@ -15,6 +15,7 @@ import {
   generate,
   queryDrivenGenerators,
   type DDSName,
+  type SessionHistory,
 } from "./dds.js";
 import { Random } from "./random.js";
 interface DirectoryState {
@@ -36,6 +37,7 @@ type Client = {
   reference: number;
   csn: number;
   pending: number[];
+  summarizer: boolean;
 };
 export class Session {
   private clients: Client[] = [];
@@ -64,9 +66,13 @@ export class Session {
     }
     return result;
   }
-  async create(source?: Client): Promise<void> {
-    const id = `client-${this.nextId++}`;
-    const peer = this.peers[(this.nextId - 1) % this.peers.length];
+  async create(source?: Client, summarizerPeer?: Peer): Promise<void> {
+    const id = summarizerPeer
+      ? `summarizer-${this.peers.indexOf(summarizerPeer)}`
+      : `client-${this.nextId++}`;
+    const peer = summarizerPeer ?? this.peers[(this.nextId - 1) % this.peers.length];
+    if (source && !source.summarizer)
+      throw new Error("Join source must be a non-editing summarizer");
     if (!peer) throw new Error("No peers");
     if (source && source.pending.length !== 0)
       throw new Error("Join source has pending ops");
@@ -91,6 +97,7 @@ export class Session {
       reference: cursor,
       csn: 0,
       pending: [],
+      summarizer: summarizerPeer !== undefined,
     };
     const result = await this.call(client, {
       method: "createClient",
@@ -176,7 +183,10 @@ export class Session {
     this.log.push({
       ...op,
       sequenceNumber: this.log.length + 1,
-      minimumSequenceNumber: Math.min(...this.clients.map((c) => c.reference)),
+      // Read-only summarizers never submit reference updates and do not constrain MSN.
+      minimumSequenceNumber: Math.min(
+        ...this.clients.filter((c) => !c.summarizer).map((c) => c.reference),
+      ),
       type: "op",
     });
   }
@@ -231,6 +241,9 @@ export class Session {
         throw new Error(
           `State mismatch at ${c.id}: ${JSON.stringify(baseline)} != ${JSON.stringify(state)}`,
         );
+      baseline = state;
+      // Editor summaries remain byte-checked above; only read-only replicas supply loads.
+      if (!c.summarizer) continue;
       // Use both configured implementations. TS self-checks can certify unported DDSes.
       for (const peer of this.peers) {
         const id = `cross-load-${this.crossLoadNumber++}`;
@@ -257,7 +270,6 @@ export class Session {
         }
         await peer.call({ method: "disposeClient", params: { clientId: id } });
       }
-      baseline = state;
     }
   }
   private async reconnect(c: Client): Promise<void> {
@@ -278,7 +290,12 @@ export class Session {
       for (let i = 0; i < 3; i++)
         await this.edit(
           c,
-          generate(this.name, this.random, await this.queries(c)),
+          generate(
+            this.name,
+            this.random,
+            await this.queries(c),
+            this.historyFor(c),
+          ),
         );
     const newClientId = `${c.id}-reconnect-${this.reconnectNumber++}`;
     c.wireId = newClientId;
@@ -304,6 +321,15 @@ export class Session {
         },
       });
   }
+  /** What the session knows about concurrent operations, for generators that must avoid them. */
+  private historyFor(c: Client): SessionHistory {
+    return {
+      log: this.log,
+      queue: this.queue,
+      cursor: c.cursor,
+      wireId: c.wireId,
+    };
+  }
   /** The acting client's own queries, for generators that choose by eligibility. */
   private async queries(c: Client): Promise<unknown> {
     if (!queryDrivenGenerators.includes(this.name)) return undefined;
@@ -328,7 +354,7 @@ export class Session {
   private reconnectNumber = 0;
   private crossLoadNumber = 0;
   private async lifecycle(): Promise<void> {
-    const subject = this.clients[1];
+    const subject = this.clients.filter((c) => !c.summarizer)[1];
     if (!subject) throw new Error("Lifecycle needs a subject");
     const apply = async (edit: import("./protocol.js").Edit): Promise<void> => {
       await this.edit(subject, edit);
@@ -394,27 +420,35 @@ export class Session {
         implementation: z.literal(peer.kind),
         ddsTypes: z
           .array(z.string())
-          .refine((types) => types.includes(factories[this.name].type)),
+          .refine((types) => types.includes(factories[this.name].type), {
+            message: `${this.name} is not implemented by ${peer.kind}`,
+          }),
       })
         .strict()
         .parse(await peer.call({ method: "hello", params: {} }));
+    for (const peer of this.peers) await this.create(undefined, peer);
     const initial = 2 + this.random.int(4);
     for (let i = 0; i < initial; i++) await this.create();
     await this.lifecycle();
     for (let i = 0; i < 120; i++) {
-      const c = this.random.pick(this.clients);
+      const c = this.random.pick(this.clients.filter((client) => !client.summarizer));
       const step = this.random.int(100);
       if (step < 45) {
-        const edit = generate(this.name, this.random, await this.queries(c));
+        const edit = generate(
+          this.name,
+          this.random,
+          await this.queries(c),
+          this.historyFor(c),
+        );
         if (this.name === "shared-summary-block") {
           for (const client of this.clients) await this.edit(client, edit);
         } else await this.edit(c, edit);
       } else if (step < 61) this.sequence();
       else if (step < 82) await this.deliver(c, 1 + this.random.int(8));
-      else if (step < 90 && this.clients.length < 10) {
+      else if (step < 90 && this.clients.filter((client) => !client.summarizer).length < 10) {
         await this.checkpoint();
         const candidates = this.clients.filter(
-          (client) => client.pending.length === 0,
+          (client) => client.summarizer && client.pending.length === 0,
         );
         if (candidates.length) await this.create(this.random.pick(candidates));
       } else if (step < 96) await this.checkpoint();

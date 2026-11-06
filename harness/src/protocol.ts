@@ -1,14 +1,18 @@
 import { z } from "zod";
 export const ddsType = "https://graph.microsoft.com/types/counter";
-export const summarySchema = z
-  .object({
+export interface SummaryTree {
+  type: 1;
+  tree: Record<string, SummaryTree | { type: 2; content: string }>;
+}
+export const summarySchema: z.ZodType<SummaryTree> = z.lazy(() =>
+  z.object({
     type: z.literal(1),
-    tree: z.record(
-      z.string(),
+    tree: z.record(z.string(), z.union([
       z.object({ type: z.literal(2), content: z.string() }).strict(),
-    ),
-  })
-  .strict();
+      summarySchema,
+    ])),
+  }).strict(),
+);
 export const outboundSchema = z
   .object({
     clientId: z.string(),
@@ -22,7 +26,19 @@ export const messageSchema = outboundSchema.extend({
   minimumSequenceNumber: z.number().int().nonnegative(),
   type: z.literal("op"),
 });
+const sequencePlace = z.union([
+  z.number().int().nonnegative(),
+  z.enum(["start", "end"]),
+  z.object({ pos: z.number().int().nonnegative(), side: z.union([z.literal(0), z.literal(1)]) }),
+]);
 export const editSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("insertText"), position: z.number().int().nonnegative(), text: z.string(), props: z.record(z.string(), z.json()).optional() }),
+  z.object({ kind: z.literal("insertMarker"), position: z.number().int().nonnegative(), props: z.record(z.string(), z.json()) }),
+  z.object({ kind: z.literal("removeRange"), start: z.number().int().nonnegative(), end: z.number().int().nonnegative() }),
+  z.object({ kind: z.literal("annotateRange"), start: z.number().int().nonnegative(), end: z.number().int().nonnegative(), props: z.record(z.string(), z.json()) }),
+  z.object({ kind: z.literal("addInterval"), collection: z.string(), id: z.string(), start: sequencePlace, end: sequencePlace, props: z.record(z.string(), z.json()).optional() }),
+  z.object({ kind: z.literal("changeInterval"), collection: z.string(), id: z.string(), start: sequencePlace.optional(), end: sequencePlace.optional(), props: z.record(z.string(), z.json()).optional() }),
+  z.object({ kind: z.literal("deleteInterval"), collection: z.string(), id: z.string() }),
   z.object({ kind: z.literal("increment"), amount: z.number() }),
   z.object({
     kind: z.literal("set"),

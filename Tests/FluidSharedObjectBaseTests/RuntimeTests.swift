@@ -28,3 +28,15 @@ import Testing
   runtime.flush()
   #expect(runtime.takeOutbound().count == 1)
 }
+
+@Test func disconnectDropsQueuedMessagesOfTheReconnectedClientID() throws {
+  let factory = MockContainerRuntimeFactory<SharedCounter>()
+  let c = SharedCounter(id: "c")
+  let runtime = factory.createContainerRuntime(clientId: "old", channel: c)
+  runtime.disconnect()
+  try runtime.reconnect(clientId: "new")
+  try c.increment(1)
+  #expect(factory.outstandingMessageCount == 1)
+  runtime.disconnect()
+  #expect(factory.outstandingMessageCount == 0)
+}

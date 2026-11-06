@@ -204,12 +204,12 @@ public final class ConsensusRegisterCollection: SharedObject<Int> {
     data.get(key)?.atomic.value ?? .undefined
   }
 
-  /// `this.deltaManager.lastSequenceNumber`, the refSeq a write captures. The runtime must expose it.
+  /// `this.deltaManager.lastSequenceNumber`, the refSeq a write captures.
   private func currentReferenceSequenceNumber() throws -> Int {
-    guard let host = runtime as? any LastSequenceNumberRuntime else {
-      throw SharedObjectError("runtime does not expose lastSequenceNumber")
+    guard let runtime else {
+      throw SharedObjectError("ConsensusRegisterCollection is attached but has no runtime")
     }
-    return host.lastSequenceNumber
+    return runtime.deltaManager.lastSequenceNumber
   }
 
   /// The refSeq captured when the op was created. A legacy op without one takes the envelope's.

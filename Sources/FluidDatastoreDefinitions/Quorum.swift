@@ -45,5 +45,11 @@ public protocol IDeltaManager: AnyObject {
     /// The sequence number of the last message the container processed.
     var lastSequenceNumber: Int { get }
 
+    /// Minimum sequence number of the last processed message (or the loaded snapshot).
+    var minimumSequenceNumber: Int { get }
+
+    /// Whether the client can write: connected in write mode.
+    var active: Bool { get }
+
     var readOnlyInfo: ReadOnlyInfo { get }
 }

@@ -6,6 +6,7 @@ import FluidCounter
 import FluidMap
 import FluidDriverDefinitions
 import FluidSharedObjectBase
+import FluidTestRuntimeUtils
 
 func object(_ entries: [(JSString, JSONValue)]) -> JSONValue {
     var result = JSObject<JSONValue>()
@@ -14,7 +15,7 @@ func object(_ entries: [(JSString, JSONValue)]) -> JSONValue {
 }
 func run(_ scenario: JSONValue) throws -> JSONValue {
     let seed = try scenario.member("seed").asInt()
-    let runtime = try FluidDataStoreRuntime(id: "store")
+    let runtime = try FluidDataStoreRuntime(id: "store", context: MockFluidDataStoreContext())
     try runtime.register(ChannelFactory(SharedMap.self, snapshotFormatVersion: "0.2"))
     try runtime.register(ChannelFactory(SharedDirectory.self, snapshotFormatVersion: "0.1"))
     try runtime.register(ChannelFactory(SharedCounter.self, snapshotFormatVersion: "0.1"))
@@ -74,7 +75,7 @@ func run(_ scenario: JSONValue) throws -> JSONValue {
     runtime.processSignal(object([("clientId", .string("other")), ("type", .string("test")), ("content", .number(Double(seed)))]), local: false)
     let summary = try runtime.summarize()
     let gc = try runtime.getGCData()
-    let reload = try FluidDataStoreRuntime(id: "store")
+    let reload = try FluidDataStoreRuntime(id: "store", context: MockFluidDataStoreContext())
     try reload.register(ChannelFactory(SharedMap.self, snapshotFormatVersion: "0.2"))
     try reload.register(ChannelFactory(SharedDirectory.self, snapshotFormatVersion: "0.1"))
     try reload.register(ChannelFactory(SharedCounter.self, snapshotFormatVersion: "0.1"))
@@ -93,7 +94,7 @@ func run(_ scenario: JSONValue) throws -> JSONValue {
     try runtime.bindChannel("late")
     guard let attachMessage = wire.last else { throw DatastoreError("missing attach message") }
     try reload.processMessages(envelope: envelope(attachMessage.type, "other"), messages: [ChannelMessage(contents: attachMessage.content, clientSequenceNumber: 1)], local: false)
-    let stashRuntime = try FluidDataStoreRuntime(id: "store")
+    let stashRuntime = try FluidDataStoreRuntime(id: "store", context: MockFluidDataStoreContext())
     try stashRuntime.register(ChannelFactory(SharedCounter.self, snapshotFormatVersion: "0.1"))
     try stashRuntime.setAttachState(.attaching)
     try stashRuntime.setAttachState(.attached)

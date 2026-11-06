@@ -49,7 +49,7 @@ struct ConsensusQueueRecoveryTests {
 
     try pair.queue1.add(str("testValue"))
     pair.runtime1.disconnect()
-    try pair.runtime1.reconnect(clientId: "A")
+    try pair.runtime1.reconnect(clientId: "A2")
     try pair.factory.processAllMessages()
 
     #expect(added.count == 1)
@@ -64,11 +64,11 @@ struct ConsensusQueueRecoveryTests {
       return .complete
     })
     pair.runtime1.disconnect()
-    try pair.runtime1.reconnect(clientId: "A")
+    try pair.runtime1.reconnect(clientId: "A3")
     try pair.factory.processAllMessages()
 
     #expect(acquiredValue == str("testValue"))
-    #expect(acquireClient == .some(JSString("A")))
+    #expect(acquireClient == .some(pair.runtime1.clientId))
   }
 
   @Test("can store ops in disconnected state and resend them on reconnection")
@@ -79,7 +79,7 @@ struct ConsensusQueueRecoveryTests {
 
     pair.runtime1.disconnect()
     try pair.queue1.add(str("testValue"))
-    try pair.runtime1.reconnect(clientId: "A")
+    try pair.runtime1.reconnect(clientId: "A2")
     try pair.factory.processAllMessages()
 
     #expect(added.count == 1)

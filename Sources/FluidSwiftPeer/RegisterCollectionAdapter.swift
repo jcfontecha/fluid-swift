@@ -5,8 +5,6 @@ import FluidTestRuntimeUtils
 
 // Register-collection adapter, as `harness/src/dds.ts` createAdapter defines it for `register-collection`.
 
-extension MockContainerRuntime: LastSequenceNumberRuntime {}
-
 /// `state`: sorted `[key, read(Atomic), read(LWW), readVersions]` rows. JS default sort compares UTF-16
 /// code units, and an absent `readVersions` is `undefined`, which JSON writes as null.
 private func registerState(

@@ -7,6 +7,8 @@ extension Client {
     guard let message = pendingMessages.popLast() else {
       throw JSONDecodingError("rollback without pending operation")
     }
+    rollingBack = true
+    defer { rollingBack = false }
     var groups: [SegmentGroup] = []
     while pending.count > pendingHead, pending.last?.localSequence == message {
       groups.append(pending.removeLast())
@@ -14,26 +16,40 @@ extension Client {
     var removed: [BaseSegment] = []
     for group in groups {
       let type = try group.operation.member("type").asInt()
+      var changes: [MergeTreeDeltaSegment] = []
       for segment in group.segments {
         let before = segment.clone()
         group.unlink(segment)
         switch type {
         case 0:
+          if Perspective.local.contains(segment) { changes.append(MergeTreeDeltaSegment(segment: segment)) }
           let maintenance = Stamp(sequence: -2, client: "")
           segment.insertion = maintenance
           segment.removals.append(maintenance)
           segment.removals.sort()
           removed.append(segment)
         case 1:
-          if segment.removals.first?.client == id { segment.removals = [] }
+          segment.removals.removeAll { $0.sequence == -1 && $0.localSequence == group.localSequence }
+          if !Perspective.local.contains(before) && Perspective.local.contains(segment) {
+            changes.append(MergeTreeDeltaSegment(segment: segment))
+          }
         case 2:
           var properties = segment.properties
           segment.propertyManager.rollback(
             localSequence: group.localSequence, properties: &properties)
           segment.properties = properties
+          var deltas = JSObject<JSONValue>()
+          for (key, _) in try group.operation.member("props").asObject().entries {
+            if before.properties?[key] != properties?[key] { deltas[key] = before.properties?[key] ?? .null }
+          }
+          if Perspective.local.contains(segment) { changes.append(MergeTreeDeltaSegment(segment: segment, propertyDeltas: deltas)) }
         default: throw JSONDecodingError("unsupported rollback operation")
         }
         mergeTree.update(segment, before: before)
+      }
+      if !changes.isEmpty {
+        let inverse = type == 0 ? 1 : type == 1 ? 0 : 2
+        try delta?(object([("type", .number(Double(inverse)))]), changes, true)
       }
     }
     slideReferences(on: removed)
@@ -41,12 +57,15 @@ extension Client {
   }
 
   /// Ports client.ts resetPendingDeltaToOps for ordinary production operations.
-  public func regeneratePendingOps() throws -> [JSONValue] {
+  public func regeneratePendingOps(squash: Bool = false) throws -> [JSONValue] {
     if lastNormalization?.sequence != currentSequence
-      || lastNormalization?.localSequence != localSequence
+      || lastNormalization?.localSequence != localSequence || lastNormalization?.squash != squash
     {
+      normalizingSquashed = squash
+      defer { normalizingSquashed = false }
+      try beforeNormalize?()
       mergeTree.normalizeSegmentsOnRebase()
-      lastNormalization = (currentSequence, localSequence)
+      lastNormalization = (currentSequence, localSequence, squash)
     }
     let original = Array(pending.dropFirst(pendingHead))
     pending = []
@@ -69,6 +88,15 @@ extension Client {
         let operation: JSONValue
         switch type {
         case 0:
+          if squash && !segment.removals.isEmpty {
+            let before = segment.clone()
+            let stamp = Stamp(sequence: 0, client: "squash")
+            segment.insertion = stamp
+            segment.removals = [stamp]
+            mergeTree.update(segment, before: before)
+            mergeTree.schedule(segment, sequence: 0, current: currentSequence)
+            continue
+          }
           let copy = segment.clone()
           let payload = try group.operation.member("seg")
           if case .object(let fields) = payload {

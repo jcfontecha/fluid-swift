@@ -1,6 +1,7 @@
 import Testing
 import FluidJS
 @testable import FluidContainerRuntime
+import FluidTestRuntimeUtils
 
 @Suite struct RoutingTests {
   @Test func blobAttachMetadataAndIdentity() throws {
@@ -142,12 +143,12 @@ import FluidJS
 
 @Suite struct ContainerRoutingTests {
   @Test func unknownOpsCloseButChunkedOpsAssertBeforeDispatch() throws {
-    let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self")
+    let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
     #expect(throws: JSONDecodingError.self) { try runtime.validateAndProcessRuntimeMessages(JSON.parse(#"{"type":"future"}"#), messagesContent: [], local: false) }
     #expect(runtime.closed)
   }
   @Test func signalsPreserveAbsenceEmptyAddressAndTrailingExtensionSegment() throws {
-    let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self")
+    let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
     var output: [JSONValue] = []
     runtime.onRuntimeDispatch = { _, value in output.append(value) }
     runtime.channelCollection.contexts = []
@@ -160,7 +161,7 @@ import FluidJS
     #expect(try output.last?.asArray().first == .array([.string("")]))
   }
   @Test func targetedSignalsDoNotAdvanceBroadcastCounter() throws {
-    let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self")
+    let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
     var envelopes: [JSONValue] = []
     runtime.onSubmitSignal = { envelope, _ in envelopes.append(envelope) }
     try runtime.submitSignal(type: "cursor", content: .null)
@@ -192,7 +193,7 @@ import FluidJS
 
 @Suite struct RuntimeBlobIntegrationTests {
   @Test func blobAttachTravelsThroughOutboxPendingAndInbound() throws {
-    let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self")
+    let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self", deltaManager: MockDeltaManager(), quorum: MockQuorumClients())
     runtime.blobManager.upload = { _, complete in try complete(.success(.init(id: "storage"))) }
     var handle: BlobHandle?
     try runtime.blobManager.createBlob([1, 255], localId: "local", payloadPending: true) {
@@ -216,7 +217,7 @@ import FluidJS
     #expect(!runtime.blobManager.hasOutstandingBlobWork)
     #expect(runtime.pendingStateManager.pendingMessagesCount == 0)
     #expect(try runtime.blobManager.getPendingBlobs() == nil)
-    let loaded = try ContainerRuntime(sessionId: runtime.idCompressor.localSessionId, clientId: "new", stash: stash)
+    let loaded = try ContainerRuntime(sessionId: runtime.idCompressor.localSessionId, clientId: "new", deltaManager: MockDeltaManager(), quorum: MockQuorumClients(), stash: stash)
     #expect(loaded.blobManager.hasOutstandingBlobWork)
     #expect(loaded.blobManager.hasBlob("local"))
     var datastoreStashCalls = 0
@@ -248,9 +249,9 @@ import FluidJS
   @Test func oldestClientAndPendingPayloadGate() throws {
     let session = "10000000-0000-4000-8000-000000000001"
     let options = try JSON.parse(#"{"createBlobPayloadPending":true}"#)
-    #expect(throws: JSONDecodingError.self) { try ContainerRuntime(sessionId: session, clientId: "a", oldestSupportedClient: "2.0.0", runtimeOptions: options) }
-    #expect(throws: JSONDecodingError.self) { try ContainerRuntime(sessionId: session, clientId: "a", oldestSupportedClient: "2.40.0", minVersionForCollab: "2.40.0") }
-    let runtime = try ContainerRuntime(sessionId: session, clientId: "a", oldestSupportedClient: "2.40.0", runtimeOptions: options)
+    #expect(throws: JSONDecodingError.self) { try ContainerRuntime(sessionId: session, clientId: "a", deltaManager: MockDeltaManager(), quorum: MockQuorumClients(), oldestSupportedClient: "2.0.0", runtimeOptions: options) }
+    #expect(throws: JSONDecodingError.self) { try ContainerRuntime(sessionId: session, clientId: "a", deltaManager: MockDeltaManager(), quorum: MockQuorumClients(), oldestSupportedClient: "2.40.0", minVersionForCollab: "2.40.0") }
+    let runtime = try ContainerRuntime(sessionId: session, clientId: "a", deltaManager: MockDeltaManager(), quorum: MockQuorumClients(), oldestSupportedClient: "2.40.0", runtimeOptions: options)
     #expect(runtime.createBlobPayloadPending)
     var uploaded = false
     runtime.blobManager.upload = { _, _ in uploaded = true }
@@ -264,4 +265,12 @@ import FluidJS
     #expect(throws: JSONDecodingError.self) { try validateMinimumVersionForCollab("3.10.1") }
     #expect(throws: JSONDecodingError.self) { try validateMinimumVersionForCollab("02.0.0") }
   }
+}
+
+@Test func containerRuntimeProvidesItsContextsDeltaManagerAndQuorum() throws {
+  let deltaManager = MockDeltaManager()
+  let quorum = MockQuorumClients()
+  let runtime = try ContainerRuntime(sessionId: "10000000-0000-4000-8000-000000000001", clientId: "self", deltaManager: deltaManager, quorum: quorum)
+  #expect(runtime.deltaManager === deltaManager)
+  #expect(runtime.getQuorum() === quorum)
 }
