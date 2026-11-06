@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "fuzz:oplifecycle": "tsx src/oplifecycle/fuzz.ts",
+    "fuzz:mergetree": "tsx src/mergetree/driver.ts",
     "fixtures:driver-definitions": "tsx src/driver-definitions-fixtures.ts",
     "socketio-fixtures": "tsx src/socketio-fixtures.ts",
     "socketio-check": "tsx src/socketio-check.ts",
@@ -55,6 +56,7 @@
   },
   "devDependencies": {
     "@types/node": "22.19.0",
+    "best-random": "1.0.0",
     "tsx": "4.20.6",
     "typescript": "5.9.3"
   }

@@ -1,0 +1,5832 @@
+{
+  "seed": 197,
+  "requests": [
+    {
+      "method": "reset",
+      "params": {}
+    },
+    {
+      "method": "create",
+      "params": {
+        "client": "A"
+      }
+    },
+    {
+      "method": "create",
+      "params": {
+        "client": "B"
+      }
+    },
+    {
+      "method": "create",
+      "params": {
+        "client": "C"
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "\u00e9"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "a"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "\udfff"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "obliterate",
+          "start": 0,
+          "end": 1,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "a"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "\ud800"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "reference",
+          "pos": 0,
+          "id": "r7",
+          "refType": 128
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "obliterate",
+          "start": 0,
+          "end": 1,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "\n"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "a"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "marker",
+          "pos": 1
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "reference",
+          "pos": 0,
+          "id": "r13",
+          "refType": 128
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "obliterate",
+          "start": 1,
+          "end": 2,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "marker",
+          "pos": 1
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 1,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "obliterate",
+          "start": 1,
+          "end": 4,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 1,
+          "text": "a"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "marker",
+          "pos": 1
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "\ud83d\ude00"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "reference",
+          "pos": 1,
+          "id": "r23",
+          "refType": 64
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "reference",
+          "pos": 2,
+          "id": "r24",
+          "refType": 64
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 1,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 2,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "obliterate",
+          "start": 2,
+          "end": 3,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "reference",
+          "pos": 0,
+          "id": "r27",
+          "refType": 64
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 1,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 2,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 3,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 4,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 5,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 6,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 7,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 8,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\n",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 9,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 10,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 11,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 12,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 13,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 4,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 14,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 15,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 16,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\ud83d\ude00",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 17,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 3,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 3,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 4,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 5,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 6,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 7,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 8,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\n",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 9,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 10,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 11,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 12,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 13,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 4,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 14,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 15,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 16,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\ud83d\ude00",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 17,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 3,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 2,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 1,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 3,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 4,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 5,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 6,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 7,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 8,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\n",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 2,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 9,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 10,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 3,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 11,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 12,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 13,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 4,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 14,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 15,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 16,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\ud83d\ude00",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 0,
+          "sequenceNumber": 17,
+          "minimumSequenceNumber": 0,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 3,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "A",
+        "seq": 17
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "B",
+        "seq": 17
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "C",
+        "seq": 17
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "reference",
+          "pos": 5,
+          "id": "r30",
+          "refType": 64
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 3,
+          "text": "bc"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "reference",
+          "pos": 7,
+          "id": "r32",
+          "refType": 256
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "remove",
+          "start": 2,
+          "end": 7,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 3,
+          "text": "\u00e9"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "marker",
+          "pos": 1
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 3,
+          "text": "a"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "reference",
+          "pos": 5,
+          "id": "r37",
+          "refType": 256
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "\u00e9"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "marker",
+          "pos": 5
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 8,
+          "text": "\udfff"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 1,
+          "text": "\udfff"
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 18,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 19,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 7,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "marker",
+          "pos": 0
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "reference",
+          "pos": 1,
+          "id": "r46",
+          "refType": 128
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "marker",
+          "pos": 2
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 1,
+          "text": "\ud800"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 3,
+          "text": "\n"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "remove",
+          "start": 0,
+          "end": 2,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "remove",
+          "start": 1,
+          "end": 2,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "marker",
+          "pos": 4
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 4,
+          "text": "\udfff"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 11,
+          "text": "a"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 2,
+          "text": "\udfff"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "remove",
+          "start": 8,
+          "end": 10,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "reference",
+          "pos": 0,
+          "id": "r58",
+          "refType": 64
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 18,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 19,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 7,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 20,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 21,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 22,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 23,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 24,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 25,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 26,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 27,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 28,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 29,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 30,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\n",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 31,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 32,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 33,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 34,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 35,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 11,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 36,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 37,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 10,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 18,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 19,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 7,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 20,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 21,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 22,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 23,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 24,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 25,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 26,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 27,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 28,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 29,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 30,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\n",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 31,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 32,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 33,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 34,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 35,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 11,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 36,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 37,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 10,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 20,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 4,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 21,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 5,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 22,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 23,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 6,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 24,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 25,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 26,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 7,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 27,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 28,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 29,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 30,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\n",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 31,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 32,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 8,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 33,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 34,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 19,
+          "sequenceNumber": 35,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 11,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 9,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 36,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 10,
+          "referenceSequenceNumber": 17,
+          "sequenceNumber": 37,
+          "minimumSequenceNumber": 17,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 10,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "A",
+        "seq": 37
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "B",
+        "seq": 37
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "C",
+        "seq": 37
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "obliterate",
+          "start": 11,
+          "end": 14,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "obliterate",
+          "start": 8,
+          "end": 9,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 3,
+          "text": "bc"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "remove",
+          "start": 6,
+          "end": 11,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "reference",
+          "pos": 3,
+          "id": "r64",
+          "refType": 256
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 3,
+          "text": "\ud800"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 8,
+          "text": "\u00e9"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "obliterate",
+          "start": 2,
+          "end": 10,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 6,
+          "text": "a"
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 38,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 11,
+            "pos2": 14,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 1,
+          "text": "\u00e9"
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 38,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 11,
+            "pos2": 14,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 39,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 9,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "reference",
+          "pos": 6,
+          "id": "r74",
+          "refType": 128
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "reference",
+          "pos": 8,
+          "id": "r75",
+          "refType": 256
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "obliterate",
+          "start": 9,
+          "end": 10,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "obliterate",
+          "start": 5,
+          "end": 8,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 38,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 11,
+            "pos2": 14,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 39,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 9,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "obliterate",
+          "start": 2,
+          "end": 3,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 8,
+          "text": "bc"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "obliterate",
+          "start": 7,
+          "end": 16,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "obliterate",
+          "start": 4,
+          "end": 5,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "annotate",
+          "start": 1,
+          "end": 2,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 1,
+          "text": "\udfff"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 1,
+          "text": "\ud800"
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 40,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 41,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 6,
+            "pos2": 11,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 42,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 43,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 44,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 10,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 45,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 6,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 46,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 47,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 9,
+            "pos2": 10,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 48,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "pos2": 8,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 49,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 3,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 50,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 51,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 7,
+            "pos2": 16,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 52,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 5,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 53,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 54,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 55,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 39,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 9,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 40,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 41,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 6,
+            "pos2": 11,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 42,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 43,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 44,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 10,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 45,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 6,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 46,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 47,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 9,
+            "pos2": 10,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 48,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "pos2": 8,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 49,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 3,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 50,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 51,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 7,
+            "pos2": 16,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 52,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 5,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 53,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 54,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 55,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 11,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 40,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 41,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 6,
+            "pos2": 11,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 42,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 12,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 43,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 44,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 10,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 45,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 6,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 13,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 46,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 47,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 9,
+            "pos2": 10,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 37,
+          "sequenceNumber": 48,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "pos2": 8,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 49,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 3,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 14,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 50,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "bc",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 15,
+          "referenceSequenceNumber": 38,
+          "sequenceNumber": 51,
+          "minimumSequenceNumber": 37,
+          "type": "op",
+          "contents": {
+            "pos1": 7,
+            "pos2": 16,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 52,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 5,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 53,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 54,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 39,
+          "sequenceNumber": 55,
+          "minimumSequenceNumber": 38,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "A",
+        "seq": 55
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "B",
+        "seq": 55
+      }
+    },
+    {
+      "method": "minSeq",
+      "params": {
+        "client": "C",
+        "seq": 55
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 5,
+          "text": "\u00e9"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "obliterate",
+          "start": 4,
+          "end": 6,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 1,
+          "text": "\ud800"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "marker",
+          "pos": 5
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "obliterate",
+          "start": 3,
+          "end": 4,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "annotate",
+          "start": 3,
+          "end": 4,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 4,
+          "text": "\ud800"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "remove",
+          "start": 4,
+          "end": 5,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "marker",
+          "pos": 0
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "obliterate",
+          "start": 2,
+          "end": 5,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "annotate",
+          "start": 3,
+          "end": 6,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 21,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 56,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 22,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 57,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 6,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "\udfff"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "marker",
+          "pos": 1
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "obliterate",
+          "start": 1,
+          "end": 2,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "annotate",
+          "start": 0,
+          "end": 1,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "insert",
+          "pos": 8,
+          "text": "\u00e9"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "insert",
+          "pos": 0,
+          "text": "a"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "insert",
+          "pos": 2,
+          "text": "\ud800"
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "A",
+        "edit": {
+          "kind": "annotate",
+          "start": 8,
+          "end": 10,
+          "props": {
+            "color": "blue"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "reference",
+          "pos": 1,
+          "id": "r113",
+          "refType": 256
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "remove",
+          "start": 0,
+          "end": 2,
+          "props": {
+            "color": null
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "B",
+        "edit": {
+          "kind": "obliterate",
+          "start": 0,
+          "end": 2,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "obliterate",
+          "start": 1,
+          "end": 2,
+          "props": {
+            "color": "red"
+          }
+        }
+      }
+    },
+    {
+      "method": "edit",
+      "params": {
+        "client": "C",
+        "edit": {
+          "kind": "marker",
+          "pos": 1
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 21,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 56,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 22,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 57,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 6,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 23,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 58,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 24,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 59,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 21,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 60,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 4,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 22,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 61,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 4,
+            "props": {
+              "color": null
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 23,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 62,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 24,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 63,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 5,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 25,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 64,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 65,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 5,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 26,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 66,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 6,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 27,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 67,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 28,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 68,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 69,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 70,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 29,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 71,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 72,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 25,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 73,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 30,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 74,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 10,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 26,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 75,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 76,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 27,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 77,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "A",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 28,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 78,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 21,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 56,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 22,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 57,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 6,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 23,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 58,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 24,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 59,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 21,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 60,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 4,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 22,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 61,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 4,
+            "props": {
+              "color": null
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 23,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 62,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 24,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 63,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 5,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 25,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 64,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 65,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 5,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 26,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 66,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 6,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 27,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 67,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 28,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 68,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 69,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 70,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 29,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 71,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 72,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 25,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 73,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 30,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 74,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 10,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 26,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 75,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 76,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 27,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 77,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "B",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 28,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 78,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 23,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 58,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 24,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 59,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 5,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 21,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 60,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 4,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 22,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 61,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 4,
+            "props": {
+              "color": null
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 23,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 62,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 24,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 63,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 4,
+            "pos2": 5,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 25,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 64,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 16,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 65,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "pos2": 5,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 26,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 66,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 3,
+            "pos2": 6,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 27,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 67,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "\udfff",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 28,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 68,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 17,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 69,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 18,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 70,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 1,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 29,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 71,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "seg": "\u00e9",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 19,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 72,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "seg": "a",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 25,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 73,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 2,
+            "seg": "\ud800",
+            "type": 0
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "A",
+          "clientSequenceNumber": 30,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 74,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 8,
+            "pos2": 10,
+            "props": {
+              "color": "blue"
+            },
+            "type": 2
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 26,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 75,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "B",
+          "clientSequenceNumber": 20,
+          "referenceSequenceNumber": 55,
+          "sequenceNumber": 76,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 0,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 27,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 77,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "pos2": 2,
+            "type": 4
+          }
+        }
+      }
+    },
+    {
+      "method": "process",
+      "params": {
+        "client": "C",
+        "message": {
+          "clientId": "C",
+          "clientSequenceNumber": 28,
+          "referenceSequenceNumber": 57,
+          "sequenceNumber": 78,
+          "minimumSequenceNumber": 55,
+          "type": "op",
+          "contents": {
+            "pos1": 1,
+            "seg": {
+              "marker": {
+                "refType": 0
+              }
+            },
+            "type": 0
+          }
+        }
+      }
+    }
+  ]
+}

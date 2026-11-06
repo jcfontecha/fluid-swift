@@ -215,3 +215,75 @@ allocation, resubmit and pending-registration hooks; RemoteMessageProcessor take
 sequenced JSON envelopes and returns the same result shapes as TS. Loader wiring,
 legacy loader submission, historical initial-partial-stream recovery, summarizer,
 GC and datastores are not implemented by this lane. Live chunk processing is strict.
+
+## Merge-tree mode (F1, implementation in progress)
+
+`npm run fuzz:mergetree -- --peers ts,ts --seeds 0..499` uses isolated
+stdio peers around the real 3.11.0 `Client`, not SharedString or a rewritten TS
+model. The oracle subclasses `Client` only to expose its internal tree and
+short-ID lookup, matching the upstream TestClient technique. It uses upstream
+TextSegment, Marker, perspectives, local references and both snapshot writers.
+The packaged TestClient itself imports an unavailable private testing dependency,
+so the oracle does not load that module or install dependencies.
+
+Build the independent native peer with
+`swift build --scratch-path .build/f1 --target FluidMergeTreePeer`.
+`--peers ts,swift` launches `.build/f1/debug/FluidMergeTreePeer`; it never uses
+or changes the phase-0 peer owned by E1.
+
+Each slot hosts shadow copies of A, B and C. A client's authoritative slot is
+its index modulo peer count; its generated op enters the single driver-owned
+FIFO sequencer. Shadows apply identical local edits and compare generated ops,
+then consume the same wire log. This compares each client's optimistic and
+historical state against its corresponding oracle, as well as cross-client
+convergence after delivery. The driver maintains independent client cursors,
+submission counters, and latest submitted reference sequences. At fully drained
+checkpoints, a simulated all-client heartbeat advances minSeq to the current
+sequence. No minSeq advance occurs while messages remain in flight.
+
+Methods: `reset`, `create`, `edit`, `process`, `state`, `minSeq`, `snapshot`.
+Requests use the usual JSON-RPC framing with a local `params.client` identifier.
+`edit` returns the upstream op directly, or null for a local-reference edit.
+`process` takes the sequenced message in `params.message`. `snapshot` takes
+`version: "legacy" | "v1"` and returns the upstream summary tree, retaining blob
+strings byte-for-byte. `state` returns UTF-16 `text` units, `length`, ordered
+visible `segments`, local `references`, and `lengths` for each sequence from
+minSeq through currentSeq crossed with client IDs A/B/C. The local-client
+getLength fast path intentionally reports the current local length.
+
+The 120-step seeded farm includes text/marker insertions, ordinary removal,
+annotation and sliding/staying/transient references. Obliterate is disabled,
+matching the production default; the oracle enables it only for explicit repros.
+Strings include lone surrogates, paired surrogates, LF and non-ASCII text;
+positions are uniformly chosen UTF-16 offsets, including between surrogate halves.
+All corresponding peer responses compare structurally; snapshot blob strings
+compare exactly. Failure writes `traces/mergetree-failure.jsonl`, including seed,
+peer slot, requests and responses. Reconnect and snapshot loading are not yet
+part of this protocol.
+
+**Production oracle gate is green:** all 500 TS/TS seeds (0–499), no exclusions.
+The archived seed-175 and seed-197 failures both use experimental obliterate.
+Repro scripts explicitly enable it and retain the strict schedule audit.
+
+`--obliterate --peers ts,ts` runs the pinned upstream field farm, not the shadow
+protocol above. It uses TestClient, the upstream RNG and field operations, sided
+obliterate + annotate-adjust, 3 clients, lengths 1–512 doubling, 8 rounds, and
+ops/round 1–128 doubling, testing exact and zero-length field replacements.
+The unpublished RNG subset is transpiled from the read-only reference tree into
+ignored node_modules; best-random is pinned to 1.0.0. Seed 0 passes the entire
+matrix. No Swift obliterate support is claimed. The upstream merge-tree farm has
+no seed skips; SharedString's different workload skips 51/AB#7220, 71/AB#35446,
+68/AB#45138, which are documented but not applied to unrelated random streams.
+
+`npx tsx src/mergetree/core-check.ts` passes 1,000 TS/Swift seeds with
+insert/remove/raw annotations, optimistic state, pending legacy snapshots,
+historical lengths and byte-exact V1/legacy blobs. This is narrower than the
+full farm: full mixed seed 0 still stops on unsupported local references.
+A deliberately reversed Swift insertion tie-break was caught by the FULL farm
+on seed 0 (text-order mismatch), then reverted and the peer rebuilt.
+
+PropertiesManager now handles production raw-property pending overlays, remote
+consensus, split copies, acknowledgements and legacy reconstruction. Remaining:
+stable identities/local references, §4 class split, incremental block-tree partial
+lengths, physical zamboni, snapshot readers, pending regeneration/rollback and
+reconnect. See `src/mergetree/README.md` for exact validation and next steps.

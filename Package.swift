@@ -10,6 +10,9 @@ let package = Package(
         .executable(name: "fluid-swift-peer", targets: ["FluidSwiftPeer"]),
     ],
     targets: [
+        .target(name: "FluidMergeTree", dependencies: ["FluidJS"]),
+        .executableTarget(name: "FluidMergeTreePeer", dependencies: ["FluidMergeTree", "FluidJS"]),
+        .testTarget(name: "FluidMergeTreeTests", dependencies: ["FluidMergeTree", "FluidJS"]),
         .target(name: "FluidJS"),
         .target(name: "FluidContainerRuntime", dependencies: ["FluidJS", "FluidLZ4", "FluidDriverDefinitions"]),
         .executableTarget(name: "FluidOpLifecyclePeer", dependencies: ["FluidContainerRuntime", "FluidJS"]),
