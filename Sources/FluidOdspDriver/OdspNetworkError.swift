@@ -10,7 +10,9 @@ public struct OdspNetworkError: Error, Sendable {
     public var claims: String?
     public var tenantId: String?
     public var serverEpoch: String?
+    public var scenarioName: String?
     public var redirectLocation: String?
+    public var redirectUrl: IOdspResolvedUrl?
     public var facetCodes: [String] = []
     public var odsp409Error = false
     public var repeatForTokenRefresh = false

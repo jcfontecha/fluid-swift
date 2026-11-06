@@ -50,3 +50,5 @@ public struct JSMap<Key: Hashable, Value> {
         }
     }
 }
+
+extension JSMap: Sendable where Key: Sendable, Value: Sendable {}

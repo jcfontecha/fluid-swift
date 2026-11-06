@@ -31,7 +31,7 @@ let package = Package(
         .target(name: "FluidMatrix", dependencies: ["FluidJS", "FluidMergeTree", "FluidSharedObjectBase", "FluidDriverDefinitions"]),
         .testTarget(name: "FluidMatrixTests", dependencies: ["FluidMatrix", "FluidJS"]),
         .executableTarget(name: "FluidOdspNetPeer", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"]),
-        .target(name: "FluidOdspDriver", dependencies: ["FluidJS", "FluidDriverDefinitions"]),
+        .target(name: "FluidOdspDriver", dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidSocketIO"]),
         .testTarget(name: "FluidOdspDriverTests", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"]),
         .executableTarget(name: "FluidOdspSnapshotPeer", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"]),
         .target(name: "FluidPresence", dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions"]),

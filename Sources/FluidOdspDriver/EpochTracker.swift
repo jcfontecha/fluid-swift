@@ -2,11 +2,83 @@ import FluidJS
 import Foundation
 
 /// epochTracker.ts. Owned by the container's serial executor, not an independently scheduled actor.
-public final class EpochTracker {
+public class EpochTracker {
     public private(set) var fluidEpoch: String?
     public private(set) var cacheClearCount = 0
     public var onCacheClear: () -> Void = {}
-    public init() {}
+    public struct Entry: Sendable {
+        public let type: String
+        public let key: String
+        public init(type: String, key: String) {
+            self.type = type
+            self.key = key
+        }
+    }
+    public let rateLimiter = RateLimiter(24)
+    public var onCacheError: (Error) -> Void = { _ in }
+    private let cacheGet: ((Entry) async throws -> JSONValue?)?
+    private let cachePut: ((Entry, JSONValue) async throws -> Void)?
+    private let cacheRemove: (() async throws -> Void)?
+    private let now: () -> Double
+    public init(now: @escaping () -> Double = { Date().timeIntervalSince1970 * 1000 }, cacheGet: ((Entry) async throws -> JSONValue?)? = nil, cachePut: ((Entry, JSONValue) async throws -> Void)? = nil, cacheRemove: (() async throws -> Void)? = nil) {
+        self.now = now
+        self.cacheGet = cacheGet
+        self.cachePut = cachePut
+        self.cacheRemove = cacheRemove
+    }
+    nonisolated(nonsending) public func get(_ entry: Entry) async -> JSONValue? {
+        do {
+            guard let envelope = try await cacheGet?(entry), try envelope.asObject()["version"] == .number(3) else { return nil }
+            guard let epoch = try envelope.asObject()["fluidEpoch"]?.asString().description else { throw JSONDecodingError("0x1dc") }
+            if fluidEpoch == nil { try validateEpoch(epoch) }
+            else if fluidEpoch != epoch { return nil }
+            let value = try envelope.asObject()["value"]
+            if isSnapshot(entry) {
+                let timestamp = try value?.asObject()["cacheEntryTime"]?.asNumber()
+                if timestamp == nil || now() - (timestamp ?? 0) >= 432000000 {
+                    try await removeEntries()
+                    return nil
+                }
+            }
+            return value
+        } catch {
+            onCacheError(error)
+            return nil
+        }
+    }
+    nonisolated(nonsending) public func put(_ entry: Entry, value: JSONValue) async throws {
+        guard let epoch = fluidEpoch else { throw JSONDecodingError("0x1dd") }
+        var value = value
+        if isSnapshot(entry) {
+            var fields = try value.asObject()
+            if fields["cacheEntryTime"] == nil || fields["cacheEntryTime"] == .null { fields["cacheEntryTime"] = .number(now()) }
+            value = .object(fields)
+        }
+        var envelope = JSObject<JSONValue>()
+        envelope["value"] = value
+        envelope["version"] = .number(3)
+        envelope["fluidEpoch"] = .string(JSString(epoch))
+        do { try await cachePut?(entry, .object(envelope)) }
+        catch {
+            onCacheError(error)
+            throw error
+        }
+    }
+    nonisolated(nonsending) public func removeEntries() async throws {
+        clearCache()
+        try await cacheRemove?()
+    }
+    private func isSnapshot(_ entry: Entry) -> Bool {
+        entry.type == "snapshot" || entry.type == "snapshotWithLoadingGroupId"
+    }
+
+    nonisolated(nonsending) public func fetch<T>(type: OdspFetchType, call: () async throws -> T) async throws -> T {
+        do { return try await call() }
+        catch let error as OdspNetworkError {
+            if error.errorType == "fileOverwrittenInStorage" { try await cacheRemove?() }
+            throw error
+        }
+    }
 
     public func validateEpoch(_ epoch: String?) throws {
         guard let epoch else { throw JSONDecodingError("0x584") }

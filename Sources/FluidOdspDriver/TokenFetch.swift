@@ -37,7 +37,7 @@ public struct TokenFetchOptions: Sendable {
     public init() {}
 }
 
-public func getWithRetryForTokenRefresh<T>(_ get: (TokenFetchOptions) async throws -> T) async throws -> T {
+nonisolated(nonsending) public func getWithRetryForTokenRefresh<T>(_ get: (TokenFetchOptions) async throws -> T) async throws -> T {
     do { return try await get(TokenFetchOptions()) }
     catch let error as OdspNetworkError {
         guard ["authorizationError", "incorrectServerResponse", "fetchTokenError"].contains(error.errorType) || error.repeatForTokenRefresh else { throw error }

@@ -13,7 +13,8 @@ import PackageDescription
 let package = Package(name: "OdspLaneTests", platforms: [.macOS(.v15)], targets: [
     .target(name: "FluidJS"),
     .target(name: "FluidDriverDefinitions", dependencies: ["FluidJS"]),
-    .target(name: "FluidOdspDriver", dependencies: ["FluidJS", "FluidDriverDefinitions"]),
+    .target(name: "FluidSocketIO", dependencies: ["FluidJS"]),
+    .target(name: "FluidOdspDriver", dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidSocketIO"]),
     .testTarget(name: "FluidOdspDriverTests", dependencies: ["FluidOdspDriver", "FluidJS", "FluidDriverDefinitions"])
 ])
 ''')

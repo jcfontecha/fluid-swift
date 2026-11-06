@@ -184,9 +184,9 @@ public final class OdspDocumentDeltaConnection {
         case "get_ops_response":
             guard let response = arguments.first else { throw JSONDecodingError("missing get_ops response") }
             let nonce = try response.member("nonce").asString().description
-            guard let index = requests.firstIndex(where: { $0.0 == nonce }) else { return }
-            requests.remove(at: index)
-            if try response.member("code").asInt() == 200 { onOps(try response.member("messages").asArray()) }
+            guard nonce.hasPrefix(noncePrefix) || requests.contains(where: { $0.0 == nonce }) else { return }
+            requests.removeAll { $0.0 == nonce }
+            if let messages = try response.asObject()["messages"]?.asArray(), !messages.isEmpty { onOps(messages) }
         case "flush_ops_response":
             guard let response = arguments.first else { throw JSONDecodingError("missing flush response") }
             if try response.member("nonce").asString().description == flushNonce {

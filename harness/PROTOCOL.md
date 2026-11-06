@@ -1047,7 +1047,8 @@ both directions, and the byte-grammar, hazard and error-code tests.
 `npm run fuzz:odsp-net -- --self` exercises the installed 3.11.0 driver against itself;
 without `--self` it builds `FluidOdspNetPeer` using `--scratch-path .build/odsp2` and compares
 1,000 scripted seeds over a loopback HTTP server. `--seeds=N` selects a smaller run.
-The fake also exposes a websocket-only Socket.IO endpoint; live socket comparison is not yet wired.
+The same run also checks named live Socket.IO, discovery, snapshot-manager, persisted-cache,
+limiter, redirect and redemption scenarios (these are deterministic fixtures, not 1,000 socket seeds).
 
 The current comparisons run the actual TS `OdspDeltaStorageService`, `EpochTracker`,
 `downloadSnapshot`, `fetchJoinSession` and `OdspSummaryUploadManager`. They cover REST delta
@@ -1056,7 +1057,7 @@ mismatch with cache clearing, 429/retry-after and 500), successful join-session,
 JSON/compact snapshot downloads, and successful summary upload (text, binary, handle and attachment).
 A separate comparison runs the actual TS `runWithRetry` with Node virtual timers/Date and a fixed
 random source against native clock injection: five attempts at 0/1000/2000/3000/4000 ms and a
-terminal nonretryable error. It does not yet cover random backoff or redemption timing.
+terminal nonretryable error. It does not yet cover random backoff; redemption timing is compared separately below.
 
 Each request compares method, raw URL (including query order/escaping), protocol headers,
 and UTF-8 body including CRLF boundaries. Multipart boundary UUIDs become `BOUNDARY` and
@@ -1070,6 +1071,45 @@ retryability, optional status, claims, tenant, server epoch, cache-clear count, 
 `getRetryDelayFromError` converted to milliseconds. Snapshot blob bytes compare as hex.
 Telemetry-only error fields and messages are not yet compared.
 
+The resumed lane additionally certifies these bounded behaviors against the installed TS classes:
+
+- `OdspDocumentDeltaConnection` over real websocket-only Socket.IO: exact ordered handshake and
+  outbound frames, nonce mismatch rejection, early ops/signals, initial op sorting, multiplex filtering,
+  two simultaneous documents on one physical socket (including parallel initialization), zero-reference reuse before deletion and new
+  transport after the 2-second deletion timer. Ops, targeted/batched signals, nacks, get-ops with a
+  non-200 response containing messages, flush success, overlapping-flush cancellation, targeted server
+  disconnect during flush and disconnect-document ordering are compared. Handshake 400/404 retryability,
+  406 failure and mode mismatch are compared. For parallel initialization only, frames compare as a multiset because independent Swift tasks can
+  start in either order; all other socket scenarios compare ordered traces. Native transport uses committed `FluidSocketIO` through
+  the factory-owned `OdspSocketIOFactory`; protocol state remains `OdspDocumentDeltaConnection`.
+- Actual `OdspDelayLoadedDeltaStream` discovery cache/default 3,600-second lifetime, cache hits and
+  exact expiry at the 30-second refresh buffer. A live connection refreshes discovery, receives a 403
+  server disconnect, clears its timer/cache and rediscovers. Node virtual Date drives discovery;
+  native clock injection drives the same boundary. Native tests also exercise the real refresh timer,
+  cancellation, stale-client guard and preservation on non-authorization disconnect.
+- Actual storage-manager defaults (`mds=500000000`, timeout 120000 ms), host timeout forwarding,
+  summarizer removal of limits, 413 blobless retry with limits removed, and host-mds suppression of that
+  retry. Timer registrations are observed on TS; native request timeout values are observed before I/O.
+  Seven cache/network races compare cache/network wins, cache miss/failure, network failure, and both
+  failure completion orders. Background network cache writes finish even when cache wins.
+- Actual `prefetchLatestSnapshot`: untracked request framing, immediate deferred publication, consumers
+  obtaining the snapshot before persisted put completes, 4,999/5,000-ms eviction, and a rejected put
+  returning false/removing the entry without retracting an already-resolved consumer snapshot.
+  TS additionally emits a duplicate unhandled rejection from its unawaited put wrapper: the harness
+  observes and asserts that specific rejection without terminating Node; process-level rejection
+  delivery is not compared to Swift error delivery.
+- Actual epoch-cache version-3 envelopes: missing/wrong-version/other-epoch entries, ops strings,
+  snapshot missing-time and exact 5-day expiry, epoch learning before expiry, cache clearing and puts
+  with preserved/defaulted timestamps. The 48-request loopback test observes exactly 24 concurrent
+  requests in both clients. This concurrency probe compares peak/count, not nondeterministic arrival
+  order or individual request traces. Native URLSession's connection cap is above 24 so the driver
+  limiter, not Foundation's default six-connection cap, controls this test.
+- A 404 relocation facet becomes `locationRedirection`, patches only the site origin and clears cache.
+  Actual `EpochTrackerWithRedemption` comparisons cover trees-latest success, trees-latest failure and
+  the 14,999/15,000-ms synchronization boundary, including replayed requests/correlation numbers. The parallel redemption request traces are sorted by
+  their compared RequestNumber, not physical HTTP arrival order.
+
+
 `harness/src/odsp-net/planted-divergence.txt` records the failed run with native numeric
 retry-after interpreted as milliseconds instead of seconds. The source was restored afterward.
 `npm run fuzz:odsp-snapshot -- --scratch-path=.build/odsp2` runs the independent H10 codec farm.
@@ -1077,16 +1117,16 @@ retry-after interpreted as milliseconds instead of seconds. The source was resto
 **This lane is not fully certified. Remaining implementation/integration work:**
 
 - Full create-new/share-link/nav resolution and the Office/OneNote/ODC adapter packages.
-- Epoch persisted-cache envelopes, 24-request limiter, redirect handling and 15-second redemption synchronization.
-- Snapshot manager's concurrent cache/network race, default mds/timeout and blobless retry, and prefetch deferred/5-second eviction/persisted-put failure ordering.
+- Full persisted-cache host-adapter integration for native binary snapshot values, cache I/O failure metadata, already-completed/cache-hit redemption branches, invalid relocation URLs and HTTP redirect responses.
+- Snapshot grouped/summarizer/concurrent-policy combinations, deadline-triggered HTTP aborts and timeout-driven blobless retry (413 retry and timeout configuration are compared), overlapping/factory-shared prefetch integration and malformed-cache transformation branches.
 - Ops cache backing-store adapters and automatic flush timer; streaming/concurrent range fetching and cancellation.
-- Live Socket.IO adapter and handshake/early-event queues, factory-wide socket reuse, response/error/flush promise behavior. The current specialization tests synchronous ref teardown, multiplex filtering and request framing only.
-- Join-session discovery caching, refresh timer and disconnect-driven invalidation.
+- Socket transport/error/namespace and actual 62-second handshake-timeout branches, disconnect during initialization, get-ops eviction/stale-response combinations, unsupported flush and host-header propagation; full document-service/factory integration of the live adapter.
+- Join-session separate websocket-token acquisition/retry, connection-failure cache-preservation combinations, sensitivity-label metadata and storage-only facet transitions.
 - Full error telemetry/message mapping, all host-token failure metadata, HTTP redirect behavior and all special-facet/error branches.
 - Summary relay-flush retry and empty-file pending rename integration.
 
 `python3 harness/src/odsp-net/test-swift.py` compiles and runs the real ODSP test files through
-an ephemeral four-target manifest, reusing the same `Sources`/`Tests` and `.build/odsp2` scratch path.
+an ephemeral five-target manifest, reusing the same `Sources`/`Tests` and `.build/odsp2` scratch path.
 This avoids compiling sibling lanes' in-progress test targets; it does not substitute copies or mocks
 for native ODSP source. The ordinary full-package filtered command can still fail on unrelated
 concurrent edits (observed: ContainerRuntime `SummaryManagerTests` referencing a missing `Throttler`).

@@ -1,16 +1,26 @@
 import FluidJS
 import Foundation
 
+/// epochTracker.ts FetchType.
+public enum OdspFetchType: String, Sendable {
+    case blob, createBlob, createFile, joinSession, ops, test, snapshotTree, treesLatest
+    case uploadSummary, push, versions, renameFile
+}
+
 public struct OdspRequest: Sendable {
     public var url: String
     public var method: String
     public var headers: [String: String]
     public var body: Data
-    public init(url: String, method: String = "POST", headers: [String: String] = [:], body: Data = Data()) {
+    public var timeoutMs: Double?
+    public var fetchType: OdspFetchType
+    public init(url: String, method: String = "POST", headers: [String: String] = [:], body: Data = Data(), timeoutMs: Double? = 30000, fetchType: OdspFetchType = .test) {
         self.url = url
         self.method = method
         self.headers = headers
         self.body = body
+        self.timeoutMs = timeoutMs
+        self.fetchType = fetchType
     }
 }
 
@@ -26,25 +36,33 @@ public struct OdspResponse: Sendable {
     public func json() throws -> JSONValue { try JSON.parse(String(decoding: body, as: UTF8.self)) }
 }
 
+private let odspHTTPSession: URLSession = {
+    let configuration = URLSessionConfiguration.ephemeral
+    // Foundation's six-connection default must not supersede EpochTracker's 24-request limiter.
+    configuration.httpMaximumConnectionsPerHost = 64
+    configuration.timeoutIntervalForResource = Double.greatestFiniteMagnitude
+    return URLSession(configuration: configuration)
+}()
+
 /// odspUtils.ts fetchHelper I/O edge. Wire JSON always uses FluidJS.
-public func fetchHelper(_ request: OdspRequest, timeoutMs: Double = 30000) async throws -> OdspResponse {
+public func fetchHelper(_ request: OdspRequest) async throws -> OdspResponse {
     guard let url = URL(string: request.url) else { throw JSONDecodingError("invalid request URL") }
     var wire = URLRequest(url: url)
     if request.headers.keys.contains(where: { $0.lowercased() == "authorization" }) {
         wire.cachePolicy = .reloadIgnoringLocalCacheData
     }
     wire.httpMethod = request.method
-    wire.httpBody = request.body
+    if request.method != "GET" || !request.body.isEmpty { wire.httpBody = request.body }
     wire.allHTTPHeaderFields = request.headers
     if request.headers.keys.contains(where: { $0.lowercased() == "authorization" }) {
         // WHATWG fetch's authenticated-request cache mode emits these under Node's oracle transport.
         if wire.value(forHTTPHeaderField: "Pragma") == nil { wire.setValue("no-cache", forHTTPHeaderField: "Pragma") }
         if wire.value(forHTTPHeaderField: "Cache-Control") == nil { wire.setValue("no-cache", forHTTPHeaderField: "Cache-Control") }
     }
-    wire.timeoutInterval = timeoutMs / 1000
+    wire.timeoutInterval = request.timeoutMs.map { $0 / 1000 } ?? Double.greatestFiniteMagnitude
     let data: Data
     let response: URLResponse
-    do { (data, response) = try await URLSession.shared.data(for: wire) }
+    do { (data, response) = try await odspHTTPSession.data(for: wire) }
     catch {
         let timeout = (error as? URLError)?.code == .timedOut
         throw OdspNetworkError(timeout ? "fetchTimeout" : "fetchFailure", canRetry: true)
@@ -77,7 +95,7 @@ public final class OdspNetwork {
         self.tokenFetcher = tokenFetcher
         self.send = send
     }
-    public func authorized(url: String, method: String = "POST", make: (String, String) throws -> OdspRequest) async throws -> OdspResponse {
+    nonisolated(nonsending) public func authorized(url: String, method: String = "POST", make: (String, String) throws -> OdspRequest, fetchResponse: ((OdspRequest) async throws -> OdspResponse)? = nil) async throws -> OdspResponse {
         try await getWithRetryForTokenRefresh { options in
             var options = options
             options.requestURL = url
@@ -90,10 +108,21 @@ public final class OdspNetwork {
             catch { throw OdspNetworkError("fetchTokenError", canRetry: false) }
             guard let auth = response.authorizationHeader else { throw OdspNetworkError("fetchTokenError", canRetry: false) }
             let request = try make(auth, self.boundary())
+            if let fetchResponse { return try await fetchResponse(request) }
             return try await self.fetch(request)
         }
     }
-    public func fetch(_ request: OdspRequest) async throws -> OdspResponse {
+    nonisolated(nonsending) public func fetchWithoutEpoch(_ request: OdspRequest) async throws -> OdspResponse {
+        let response = try await send(request)
+        guard (200..<300).contains(response.status) else {
+            throw try createOdspNetworkError(status: response.status, headers: response.headers, body: String(decoding: response.body, as: UTF8.self))
+        }
+        return response
+    }
+    nonisolated(nonsending) public func fetch(_ request: OdspRequest) async throws -> OdspResponse {
+        try await epochTracker.fetch(type: request.fetchType) { try await self.fetchOnce(request) }
+    }
+    nonisolated(nonsending) private func fetchOnce(_ request: OdspRequest) async throws -> OdspResponse {
         var request = request
         let stats = "driverId=NORMALIZED, RequestNumber=\(requestNumber), driverVersion=3.11.0, isSummarizer=false"
         requestNumber += 1
@@ -107,9 +136,22 @@ public final class OdspNetwork {
             request.headers["X-RequestStats"] = stats
             if let epoch = epochTracker.fluidEpoch { request.headers["x-fluid-epoch"] = epoch }
         }
-        let response = try await send(request)
+        await epochTracker.rateLimiter.acquire()
+        let response: OdspResponse
+        do { response = try await send(request) }
+        catch {
+            await epochTracker.rateLimiter.release()
+            throw error
+        }
+        await epochTracker.rateLimiter.release()
         if !(200..<300).contains(response.status) {
-            throw try epochTracker.classify(status: response.status, headers: response.headers, body: String(decoding: response.body, as: UTF8.self))
+            var error = try epochTracker.classify(status: response.status, headers: response.headers, body: String(decoding: response.body, as: UTF8.self))
+            if error.errorType == "fileNotFoundOrAccessDeniedError", let location = error.redirectLocation {
+                error.redirectUrl = try patchOdspResolvedUrl(resolvedUrl, redirectLocation: location)
+                error.errorType = "locationRedirection"
+                try await epochTracker.removeEntries()
+            }
+            throw error
         }
         if let epoch = response.headers["x-fluid-epoch"] { try epochTracker.validateEpoch(epoch) }
         return response
@@ -139,7 +181,7 @@ public final class OdspDeltaStorageService {
 }
 
 /// vroom.ts.
-public func fetchJoinSession(resolved: IOdspResolvedUrl, network: OdspNetwork, requestSocketToken: Bool = true, displayName: String? = nil, disableJoinSessionRefresh: Bool = false) async throws -> JSONValue {
+nonisolated(nonsending) public func fetchJoinSession(resolved: IOdspResolvedUrl, network: OdspNetwork, requestSocketToken: Bool = true, displayName: String? = nil, disableJoinSessionRefresh: Bool = false) async throws -> JSONValue {
     let url = try getApiRoot(resolved.siteUrl) + "/drives/" + resolved.driveId + "/items/" + resolved.itemId + "/opStream/joinSession?ump=1"
     let response = try await network.authorized(url: url) { auth, boundary in
         var lines = ["Authorization: " + auth, "X-HTTP-Method-Override: POST", "Content-Type: application/json"]
@@ -148,7 +190,7 @@ public func fetchJoinSession(resolved: IOdspResolvedUrl, network: OdspNetwork, r
         var body = JSObject<JSONValue>()
         if requestSocketToken { body["requestSocketToken"] = .bool(true) }
         if let displayName, !displayName.isEmpty { body["displayName"] = .string(JSString(displayName)) }
-        return OdspRequest(url: url, headers: ["Content-Type": "multipart/form-data;boundary=" + boundary], body: odspMultipart(boundary: boundary, lines: lines, payload: body.isEmpty ? nil : JSON.stringify(.object(body))))
+        return OdspRequest(url: url, headers: ["Content-Type": "multipart/form-data;boundary=" + boundary], body: odspMultipart(boundary: boundary, lines: lines, payload: body.isEmpty ? nil : JSON.stringify(.object(body))), fetchType: .joinSession)
     }
     var body = try response.json().asObject()
     if case .string(let tenant) = body["runtimeTenantId"], tenant != "", body["tenantId"] == nil || body["tenantId"] == .string("") { body["tenantId"] = .string(tenant) }

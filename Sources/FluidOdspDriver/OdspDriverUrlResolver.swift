@@ -15,7 +15,7 @@ public func getApiRoot(_ siteUrl: String) throws -> String {
 
 /// odsp-driver-definitions/src/resolvedUrl.ts.
 public struct IOdspResolvedUrl: Sendable {
-    public let siteUrl: String
+    public var siteUrl: String
     public let driveId: String
     public let itemId: String
     public let dataStorePath: String
@@ -69,4 +69,21 @@ public struct OdspDriverUrlResolver {
         let path = relativeUrl.isEmpty ? resolved.dataStorePath : relativeUrl
         return createOdspUrl(siteUrl: resolved.siteUrl, driveId: resolved.driveId, itemId: resolved.itemId, dataStorePath: path.hasPrefix("/") ? String(path.dropFirst()) : path, containerPackageName: resolved.containerPackageName, fileVersion: resolved.fileVersion)
     }
+}
+
+/// odspLocationRedirection.ts. Only the site origin changes; endpoints and authored path stay intact.
+public func patchOdspResolvedUrl(_ resolved: IOdspResolvedUrl, redirectLocation: String) throws -> IOdspResolvedUrl {
+    guard var destination = URLComponents(string: redirectLocation),
+          let scheme = destination.scheme, destination.host != nil,
+          let original = URLComponents(string: resolved.siteUrl) else { throw JSONDecodingError("invalid redirect URL") }
+    destination.user = nil
+    destination.password = nil
+    if (scheme == "https" && destination.port == 443) || (scheme == "http" && destination.port == 80) { destination.port = nil }
+    destination.percentEncodedPath = original.percentEncodedPath.isEmpty ? "/" : original.percentEncodedPath
+    destination.query = nil
+    destination.fragment = nil
+    guard let siteUrl = destination.string else { throw JSONDecodingError("invalid redirect site URL") }
+    var patched = resolved
+    patched.siteUrl = siteUrl
+    return patched
 }

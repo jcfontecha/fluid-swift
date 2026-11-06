@@ -5,13 +5,14 @@ import Foundation
 public struct SnapshotFetchResult {
     public let snapshot: CompactSnapshot
     public let cacheAllowed: Bool
+    public let fluidEpoch: String?
 }
 
-public func downloadSnapshot(resolved: IOdspResolvedUrl, network: OdspNetwork, options: JSObject<JSONValue> = .init(), loadingGroupIds: [String]? = nil, binaryOnly: Bool = false) async throws -> CompactSnapshot {
+nonisolated(nonsending) public func downloadSnapshot(resolved: IOdspResolvedUrl, network: OdspNetwork, options: JSObject<JSONValue> = .init(), loadingGroupIds: [String]? = nil, binaryOnly: Bool = false) async throws -> CompactSnapshot {
     try await fetchSnapshotCore(resolved: resolved, network: network, options: options, loadingGroupIds: loadingGroupIds, binaryOnly: binaryOnly).snapshot
 }
 
-func fetchSnapshotCore(resolved: IOdspResolvedUrl, network: OdspNetwork, options: JSObject<JSONValue> = .init(), loadingGroupIds: [String]? = nil, binaryOnly: Bool = false) async throws -> SnapshotFetchResult {
+nonisolated(nonsending) func fetchSnapshotCore(resolved: IOdspResolvedUrl, network: OdspNetwork, options: JSObject<JSONValue> = .init(), loadingGroupIds: [String]? = nil, binaryOnly: Bool = false, untracked: Bool = false) async throws -> SnapshotFetchResult {
     var url = resolved.snapshotStorageUrl + "/trees/latest?ump=1"
     for (key, value) in options.entries where key != "timeout" {
         let text: String
@@ -19,14 +20,17 @@ func fetchSnapshotCore(resolved: IOdspResolvedUrl, network: OdspNetwork, options
         url += "&" + encodeOdspComponent(key.description) + "=" + encodeOdspComponent(text)
     }
     if let loadingGroupIds { url += "&groupId=" + encodeOdspComponent(loadingGroupIds.joined(separator: ",")) }
-    let response = try await network.authorized(url: url) { auth, boundary in
-        OdspRequest(url: url, headers: ["Content-Type": "multipart/form-data;boundary=" + boundary, "accept": (binaryOnly ? "" : "application/json, ") + "application/ms-fluid; v=1.0"], body: odspMultipart(boundary: boundary, lines: ["Authorization: " + auth, "X-HTTP-Method-Override: GET", "prefer: manualredirect"]))
-    }
+    let fetchResponse: ((OdspRequest) async throws -> OdspResponse)?
+    if untracked { fetchResponse = { request in try await network.fetchWithoutEpoch(request) } }
+    else { fetchResponse = nil }
+    let response = try await network.authorized(url: url, make: { auth, boundary in
+        OdspRequest(url: url, headers: ["Content-Type": "multipart/form-data;boundary=" + boundary, "accept": (binaryOnly ? "" : "application/json, ") + "application/ms-fluid; v=1.0"], body: odspMultipart(boundary: boundary, lines: ["Authorization: " + auth, "X-HTTP-Method-Override: GET", "prefer: manualredirect"]), timeoutMs: try options["timeout"]?.asNumber(), fetchType: .treesLatest)
+    }, fetchResponse: fetchResponse)
     guard !response.body.isEmpty else { throw OdspNetworkError("incorrectServerResponse", canRetry: false, statusCode: 712) }
     let type = response.headers["content-type"] ?? ""
     let cacheAllowed = response.headers["disablebrowsercachingofusercontent"] != "true" && loadingGroupIds?.isEmpty != false
-    if type.contains("application/ms-fluid") { return SnapshotFetchResult(snapshot: try parseCompactSnapshotResponse(Array(response.body)).snapshot, cacheAllowed: cacheAllowed) }
-    if type.contains("application/json") { return SnapshotFetchResult(snapshot: try convertOdspSnapshotToSnapshotTreeAndBlobs(response.json()), cacheAllowed: cacheAllowed) }
+    if type.contains("application/ms-fluid") { return SnapshotFetchResult(snapshot: try parseCompactSnapshotResponse(Array(response.body)).snapshot, cacheAllowed: cacheAllowed, fluidEpoch: response.headers["x-fluid-epoch"]) }
+    if type.contains("application/json") { return SnapshotFetchResult(snapshot: try convertOdspSnapshotToSnapshotTreeAndBlobs(response.json()), cacheAllowed: cacheAllowed, fluidEpoch: response.headers["x-fluid-epoch"]) }
     throw OdspNetworkError("incorrectServerResponse", canRetry: false, statusCode: 712)
 }
 

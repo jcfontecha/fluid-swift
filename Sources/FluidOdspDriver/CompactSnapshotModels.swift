@@ -38,7 +38,7 @@ public enum CompactSnapshotBlobContent: Equatable, Sendable {
 }
 
 /// `ISnapshot` with `snapshotFormatV: 1`.
-public struct CompactSnapshot {
+public struct CompactSnapshot: Sendable {
     public var snapshotTree: CompactSnapshotTree
     /// A `Map`: insertion order is the order blobs are written.
     public var blobContents: JSMap<JSString, CompactSnapshotBlobContent>
