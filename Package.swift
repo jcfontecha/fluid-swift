@@ -39,13 +39,15 @@ let package = Package(
         .testTarget(name: "FluidLZ4Tests", dependencies: ["FluidLZ4"]),
         .target(name: "FluidDriverDefinitions", dependencies: ["FluidJS"]),
         .target(name: "FluidDatastoreDefinitions", dependencies: ["FluidJS", "FluidDriverDefinitions"]),
+        .target(name: "FluidCell", dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions", "FluidSharedObjectBase"]),
+        .testTarget(name: "FluidCellTests", dependencies: ["FluidCell", "FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions", "FluidSharedObjectBase", "FluidTestRuntimeUtils"]),
         .target(name: "FluidMap", dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidSharedObjectBase"]),
         .target(name: "FluidSharedObjectBase", dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions"]),
         .target(name: "FluidCounter", dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions", "FluidSharedObjectBase"]),
         .target(name: "FluidTestRuntimeUtils", dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions"]),
         .executableTarget(
             name: "FluidSwiftPeer",
-            dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions", "FluidCounter", "FluidMap", "FluidTestRuntimeUtils"]
+            dependencies: ["FluidJS", "FluidDriverDefinitions", "FluidDatastoreDefinitions", "FluidCounter", "FluidCell", "FluidMap", "FluidSharedObjectBase", "FluidTestRuntimeUtils"]
         ),
         .testTarget(name: "FluidDriverDefinitionsTests", dependencies: ["FluidDriverDefinitions", "FluidJS"], resources: [.copy("Fixtures")]),
         .testTarget(name: "FluidJSTests", dependencies: ["FluidJS"]),

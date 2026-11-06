@@ -1,3 +1,4 @@
+import FluidCell
 import FluidCounter
 import FluidDatastoreDefinitions
 import FluidDriverDefinitions
@@ -132,6 +133,13 @@ final class Peer {
           ? SharedDirectory(id: channelId)
           : try SharedDirectory.load(id: channelId, summary: SummaryTree(json: summary))
         clients[id] = directoryAdapter(
+          MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
+      } else if type == SharedCell.type {
+        let c =
+          summary == .null
+          ? SharedCell(id: channelId)
+          : try SharedCell.load(id: channelId, summary: SummaryTree(json: summary))
+        clients[id] = cellAdapter(
           MockContainerRuntime(clientId: id, channel: c, lastSequenceNumber: seq, flushMode: mode))
       } else {
         throw PeerError(description: "not implemented: \(type)")
