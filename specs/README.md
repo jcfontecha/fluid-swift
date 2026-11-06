@@ -5,6 +5,20 @@ version) as checked out in `reference/fluidframework-3.11.0`. Specs are reading 
 the TS code and the differential harness stay the source of truth. Every claim cites
 `path/from/repo/root.ts:line`.
 
+## Quality bar
+
+- **No deferrals.** Never write "inspect", "see X for details", "verify in source", or an elided
+  citation. If a porter would have to open the file to learn a field name, an order, or a branch
+  condition, the spec is not finished.
+- Every wire or persisted format is given literally: field names, types, optionality, emission
+  order, and a concrete example derived from the code path that produces it.
+- Every state machine is given as states and transitions, with each transition's exact predicate
+  and side effects in TS execution order, and the events emitted, in order.
+- Every citation is a real `path:line` or `path:start-end`. Length follows the package's real
+  complexity, with no filler.
+
+## Sections
+
 Every spec uses these sections, in order (write "None." rather than dropping one):
 
 1. **Role** — what the package does and which layers call it, in a few sentences.

@@ -1,0 +1,84 @@
+# merge-tree: local references and reconnect
+
+## 1. Role
+
+Local references attach to segment identity and offset instead of unstable absolute positions; pending segment groups retain the provenance needed to regenerate disconnected operations. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:17`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1450`.
+
+## 2. Surface used by other packages
+
+Client exposes create/removeLocalReferencePosition, localReferencePositionToPosition, getContainingSegment, findReconnectionPosition, regeneratePendingOp, rollback and collaboration updates. Sequence intervals use sliding/staying refs; matrix pending writes use StayOnRemove refs. Tracking groups retain segments for undo independent of references. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:494`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:864`, `reference/fluidframework-3.11.0/packages/dds/matrix/src/matrix.ts:470`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTreeTracking.ts:12`.
+
+## 3. Wire and persisted formats
+
+Refs, callbacks, segment groups and short IDs are local-only. RefType bit flags: Simple=0, Tile=1, RangeBegin=16, RangeEnd=32, SlideOnRemove=64, StayOnRemove=128, Transient=256. DetachedReferencePosition=-1. Regenerated wire operations use the original delta formats; one result is returned directly, otherwise GROUP (including zero ops). Runtime metadata must preserve object identity of original pending groups. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/ops.ts:10`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/referencePositions.ts:104`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1539`.
+
+## 4. Behavior
+
+### Reference storage and resolution
+
+Each LocalReference retains segment, offset, refType, properties, sliding preference, endpoint permission, optional list node and beforeSlide/afterSlide callbacks. LocalReferenceCollection stores per-offset **before / at / after** linked-list buckets. Transient refs never become collection members. Splitting at p transfers buckets >=p, relinks refs to right half and subtracts p; append relinks other refs with the left length added **before length changes**. Removal detaches segment link and list node. Iteration walks offsets ascending and buckets before→at→after, reversing both for backward walks. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:17`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:412`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:431`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:471`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:575`.
+
+Resolution returns -1 for unbound/missing segment or nontransient ref no longer in collection. Segment refs resolve to segment position. Other refs normally resolve segment position+offset. If segment is absent from requested perspective, compute slide perspective from first acked removal seq (or requested refSeq), with removal.localSeq when present; find next present segment in preferred direction, falling to corresponding imaginary tree endpoint, then resolve its start (forward) or last offset (backward). This positional resolution is separate from physically moving the ref. compareReferencePositions compares offsets for same segment, otherwise bound segment ordinals; unbound sorts before bound. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:1181`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:1246`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/referencePositions.ts:110`.
+
+### Physical sliding
+
+Slide only after removal is acked (except detached noncollaborating edits). Use allAckedChangesPerspective to choose destination, not local pending insertions. Search preferred direction; if no candidate and endpoint sliding is disabled, search opposite direction; if endpoint sliding enabled, do **not** search opposite direction and select imaginary start/end as appropriate. Per-ref endpoint eligibility is also checked by the group slide path. Group refs with same destination/direction to preserve tombstone order. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:401`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:436`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:900`.
+
+At a forward destination insert sliding refs in the `before` bucket at offset 0; backward destination appends in `after` bucket at last offset. StayOnRemove refs remain on tombstones. SlideOnRemove calls beforeSlide, relinks, then afterSlide. Other refs detach. On remove callbacks, overlaps already invisible locally slide first; newly removed leaves emit delta first so undo consumers can install tracking refs; then remote/detached physical slides happen. Local removal slides when its ack arrives, after **all** affected segments have been acked; ACKNOWLEDGED maintenance event follows slides and precedes final path-length refresh. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:496`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:530`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:2363`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:1330`.
+
+### Collaboration and pending queues
+
+Starting collaboration sets short client ID, min/current seq, application perspective and rebuilds lengths. Reconnecting with a new long ID reuses the old short ID slot and replaces its reverse mapping; never renumber retained stamps. Local pending operations mint increasing localSeq and accumulate SegmentGroup `{segments,previousProps?,localSeq?,refSeq,obliterateInfo?}`; a split copies pending membership to both pieces. Acknowledgement takes FIFO pending group, updates insert/removal/property stamps without reapplying the edit, slides refs, emits maintenance and updates lengths. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:807`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1701`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTreeNodes.ts:235`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:1414`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:1330`.
+
+### regeneratePendingOp: mandatory ordering
+
+1. If no rebase queue, locate the first supplied metadata group in pendingSegments and splice that suffix into pendingRebase. Empty metadata array returns empty GROUP immediately. Metadata identifies retained objects, not reconstructed equal-value records.
+2. Once per `(currentSeq,localSeq)` pair, inspect all pending+rebase groups and compute **obliterate endpoint destinations before normalizing segments**. Emit normalize(squash,client), allowing interval collections to pre-rebase endpoint refs. Normalize segment order, then record normalization pair.
+3. Process original group members with one metadata group each (a singleton member may use direct group rather than array). Each must be head of pendingRebase, has defined localSeq, and is removed FIFO.
+4. Ordinary operations sort group's segments by ordinal, remove old group membership, compute each segment position using LocalReconnecting(currentSeq,clientId,original localSeq). Create zero or one op per surviving piece; new metadata group retains same localSeq, current refSeq and previousProps copy. Enqueue it on segment and pendingSegments. Return one op or GROUP.
+
+`reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1450`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:961`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1158`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:864`.
+
+Per-piece rules:
+
+- ANNOTATE requires pending property changes; emit original props/adjust over piece length unless acked-removed. Pending locally removed pieces still need annotation because annotation preceded remove.
+- INSERT requires local insertion. Clone surviving piece, but replace clone properties with **original insertion op's props**, not current annotations. Skip already squashed insertion. If squash requested and removed, convert both insert/removal to universal seq with SquashClient and rebuild lengths; no wire insert. Without squash, acked remotely obliterated local insertion becomes universal NonCollabClient, loses localSeq and is not resubmitted (obliterate-reconnect gate required).
+- REMOVE resubmits only if first removal is still local; another client's acked removal makes it unnecessary.
+
+This can split one contiguous original range into several disjoint ops because concurrent inserts must survive a set removal/annotation. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1173`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1421`.
+
+### Ack transitions in execution order
+
+Shift one FIFO pending group; no group means no ACKNOWLEDGED event. With a group, require obliterateInfo iff acknowledged op type is 4/5 (0xa40). An obliterate first replaces its info stamp with acked sliceRemove stamp, updates range index, unlinks every tiebreak-tracked insertion, clears insertionRefSeqStamp and releases tiebreakTrackingGroup. Ack every group segment, accumulating whether overlapping removal forces nonincremental length rebuild and unique parent blocks; enqueue scour entries. Only **after every segment** is stamped, slide removal/obliterate refs, emit ACKNOWLEDGED (including empty obliterate groups), then refresh each parent path. Finally scour if globally enabled, even without a pending group. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:1329-1411`.
+
+Per-segment acknowledgement dequeues segment.segmentGroups and requires identical group (0x043), requires sequencedMessage (0xa6e), then branches: annotate requires manager (0x044) and calls ack(seq,minSeq,op); insert requires seq=-1 (0x045) and replaces insertion stamp with acked insert stamp (without localSeq); remove/obliterate requires last removal pending (0xb5d) and preceding removal, if any, acked (0xb5e), replaces last removal with acked setRemove/sliceRemove. Incremental partial update is allowed only with exactly one removal stamp. Unknown ack op throws. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:149-214`.
+
+Regenerated metadata for each emitted ordinary piece has construction order `{segments:[],localSeq:oldLocalSeq,refSeq:currentSeq,previousProps:oldPreviousProps?.slice(0)}`; segment.segmentGroups.enqueue links the piece into that new group, then pendingSegments.push and opList.push. Sort comparator returns -1 when a.ordinal<b.ordinal and 1 otherwise (not 0 on equality). Each split pending piece has independent membership, but shares original operation localSeq. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1164-1171`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1270-1282`.
+
+### Normalization algorithm
+
+Walk maximal consecutive runs where each segment is removed or locally inserted. Normalize only runs containing both local insertions and acked-removed segments. Starting backward at last non-acked-removed item: move acked-removed items after last local item; move local-only removed items past following local insertions whose insert stamp exceeds removal stamp, stopping before acked-removed content. Save existing physical slots, invoke reference beforeSlide callbacks, detach tracking groups, write reordered segments into slots with saved ordinals, reattach groups, invoke afterSlide, and rebuild changed blocks bottom-up. Re-sort obliterate index and recompute newest-overlapping-obliterate links/tracking for affected pending insertions. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:2617`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:2738`.
+
+### Obliterate reconnect is not ordinary range splitting
+
+Require `mergeTreeEnableObliterateReconnect===true`. Precompute endpoints at `(currentSeq, localSeq-1)` with optional squash perspective: slide start forward and end backward, allowing endpoints. If segment changes, start side becomes Before, end becomes After; otherwise preserve original side. If rebased end ordinal<start ordinal, remove obsolete local removal stamps on affected already-acked-removed pieces, rebase obliterate to undefined and emit no operation. Otherwise recreate StayOnRemove refs and new ObliterateInfo at current refSeq, preserving original stamp/localSeq and tiebreak tracking group. Remove old membership; retain local removal membership only for non-acked-removed pieces within rebased sided range; strip obsolete local stamps on other acked-removed pieces. Replace obliterate index entry, enqueue new group, resolve positions at localSeq-1 and emit one contiguous op. Preserve type 4 if originally non-sided (end offset+1); do not upgrade it to type 5. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:880`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:927`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:981`.
+
+### Stashed ops and rollback
+
+Stashed deltas apply through the local mutation path, creating new pending metadata; group members recurse. Rollback is LIFO, group members reversed, validates metadata identity against pending tail, reverses insert/remove/annotation using saved segments/properties; it is not a sequenced inverse op broadcast. Preserve rollback flag so consumer does not resubmit rollback deltas. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1327`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:2392`.
+
+## 5. Invariants and asserts
+
+0x2f1 requires acked-removed segments for physical slides; 0x032 bounds reconnection localSeq; 0x033/0x034/0x867 require group, FIFO identity and localSeq. 0x70e requires pending group found; 0x03a/0x03b group arity; 0xb63–0xb65 require obliterate metadata/localSeq/precomputed endpoints; 0xb6b forbids changing non-sided endpoint semantics; 0xb6c requires segment membership removal; 0x036/0x037 pending property/local insertion checks. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/mergeTree.ts:1038`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:864`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:967`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:993`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1450`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1164`.
+
+## 6. JS-semantics hazards
+
+Ref comparison and rebase sorting use UTF-16 ordinal lexicographic order; ref offsets into text are **UTF-16 code units** and may address a low surrogate independently. Linked-list membership and object identity are semantic; replacing them with value equality loses pending and index ownership. Never dispatch slides or normalization events asynchronously. Preserve missing localSeq versus 0 and absent segment versus imaginary start/end; all are different states. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/referencePositions.ts:110`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:968`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/localReference.ts:496`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/client.ts:1485`.
+
+## 7. Test assets to reuse
+
+`reference/fluidframework-3.11.0/packages/dds/merge-tree/src/test/client.localReference.spec.ts:1`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/test/localReference.spec.ts:1`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/test/client.reconnectFarm.spec.ts:1`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/test/obliterate.reconnect.spec.ts:1`, `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/test/client.rebasePosition.spec.ts:1`.
+
+## 8. Open questions
+
+The squash perspective intentionally excludes local inserted-and-removed content and is used while precomputing obliterate endpoints. The implementation itself notes imperfect alignment between global precomputation and each resubmitted op's squash state; match 3.11.0 and fuzz that combination rather than invent a cleaner rule. `reference/fluidframework-3.11.0/packages/dds/merge-tree/src/perspective.ts:122`.
