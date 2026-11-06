@@ -18,6 +18,33 @@ public final class MergeTree {
     return result
   }
 
+  /// Walk neighboring leaves without materializing the document (mergeTreeNodeWalk.ts).
+  func adjacent(to segment: BaseSegment, forward: Bool) -> BaseSegment? {
+    var target = MergeBlock.Child.segment(segment)
+    var parent = segment.parent
+    while let block = parent {
+      guard let index = block.children.firstIndex(where: { child in
+        switch (child, target) {
+        case (.segment(let a), .segment(let b)): return a === b
+        case (.block(let a), .block(let b)): return a === b
+        default: return false
+        }
+      }) else { return nil }
+      let next = index + (forward ? 1 : -1)
+      if block.children.indices.contains(next) {
+        var child = block.children[next]
+        while case .block(let nested) = child {
+          guard let edge = forward ? nested.children.first : nested.children.last else { return nil }
+          child = edge
+        }
+        if case .segment(let leaf) = child { return leaf }
+      }
+      target = .block(block)
+      parent = block.parent
+    }
+    return nil
+  }
+
   func position(of segment: BaseSegment, perspective: Perspective) -> Int {
     var total = 0
     var target = MergeBlock.Child.segment(segment)
@@ -340,14 +367,17 @@ public final class MergeTree {
         index = child
       }
       guard let block = first.segment?.parent, block.needsScour != false else { continue }
-      cachedSegments = nil
-      let oldCount = block.children.count
-      block.children = scoured(block, minimum: minimum)
+      let children = scoured(block, minimum: minimum)
       block.needsScour = false
+      // zamboni.ts only refreshes structure when scouring actually removes a child.
+      guard children.count < block.children.count else { continue }
+      cachedSegments = nil
+      block.children = children
       block.assignParents()
-      refreshPath(block)
-      if block.children.count < oldCount, block.children.count < 4, let parent = block.parent {
+      if block.children.count < 4, let parent = block.parent {
         pack(parent, minimum: minimum)
+      } else {
+        refreshPath(block)
       }
     }
   }

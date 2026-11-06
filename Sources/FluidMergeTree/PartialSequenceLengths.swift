@@ -118,15 +118,14 @@ public struct PartialSequenceLengths: Sendable {
   mutating func add(_ other: PartialSequenceLengths, scale: Int = 1) {
     let minimum = max(minimumSequence, other.minimumSequence)
     if minimumSequence < minimum { advanceMinimum(to: minimum) }
-    var aligned = other
-    if aligned.minimumSequence < minimum { aligned.advanceMinimum(to: minimum) }
-    global.add(aligned.global, scale: scale, minimum: minimumSequence)
+    // Series.apply folds entries at/below the minimum into the baseline directly.
+    // Do not copy and collapse every source client series merely to add it.
+    global.add(other.global, scale: scale, minimum: minimumSequence)
     reconnecting.add(other.reconnecting, scale: scale, minimum: -1)
     latestSequence = max(latestSequence, other.latestSequence)
-    for (client, series) in aligned.clients {
-      var value = clients[client] ?? Series(deltas: [:], minimum: minimumSequence)
-      value.add(series, scale: scale, minimum: minimumSequence)
-      clients[client] = value
+    for (client, series) in other.clients {
+      clients[client, default: Series(deltas: [:], minimum: minimumSequence)]
+        .add(series, scale: scale, minimum: minimumSequence)
     }
   }
   /// Current-ref reconnect queries combine acknowledged length with local-seq
@@ -145,6 +144,11 @@ public struct PartialSequenceLengths: Sendable {
     precondition(sequence >= minimumSequence)
     minimumSequence = sequence
     global.collapse(to: sequence)
-    for key in Array(clients.keys) { clients[key]?.collapse(to: sequence) }
+    for key in Array(clients.keys) {
+      clients[key]?.collapse(to: sequence)
+      if let series = clients[key], series.baseline == 0, series.entries.isEmpty {
+        clients.removeValue(forKey: key)
+      }
+    }
   }
 }

@@ -151,7 +151,7 @@ extension Client {
   /// before selecting destinations. Pending insertions are never slide targets.
   internal func slideReferences(on removed: [BaseSegment]) {
     struct SlideGroup {
-      var destination: Int?
+      var destination: BaseSegment?
       var forward: Bool
       var references: [LocalReference]
     }
@@ -159,6 +159,33 @@ extension Client {
     var backwardGroup: SlideGroup?
     let present: (BaseSegment) -> Bool = {
       $0.insertion.sequence != -1 && !$0.removals.contains { $0.sequence != -1 }
+    }
+    // Cache tombstone runs per direction, matching TS getSlideToSegment.
+    var forwardCache: [ObjectIdentifier: BaseSegment?] = [:]
+    var backwardCache: [ObjectIdentifier: BaseSegment?] = [:]
+    func findDestination(from segment: BaseSegment, forward: Bool) -> BaseSegment? {
+      var visited: [BaseSegment] = []
+      var cursor = segment
+      var result: BaseSegment?
+      while true {
+        let cached = forward ? forwardCache[ObjectIdentifier(cursor)] : backwardCache[ObjectIdentifier(cursor)]
+        if let cached {
+          result = cached
+          break
+        }
+        visited.append(cursor)
+        guard let next = mergeTree.adjacent(to: cursor, forward: forward) else { break }
+        if present(next) {
+          result = next
+          break
+        }
+        cursor = next
+      }
+      for leaf in visited {
+        if forward { forwardCache[ObjectIdentifier(leaf)] = .some(result) }
+        else { backwardCache[ObjectIdentifier(leaf)] = .some(result) }
+      }
+      return result
     }
     func slide(_ group: SlideGroup?, preference: SlidingPreference) {
       guard let group else { return }
@@ -178,7 +205,7 @@ extension Client {
         if let destination = group.destination {
           if ref.includes(64) {
             ref.beforeSlide?(ref)
-            segments[destination].localRefs.addSliding(ref, forward: group.forward, preceding: preceding)
+            destination.localRefs.addSliding(ref, forward: group.forward, preceding: preceding)
             preceding = ref
             ref.afterSlide?(ref)
           } else { ref.segment?.localRefs.removeLocalRef(ref) }
@@ -189,14 +216,18 @@ extension Client {
         }
       }
     }
-    func append(_ segment: BaseSegment, at index: Int, preference: SlidingPreference, group: inout SlideGroup?) {
+    func append(_ segment: BaseSegment, preference: SlidingPreference, group: inout SlideGroup?) {
       let references = segment.localRefs.references.filter { $0.slidingPreference == preference }
       guard !references.isEmpty else { return }
       let forward = preference == .forward
-      let destination = adjacent(to: index, forward: forward, present: present)
-        ?? (referencesCanSlideToEndpoint ? nil : adjacent(to: index, forward: !forward, present: present))
-      let slideForward = destination.map { $0 > index } ?? false
-      if group?.destination != destination || group?.forward != slideForward {
+      var slideForward = forward
+      var destination = findDestination(from: segment, forward: forward)
+      if destination == nil && !referencesCanSlideToEndpoint {
+        slideForward = !forward
+        destination = findDestination(from: segment, forward: !forward)
+      }
+      if destination == nil { slideForward = false }
+      if group?.destination !== destination || group?.forward != slideForward {
         slide(group, preference: preference)
         group = SlideGroup(destination: destination, forward: slideForward, references: references)
       } else {
@@ -206,9 +237,9 @@ extension Client {
     // Upstream flushes a direction's preceding group as each segment changes its destination,
     // then flushes the two trailing groups. Grouping all forward slides first changes interval events.
     for segment in removed {
-      guard let index = segments.firstIndex(where: { $0 === segment }) else { continue }
-      append(segment, at: index, preference: .forward, group: &forwardGroup)
-      append(segment, at: index, preference: .backward, group: &backwardGroup)
+      guard segment.parent != nil, !segment.localRefs.references.isEmpty else { continue }
+      append(segment, preference: .forward, group: &forwardGroup)
+      append(segment, preference: .backward, group: &backwardGroup)
     }
     slide(forwardGroup, preference: .forward)
     slide(backwardGroup, preference: .backward)
