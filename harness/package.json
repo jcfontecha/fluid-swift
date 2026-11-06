@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "bench:ts": "tsx src/bench/bench.ts",
     "fuzz:odsp-net": "tsx src/odsp-net/fuzz.ts",
     "fuzz:odsp-snapshot": "tsx src/odsp-snapshot/fuzz.ts",
     "fuzz:summarize": "tsx src/summarize/fuzz.ts",

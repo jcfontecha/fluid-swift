@@ -1,0 +1,5 @@
+.build/
+.swiftpm/
+container.json
+Raw/*.log
+Raw/*.trace/

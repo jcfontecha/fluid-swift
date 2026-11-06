@@ -1,0 +1,1267 @@
+Analysis of sampling FluidBench (pid 63564) every 1 millisecond
+Process:         FluidBench [63564]
+Path:            /Users/USER/*/FluidBench
+Load Address:    0x100090000
+Identifier:      FluidBench
+Version:         0
+Code Type:       ARM64
+Platform:        macOS
+Parent Process:  zsh [63563]
+Target Type:     live task
+
+Date/Time:       2026-11-06 08:06:56.688 -0800
+Launch Time:     2026-11-06 08:06:56.629 -0800
+OS Version:      macOS 27.0 (26A428)
+Report Version:  7
+Analysis Tool:   /usr/bin/sample
+----
+
+Call graph:
+    371 Thread_12623783   DispatchQueue_1: com.apple.main-thread  (serial)
+      371 start  (in dyld) + 6688  [0x192103e80]
+        367 main  (in FluidBench) + 4184  [0x100092358]  main.swift:101
+        + 366 specialized measure(_:count:_:)  (in FluidBench) + 316  [0x1000935ec]  main.swift:48
+        + ! 119 SharedMap.summarize()  (in FluidBench) + 1736  [0x10017a618]  SharedMap.swift:90
+        + ! : 119 static JSON.stringify(_:)  (in FluidBench) + 64  [0x1000b7dac]  JSON.swift:6
+        + ! :   106 static JSON.write(_:into:)  (in FluidBench) + 448  [0x1000b7fa8]  JSON.swift:101
+        + ! :   | 74 static JSON.write(_:into:)  (in FluidBench) + 448  [0x1000b7fa8]  JSON.swift:101
+        + ! :   | + 70 static JSON.write(_:into:)  (in FluidBench) + 88  [0x1000b7e40]  JSON.swift:85
+        + ! :   | + ! 53 static JSON.numberToString(_:)  (in FluidBench) + 308  [0x1000b8a4c]  JSON.swift:33
+        + ! :   | + ! : 46 String.UnicodeScalarView.append<A>(contentsOf:)  (in libswiftCore.dylib) + 76  [0x1a6d5de34]
+        + ! :   | + ! : | 34 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 872  [0x1a6c48cf8]
+        + ! :   | + ! : | + 16 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 460  [0x1a6bec824]
+        + ! :   | + ! : | + ! 11 protocol witness for Collection.subscript.read in conformance [A]  (in libswiftCore.dylib) + 68  [0x1a6b8e0fc]
+        + ! :   | + ! : | + ! : 8 Array.subscript.read  (in libswiftCore.dylib) + 128  [0x1a6a5b7bc]
+        + ! :   | + ! : | + ! : | 5 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 244,404,...  [0x1922f4b40,0x1922f4be0,...]
+        + ! :   | + ! : | + ! : | 2 _malloc_zone_malloc  (in libsystem_malloc.dylib) + 12  [0x1923004fc]
+        + ! :   | + ! : | + ! : | 1 <deduplicated_symbol>  (in libsystem_malloc.dylib) + 192  [0x1922fb8c8]
+        + ! :   | + ! : | + ! : 2 Array.subscript.read  (in libswiftCore.dylib) + 12  [0x1a6a5b748]
+        + ! :   | + ! : | + ! : 1 Array.subscript.read  (in libswiftCore.dylib) + 180  [0x1a6a5b7f0]
+        + ! :   | + ! : | + ! :   1 Array._checkSubscript(_:wasNativeTypeChecked:)  (in libswiftCore.dylib) + 44  [0x1a6a52a74]
+        + ! :   | + ! : | + ! 5 protocol witness for Collection.subscript.read in conformance [A]  (in libswiftCore.dylib) + 44  [0x1a6b8e0e4]
+        + ! :   | + ! : | + !   3 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 244,404,...  [0x1922f4b40,0x1922f4be0,...]
+        + ! :   | + ! : | + !   2 <deduplicated_symbol>  (in libsystem_malloc.dylib) + 92,116  [0x1922fb864,0x1922fb87c]
+        + ! :   | + ! : | + 14 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 600  [0x1a6bec8b0]
+        + ! :   | + ! : | + ! 10 protocol witness for Collection.subscript.read in conformance _ArrayBuffer<A>  (in libswiftCore.dylib) + 40  [0x1a6e1e914]
+        + ! :   | + ! : | + ! : 8 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! :   | + ! : | + ! : | 8 mach_absolute_time  (in libsystem_kernel.dylib) + 108,112  [0x1924950f8,0x1924950fc]
+        + ! :   | + ! : | + ! : 2 _xzm_free_main  (in libsystem_malloc.dylib) + 448  [0x1922fd07c]
+        + ! :   | + ! : | + ! 3 _xzm_free_main  (in libsystem_malloc.dylib) + 28,392,...  [0x1922fced8,0x1922fd044,...]
+        + ! :   | + ! : | + ! 1 protocol witness for Collection.subscript.read in conformance _ArrayBuffer<A>  (in libswiftCore.dylib) + 20  [0x1a6e1e900]
+        + ! :   | + ! : | + 2 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 444  [0x1a6bec814]
+        + ! :   | + ! : | + 1 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 300  [0x1a6bec784]
+        + ! :   | + ! : | + ! 1 ???  (in libswiftCore.dylib)  load address 0x1a6a44000 + 0x496a4  [0x1a6a8d6a4]
+        + ! :   | + ! : | + 1 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 328  [0x1a6bec7a0]
+        + ! :   | + ! : | +   1 swift::metadataimpl::ValueWitnesses<swift::metadataimpl::NativeBox<unsigned long long, 8ul, 8ul, 8ul>>::destroy(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)  (in libswiftCore.dylib) + 0  [0x1a6a524fc]
+        + ! :   | + ! : | 4 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 104  [0x1a6c489f8]
+        + ! :   | + ! : | + 4 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! :   | + ! : | +   3 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! :   | + ! : | +   ! 2 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! :   | + ! : | +   ! : 2 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! :   | + ! : | +   ! :   1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 132  [0x1a6aceac4]
+        + ! :   | + ! : | +   ! :   | 1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 500  [0x1a6acec34]
+        + ! :   | + ! : | +   ! :   1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 44  [0x1a6acea6c]
+        + ! :   | + ! : | +   ! 1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 0  [0x1a6ad0778]
+        + ! :   | + ! : | +   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! :   | + ! : | +     1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 452  [0x1a6abef20]
+        + ! :   | + ! : | 3 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 672  [0x1a6c48c30]
+        + ! :   | + ! : | + 3 specialized ContiguousArray._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 20  [0x1a6bfb164]
+        + ! :   | + ! : | +   3 specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 116  [0x1a6bfb46c]
+        + ! :   | + ! : | +     2 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in libswiftCore.dylib) + 60  [0x1a6b8688c]
+        + ! :   | + ! : | +     ! 1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! :   | + ! : | +     ! : 1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! :   | + ! : | +     ! :   1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 404  [0x1922f4be0]
+        + ! :   | + ! : | +     ! 1 swift_allocObject  (in libswiftCore.dylib) + 28  [0x1a6a48e68]
+        + ! :   | + ! : | +     1 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in libswiftCore.dylib) + 68  [0x1a6b86894]
+        + ! :   | + ! : | +       1 malloc_size  (in libsystem_malloc.dylib) + 124  [0x1922c8208]
+        + ! :   | + ! : | +         1 xzm_malloc_zone_size  (in libsystem_malloc.dylib) + 116  [0x1922f0378]
+        + ! :   | + ! : | 2 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 636  [0x1a6c48c0c]
+        + ! :   | + ! : | + 1 protocol witness for Sequence.underestimatedCount.getter in conformance [A]  (in libswiftCore.dylib) + 0  [0x1a6b8e234]
+        + ! :   | + ! : | + 1 swift::_getWitnessTable(swift::TargetProtocolConformanceDescriptor<swift::InProcess> const*, swift::TargetMetadata<swift::InProcess> const*, void const* const*)  (in libswiftCore.dylib) + 4772  [0x1a6ac84b0]
+        + ! :   | + ! : | 2 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 1252  [0x1a6c48e74]
+        + ! :   | + ! : | + 2 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 304,392  [0x1a6bec788,0x1a6bec7e0]
+        + ! :   | + ! : | 1 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 1328  [0x1a6c48ec0]
+        + ! :   | + ! : |   1 destroy for IndexingIterator  (in libswiftCore.dylib) + 80  [0x1a6eb1b58]
+        + ! :   | + ! : 7 String.UnicodeScalarView.append<A>(contentsOf:)  (in libswiftCore.dylib) + 92  [0x1a6d5de44]
+        + ! :   | + ! :   4 specialized static String._slowFromCodeUnits<A, B>(_:encoding:repair:)  (in libswiftCore.dylib) + 68  [0x1a6d69be0]
+        + ! :   | + ! :   + 4 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 96  [0x1a6b85620]
+        + ! :   | + ! :   +   3 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in libswiftCore.dylib) + 40  [0x1a6b86724]
+        + ! :   | + ! :   +   ! 2 canonical specialized generic type metadata accessor for _ContiguousArrayStorage<UInt8>  (in libswiftCore.dylib) + 16  [0x1a6e9f264]
+        + ! :   | + ! :   +   ! : 1 ???  (in <unknown binary>)  [0x199d285a8]
+        + ! :   | + ! :   +   ! : 1 type metadata accessor for __ContiguousArrayStorageBase  (in libswiftCore.dylib) + 24  [0x1a6a4b388]
+        + ! :   | + ! :   +   ! :   1 objc_msgSend  (in libobjcMsgSend.dylib) + 68  [0x199c4c844]
+        + ! :   | + ! :   +   ! 1 canonical specialized generic type metadata accessor for _ContiguousArrayStorage<UInt8>  (in libswiftCore.dylib) + 28  [0x1a6e9f270]
+        + ! :   | + ! :   +   !   1 objc_opt_self  (in libobjc.A.dylib) + 16  [0x19206a77c]
+        + ! :   | + ! :   +   1 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in libswiftCore.dylib) + 52  [0x1a6b86730]
+        + ! :   | + ! :   +     1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! :   | + ! :   +       1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! :   | + ! :   +         1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 404  [0x1922f4be0]
+        + ! :   | + ! :   2 specialized static String._slowFromCodeUnits<A, B>(_:encoding:repair:)  (in libswiftCore.dylib) + 672  [0x1a6d69e3c]
+        + ! :   | + ! :   + 2 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   | + ! :   +   2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :   | + ! :   +     2 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! :   | + ! :   +       2 mach_absolute_time  (in libsystem_kernel.dylib) + 108,112  [0x1924950f8,0x1924950fc]
+        + ! :   | + ! :   1 specialized static String._slowFromCodeUnits<A, B>(_:encoding:repair:)  (in libswiftCore.dylib) + 152  [0x1a6d69c34]
+        + ! :   | + ! 16 static JSON.numberToString(_:)  (in FluidBench) + 192  [0x1000b89d8]  JSON.swift:29
+        + ! :   | + ! : 4 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 36  [0x1000bc70c]  JSON.swift:59
+        + ! :   | + ! : | 3 Double.description.getter  (in libswiftCore.dylib) + 88  [0x1a6dcb1b8]
+        + ! :   | + ! : | + 2 _Float64ToASCII(value:buffer:)  (in libswiftCore.dylib) + 848  [0x1a6c94d38]
+        + ! :   | + ! : | + ! 2 _Float64ToASCII(value:buffer:)  (in libswiftCore.dylib) + 952,1308  [0x1a6c94da0,0x1a6c94f04]
+        + ! :   | + ! : | + 1 _Float64ToASCII(value:buffer:)  (in libswiftCore.dylib) + 2516  [0x1a6c953bc]
+        + ! :   | + ! : | +   1 specialized MutableRawSpan.storeBytes<A>(of:toByteOffset:as:)  (in libswiftCore.dylib) + 0  [0x1a6c93fd8]
+        + ! :   | + ! : | 1 Double.description.getter  (in libswiftCore.dylib) + 76  [0x1a6dcb1ac]
+        + ! :   | + ! : 4 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 52  [0x1000bc71c]  JSON.swift:60
+        + ! :   | + ! : | 4 specialized Collection.firstIndex(where:)  (in FluidBench) + 152,200,...  [0x1000b8e18,0x1000b8e48,...]  /<compiler-generated>:0
+        + ! :   | + ! : 3 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 1712  [0x1000bcd98]  JSON.swift:68
+        + ! :   | + ! : | 2 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 128  [0x1000bb14c]  /<compiler-generated>:0
+        + ! :   | + ! : | + 2 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! :   | + ! : | +   2 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! :   | + ! : | +     2 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 672  [0x1922f4cec]
+        + ! :   | + ! : | 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 232  [0x1000bb1b4]  /<compiler-generated>:0
+        + ! :   | + ! : |   1 swift_bridgeObjectRelease  (in libswiftCore.dylib) + 0  [0x1a6a4b398]
+        + ! :   | + ! : 3 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 1744  [0x1000bcdb8]  JSON.swift:68
+        + ! :   | + ! : | 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 128  [0x1000bb14c]  /<compiler-generated>:0
+        + ! :   | + ! : | + 1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! :   | + ! : | +   1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! :   | + ! : | +     1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 268  [0x1922f4b58]
+        + ! :   | + ! : | 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 232  [0x1000bb1b4]  /<compiler-generated>:0
+        + ! :   | + ! : | + 1 swift_release  (in libswiftCore.dylib) + 16  [0x1a6a4b574]
+        + ! :   | + ! : | 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 224  [0x1000bb1ac]  /<compiler-generated>:0
+        + ! :   | + ! : 2 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 1672,1720  [0x1000bcd70,0x1000bcda0]  JSON.swift:68
+        + ! :   | + ! 1 static JSON.numberToString(_:)  (in FluidBench) + 316  [0x1000b8a54]  /<compiler-generated>:0
+        + ! :   | + !   1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 12  [0x1a6ab5a48]
+        + ! :   | + 2 static JSON.write(_:into:)  (in FluidBench) + 92  [0x1000b7e44]  JSON.swift:0
+        + ! :   | + ! 1 _StringGuts.copyUTF8(into:)  (in libswiftCore.dylib) + 120  [0x1a6d6b404]
+        + ! :   | + ! 1 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 156  [0x1000bf730]  /<compiler-generated>:0
+        + ! :   | + !   1 ???  (in <unknown binary>)  [0x1a9d38188]
+        + ! :   | + 2 static JSON.write(_:into:)  (in FluidBench) + 876  [0x1000b8154]  JSON.swift:87
+        + ! :   | +   1 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 272  [0x1000bf8b8]  /<compiler-generated>:0
+        + ! :   | +   1 specialized static JSON.write(_:into:)  (in FluidBench) + 260  [0x1000bd3c8]  JSON.swift:115
+        + ! :   | 16 static JSON.write(_:into:)  (in FluidBench) + 216  [0x1000b7ec0]  JSON.swift:97
+        + ! :   | + 6 specialized JSObject.entries.getter  (in FluidBench) + 40  [0x1000b90b4]  JSObject.swift:32
+        + ! :   | + ! 6 specialized JSObject.keys.getter  (in FluidBench) + 480  [0x1000bd774]  JSObject.swift:27
+        + ! :   | + !   4 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 176  [0x1000bfa28]  /<compiler-generated>:0
+        + ! :   | + !   : 3 specialized Array._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 20  [0x1a6b8ed74]
+        + ! :   | + !   : | 2 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 180  [0x1a6b85910]
+        + ! :   | + !   : | + 2 malloc_size  (in libsystem_malloc.dylib) + 124  [0x1922c8208]
+        + ! :   | + !   : | +   2 xzm_malloc_zone_size  (in libsystem_malloc.dylib) + 580  [0x1922f0548]
+        + ! :   | + !   : | 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 172  [0x1a6b85908]
+        + ! :   | + !   : |   1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! :   | + !   : |     1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! :   | + !   : |       1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 156  [0x1922f4ae8]
+        + ! :   | + !   : 1 specialized Array._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 0  [0x1a6b8ed60]
+        + ! :   | + !   1 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 128  [0x1000bf9f8]  /<compiler-generated>:0
+        + ! :   | + !   : 1 swift_arrayInitWithCopy  (in libswiftCore.dylib) + 224  [0x1a6a4baf0]
+        + ! :   | + !   1 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 136  [0x1000bfa00]  /<compiler-generated>:0
+        + ! :   | + !     1 swift_bridgeObjectRelease  (in libswiftCore.dylib) + 0  [0x1a6a4b398]
+        + ! :   | + 5 specialized JSObject.entries.getter  (in FluidBench) + 128  [0x1000b910c]  JSObject.swift:32
+        + ! :   | + ! 2 specialized __RawDictionaryStorage.find<A>(_:hashValue:)  (in FluidBench) + 28,60  [0x1000beee0,0x1000bef00]  /<compiler-generated>:0
+        + ! :   | + ! 1 specialized __RawDictionaryStorage.find<A>(_:)  (in FluidBench) + 44  [0x1000bee70]  /<compiler-generated>:0
+        + ! :   | + ! : 1 Hasher.init(_seed:)  (in libswiftCore.dylib) + 12  [0x1a6a52b9c]
+        + ! :   | + ! 1 specialized __RawDictionaryStorage.find<A>(_:)  (in FluidBench) + 80  [0x1000bee94]  /<compiler-generated>:0
+        + ! :   | + ! : 1 DYLD-STUB$$Hasher._combine(_:)  (in FluidBench) + 4  [0x10020b164]
+        + ! :   | + ! 1 specialized __RawDictionaryStorage.find<A>(_:)  (in FluidBench) + 68  [0x1000bee88]  /<compiler-generated>:0
+        + ! :   | + 3 specialized JSObject.entries.getter  (in FluidBench) + 252  [0x1000b9188]  /<compiler-generated>:0
+        + ! :   | + ! 2 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   | + ! : 2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :   | + ! :   2 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! :   | + ! :     1 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        + ! :   | + ! :     | 1 swift_release$lazyLoadStub  (in libobjc.A.dylib) + 4  [0x19208f330]
+        + ! :   | + ! :     1 swift_arrayDestroy  (in libswiftCore.dylib) + 88  [0x1a6a4d714]
+        + ! :   | + ! 1 swift_release  (in libswiftCore.dylib) + 32  [0x1a6a4b584]
+        + ! :   | + 2 specialized JSObject.entries.getter  (in FluidBench) + 84  [0x1000b90e0]  JSObject.swift:32
+        + ! :   | +   2 specialized ContiguousArray._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 16  [0x1000bbfd8]  /<compiler-generated>:0
+        + ! :   | +     1 specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 268  [0x1000bc10c]  /<compiler-generated>:0
+        + ! :   | +     : 1 swift_arrayInitWithCopy  (in libswiftCore.dylib) + 20  [0x1a6a4ba24]
+        + ! :   | +     1 specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 276  [0x1000bc114]  /<compiler-generated>:0
+        + ! :   | +       1 swift_release  (in libswiftCore.dylib) + 80  [0x1a6a4b5b4]
+        + ! :   | 7 static JSON.write(_:into:)  (in FluidBench) + 916  [0x1000b817c]  /<compiler-generated>:0
+        + ! :   | + 6 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   | + ! 6 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :   | + !   2 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! :   | + !   : 1 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        + ! :   | + !   : | 1 tuple_destroy<false, true>(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)  (in libswiftCore.dylib) + 0  [0x1a6a7053c]
+        + ! :   | + !   : 1 tuple_destroy<false, true>(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)  (in libswiftCore.dylib) + 104  [0x1a6a705a4]
+        + ! :   | + !   2 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 0,60  [0x1a6a4f2c0,0x1a6a4f2fc]
+        + ! :   | + !   2 _xzm_free_main  (in libsystem_malloc.dylib) + 28,288  [0x1922fced8,0x1922fcfdc]
+        + ! :   | + 1 DYLD-STUB$$swift_bridgeObjectRelease  (in FluidBench) + 4  [0x10020b314]
+        + ! :   | 5 static JSON.write(_:into:)  (in FluidBench) + 380  [0x1000b7f64]  JSON.swift:99
+        + ! :   | + 2 specialized static JSON.write(_:into:)  (in FluidBench) + 500  [0x1000bd4b8]  JSON.swift:132
+        + ! :   | + ! 1 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 68  [0x1000bf7ec]  /<compiler-generated>:0
+        + ! :   | + ! : 1 DYLD-STUB$$swift_isUniquelyReferenced_nonNull_native  (in FluidBench) + 4  [0x10020b500]
+        + ! :   | + ! 1 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 244  [0x1000bf89c]  /<compiler-generated>:0
+        + ! :   | + 1 specialized static JSON.write(_:into:)  (in FluidBench) + 48  [0x1000bd2f4]  JSON.swift:109
+        + ! :   | + ! 1 DYLD-STUB$$swift_isUniquelyReferenced_nonNull_native  (in FluidBench) + 4  [0x10020b500]
+        + ! :   | + 1 specialized static JSON.write(_:into:)  (in FluidBench) + 188  [0x1000bd380]  JSON.swift:115
+        + ! :   | + 1 specialized static JSON.write(_:into:)  (in FluidBench) + 504  [0x1000bd4bc]  JSON.swift:135
+        + ! :   | 1 static JSON.write(_:into:)  (in FluidBench) + 136  [0x1000b7e70]  /<compiler-generated>:0
+        + ! :   | + 1 DYLD-STUB$$swift_bridgeObjectRetain  (in FluidBench) + 4  [0x10020b32c]
+        + ! :   | 1 static JSON.write(_:into:)  (in FluidBench) + 228  [0x1000b7ecc]  /<compiler-generated>:0
+        + ! :   | + 1 swift_release  (in libswiftCore.dylib) + 56  [0x1a6a4b59c]
+        + ! :   | 1 static JSON.write(_:into:)  (in FluidBench) + 236  [0x1000b7ed4]  /<compiler-generated>:0
+        + ! :   | + 1 swift_bridgeObjectRelease  (in libswiftCore.dylib) + 8  [0x1a6a4b3a0]
+        + ! :   | 1 static JSON.write(_:into:)  (in FluidBench) + 456  [0x1000b7fb0]  /<compiler-generated>:0
+        + ! :   |   1 swift_release  (in libswiftCore.dylib) + 56  [0x1a6a4b59c]
+        + ! :   7 static JSON.write(_:into:)  (in FluidBench) + 380  [0x1000b7f64]  JSON.swift:99
+        + ! :   | 3 specialized static JSON.write(_:into:)  (in FluidBench) + 500  [0x1000bd4b8]  JSON.swift:132
+        + ! :   | + 2 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 72,232  [0x1000bf7f0,0x1000bf890]  /<compiler-generated>:0
+        + ! :   | + 1 specialized Array.append<A>(contentsOf:)  (in FluidBench) + 68  [0x1000bf7ec]  /<compiler-generated>:0
+        + ! :   | +   1 DYLD-STUB$$swift_isUniquelyReferenced_nonNull_native  (in FluidBench) + 4  [0x10020b500]
+        + ! :   | 3 specialized static JSON.write(_:into:)  (in FluidBench) + 708  [0x1000bd588]  JSON.swift:135
+        + ! :   | + 2 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 124  [0x1000bb248]  /<compiler-generated>:0
+        + ! :   | + ! 2 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! :   | + !   2 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! :   | + !     2 _xzm_malloc_large_huge  (in libsystem_malloc.dylib) + 968  [0x1922f44ac]
+        + ! :   | + !       2 xzm_segment_group_alloc_chunk  (in libsystem_malloc.dylib) + 564  [0x1922d492c]
+        + ! :   | + !         2 _xzm_segment_group_find_and_allocate_chunk  (in libsystem_malloc.dylib) + 508  [0x1922d4f9c]
+        + ! :   | + !           1 _xzm_segment_group_span_mark_smaller  (in libsystem_malloc.dylib) + 220  [0x1922d6408]
+        + ! :   | + !           : 1 _xzm_reclaim_mark_used_locked  (in libsystem_malloc.dylib) + 60  [0x1922d6e24]
+        + ! :   | + !           :   1 mach_vm_reclaim_try_cancel  (in libsystem_kernel.dylib) + 184  [0x1924a866c]
+        + ! :   | + !           1 _xzm_segment_group_span_mark_smaller  (in libsystem_malloc.dylib) + 156  [0x1922d63c8]
+        + ! :   | + 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 216  [0x1000bb2a4]  /<compiler-generated>:0
+        + ! :   | +   1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   | +     1 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :   | +       1 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! :   | +         1 mach_absolute_time  (in libsystem_kernel.dylib) + 16  [0x19249509c]
+        + ! :   | 1 specialized static JSON.write(_:into:)  (in FluidBench) + 320  [0x1000bd404]  JSON.swift:115
+        + ! :   4 static JSON.write(_:into:)  (in FluidBench) + 216  [0x1000b7ec0]  JSON.swift:97
+        + ! :   | 1 specialized JSObject.entries.getter  (in FluidBench) + 160  [0x1000b912c]  /<compiler-generated>:0
+        + ! :   | + 1 swift_retain  (in libswiftCore.dylib) + 16  [0x1a6a4b468]
+        + ! :   | 1 specialized JSObject.entries.getter  (in FluidBench) + 252  [0x1000b9188]  /<compiler-generated>:0
+        + ! :   | + 1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   | +   1 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :   | +     1 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! :   | +       1 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        + ! :   | +         1 swift_release$lazyLoadStub  (in libobjc.A.dylib) + 4  [0x19208f330]
+        + ! :   | 1 specialized JSObject.entries.getter  (in FluidBench) + 84  [0x1000b90e0]  JSObject.swift:32
+        + ! :   | + 1 specialized ContiguousArray._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 16  [0x1000bbfd8]  /<compiler-generated>:0
+        + ! :   | +   1 specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 132  [0x1000bc084]  /<compiler-generated>:0
+        + ! :   | +     1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! :   | +       1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! :   | +         1 _xzm_xzone_malloc_freelist_outlined  (in libsystem_malloc.dylib) + 556  [0x1922f61e0]
+        + ! :   | 1 specialized JSObject.entries.getter  (in FluidBench) + 128  [0x1000b910c]  JSObject.swift:32
+        + ! :   |   1 specialized __RawDictionaryStorage.find<A>(_:hashValue:)  (in FluidBench) + 112  [0x1000bef34]  /<compiler-generated>:0
+        + ! :   2 static JSON.write(_:into:)  (in FluidBench) + 916  [0x1000b817c]  /<compiler-generated>:0
+        + ! :     2 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :       2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :         2 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! :           2 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        + ! :             2 tuple_destroy<false, true>(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)  (in libswiftCore.dylib) + 84  [0x1a6a70590]
+        + ! :               1 DYLD-STUB$$swift_release  (in FluidBench) + 4  [0x10020b518]
+        + ! :               1 swift_release  (in libswiftCore.dylib) + 56  [0x1a6a4b59c]
+        + ! 88 SharedMap.summarize()  (in FluidBench) + 100  [0x100179fb4]  SharedMap.swift:72
+        + ! : 49 MapKernel.getSerializedStorage()  (in FluidBench) + 380  [0x10016e23c]  MapKernel.swift:271
+        + ! : | 44 static JSON.stringify(_:)  (in FluidBench) + 64  [0x1000b7dac]  JSON.swift:6
+        + ! : | + 44 static JSON.write(_:into:)  (in FluidBench) + 88  [0x1000b7e40]  JSON.swift:85
+        + ! : | +   28 static JSON.numberToString(_:)  (in FluidBench) + 308  [0x1000b8a4c]  JSON.swift:33
+        + ! : | +   ! 26 String.UnicodeScalarView.append<A>(contentsOf:)  (in libswiftCore.dylib) + 76  [0x1a6d5de34]
+        + ! : | +   ! : 18 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 872  [0x1a6c48cf8]
+        + ! : | +   ! : | 11 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 600  [0x1a6bec8b0]
+        + ! : | +   ! : | + 9 protocol witness for Collection.subscript.read in conformance _ArrayBuffer<A>  (in libswiftCore.dylib) + 40  [0x1a6e1e914]
+        + ! : | +   ! : | + ! 8 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! : | +   ! : | + ! : 8 mach_absolute_time  (in libsystem_kernel.dylib) + 108,112  [0x1924950f8,0x1924950fc]
+        + ! : | +   ! : | + ! 1 _free  (in libsystem_malloc.dylib) + 64  [0x192301150]
+        + ! : | +   ! : | + 1 _free  (in libsystem_malloc.dylib) + 104  [0x192301178]
+        + ! : | +   ! : | + 1 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! : | +   ! : | +   1 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x1924950f8]
+        + ! : | +   ! : | 6 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 460  [0x1a6bec824]
+        + ! : | +   ! : | + 4 protocol witness for Collection.subscript.read in conformance [A]  (in libswiftCore.dylib) + 68  [0x1a6b8e0fc]
+        + ! : | +   ! : | + ! 4 Array.subscript.read  (in libswiftCore.dylib) + 128  [0x1a6a5b7bc]
+        + ! : | +   ! : | + !   2 <deduplicated_symbol>  (in libsystem_malloc.dylib) + 92,248  [0x1922fb864,0x1922fb900]
+        + ! : | +   ! : | + !   1 _malloc_zone_malloc  (in libsystem_malloc.dylib) + 100  [0x192300554]
+        + ! : | +   ! : | + !   1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 244  [0x1922f4b40]
+        + ! : | +   ! : | + 2 protocol witness for Collection.subscript.read in conformance [A]  (in libswiftCore.dylib) + 44  [0x1a6b8e0e4]
+        + ! : | +   ! : | +   1 <deduplicated_symbol>  (in libsystem_malloc.dylib) + 192  [0x1922fb8c8]
+        + ! : | +   ! : | +   1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 164  [0x1922f4af0]
+        + ! : | +   ! : | 1 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 552  [0x1a6bec880]
+        + ! : | +   ! : 3 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 104  [0x1a6c489f8]
+        + ! : | +   ! : | 2 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | +   ! : | + 2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | +   ! : | +   2 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! : | +   ! : | +     2 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 188  [0x1a6ad0a80]
+        + ! : | +   ! : | +       1 swift::ConcurrentReadableHashMap<swift::HashMapElementWrapper<swift::GenericCacheEntry>, swift::Mutex>::find<swift::MetadataCacheKey>(swift::MetadataCacheKey const&, swift::ConcurrentReadableHashMap<swift::HashMapElementWrapper<swift::GenericCacheEntry>, swift::Mutex>::IndexStorage, unsigned long, swift::HashMapElementWrapper<swift::GenericCacheEntry>*)  (in libswiftCore.dylib) + 264  [0x1a6aceee4]
+        + ! : | +   ! : | +       ! 1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 132  [0x1a6aceac4]
+        + ! : | +   ! : | +       !   1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 132  [0x1a6aceac4]
+        + ! : | +   ! : | +       1 swift::ConcurrentReadableHashMap<swift::HashMapElementWrapper<swift::GenericCacheEntry>, swift::Mutex>::find<swift::MetadataCacheKey>(swift::MetadataCacheKey const&, swift::ConcurrentReadableHashMap<swift::HashMapElementWrapper<swift::GenericCacheEntry>, swift::Mutex>::IndexStorage, unsigned long, swift::HashMapElementWrapper<swift::GenericCacheEntry>*)  (in libswiftCore.dylib) + 56  [0x1a6acee14]
+        + ! : | +   ! : | 1 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 20  [0x1a6ed4ae0]
+        + ! : | +   ! : 1 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 636  [0x1a6c48c0c]
+        + ! : | +   ! : | 1 protocol witness for Sequence.underestimatedCount.getter in conformance [A]  (in libswiftCore.dylib) + 48  [0x1a6b8e264]
+        + ! : | +   ! : |   1 swift::_getWitnessTable(swift::TargetProtocolConformanceDescriptor<swift::InProcess> const*, swift::TargetMetadata<swift::InProcess> const*, void const* const*)  (in libswiftCore.dylib) + 560  [0x1a6ac743c]
+        + ! : | +   ! : 1 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 672  [0x1a6c48c30]
+        + ! : | +   ! : | 1 specialized ContiguousArray._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 20  [0x1a6bfb164]
+        + ! : | +   ! : |   1 specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 116  [0x1a6bfb46c]
+        + ! : | +   ! : |     1 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in libswiftCore.dylib) + 68  [0x1a6b86894]
+        + ! : | +   ! : |       1 malloc_size  (in libsystem_malloc.dylib) + 52  [0x1922c81c0]
+        + ! : | +   ! : 1 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 708  [0x1a6c48c54]
+        + ! : | +   ! : | 1 swift::metadataimpl::ValueWitnesses<swift::metadataimpl::BridgeObjectBox>::initializeWithCopy(swift::OpaqueValue*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)  (in libswiftCore.dylib) + 28  [0x1a6a766a4]
+        + ! : | +   ! : |   1 swift_retain  (in libswiftCore.dylib) + 4  [0x1a6a4b45c]
+        + ! : | +   ! : 1 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 1252  [0x1a6c48e74]
+        + ! : | +   ! : | 1 protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib) + 300  [0x1a6bec784]
+        + ! : | +   ! : 1 specialized Sequence.map<A, B>(_:)  (in libswiftCore.dylib) + 0  [0x1a6c48990]
+        + ! : | +   ! 1 String.UnicodeScalarView.append<A>(contentsOf:)  (in libswiftCore.dylib) + 92  [0x1a6d5de44]
+        + ! : | +   ! : 1 specialized static String._slowFromCodeUnits<A, B>(_:encoding:repair:)  (in libswiftCore.dylib) + 388  [0x1a6d69d20]
+        + ! : | +   ! 1 String.UnicodeScalarView.append<A>(contentsOf:)  (in libswiftCore.dylib) + 108  [0x1a6d5de54]
+        + ! : | +   !   1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! : | +   !     1 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! : | +   !       1 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! : | +   !         1 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x1924950f8]
+        + ! : | +   14 static JSON.numberToString(_:)  (in FluidBench) + 192  [0x1000b89d8]  JSON.swift:29
+        + ! : | +   ! 4 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 1712  [0x1000bcd98]  JSON.swift:68
+        + ! : | +   ! : 2 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 128  [0x1000bb14c]  /<compiler-generated>:0
+        + ! : | +   ! : | 2 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! : | +   ! : |   2 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! : | +   ! : |     1 <deduplicated_symbol>  (in libsystem_malloc.dylib) + 96  [0x1922fb868]
+        + ! : | +   ! : |     1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 640  [0x1922f4ccc]
+        + ! : | +   ! : 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 136  [0x1000bb154]  /<compiler-generated>:0
+        + ! : | +   ! : | 1 malloc_size  (in libsystem_malloc.dylib) + 124  [0x1922c8208]
+        + ! : | +   ! : |   1 xzm_malloc_zone_size  (in libsystem_malloc.dylib) + 116  [0x1922f0378]
+        + ! : | +   ! : 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 232  [0x1000bb1b4]  /<compiler-generated>:0
+        + ! : | +   ! :   1 swift_release  (in libswiftCore.dylib) + 80  [0x1a6a4b5b4]
+        + ! : | +   ! 3 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 88,1088,...  [0x1000bc740,0x1000bcb28,...]  JSON.swift:67
+        + ! : | +   ! 3 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 1744  [0x1000bcdb8]  JSON.swift:68
+        + ! : | +   ! : 1 __swift_instantiateConcreteTypeFromMangledNameV2  (in FluidBench) + 72  [0x1000bcfc8]  /<compiler-generated>:0
+        + ! : | +   ! : 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 128  [0x1000bb14c]  /<compiler-generated>:0
+        + ! : | +   ! : | 1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! : | +   ! : |   1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! : | +   ! : |     1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 20  [0x1922f4a60]
+        + ! : | +   ! : 1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 76  [0x1000bb118]  /<compiler-generated>:0
+        + ! : | +   ! 2 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 52  [0x1000bc71c]  JSON.swift:60
+        + ! : | +   ! : 2 specialized Collection.firstIndex(where:)  (in FluidBench) + 284  [0x1000b8e9c]  /<compiler-generated>:0
+        + ! : | +   ! 1 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 36  [0x1000bc70c]  JSON.swift:59
+        + ! : | +   ! : 1 Double.description.getter  (in libswiftCore.dylib) + 88  [0x1a6dcb1b8]
+        + ! : | +   ! :   1 _Float64ToASCII(value:buffer:)  (in libswiftCore.dylib) + 848  [0x1a6c94d38]
+        + ! : | +   ! :     1 _Float64ToASCII(value:buffer:)  (in libswiftCore.dylib) + 1820  [0x1a6c95104]
+        + ! : | +   ! 1 specialized static JSON.shortestDigits(_:)  (in FluidBench) + 1988  [0x1000bceac]  JSON.swift:75
+        + ! : | +   1 static JSON.numberToString(_:)  (in FluidBench) + 352  [0x1000b8a78]  JSON.swift:0
+        + ! : | +   ! 1 DefaultStringInterpolation.appendLiteral(_:)  (in libswiftCore.dylib) + 20  [0x1a6d7d260]
+        + ! : | +   1 static JSON.numberToString(_:)  (in FluidBench) + 288  [0x1000b8a38]  JSON.swift:33
+        + ! : | +     1 lazy protocol witness table accessor for type ArraySlice<Unicode.Scalar> and conformance ArraySlice<A>  (in FluidBench) + 16  [0x1000bd034]
+        + ! : | 2 static JSON.stringify(_:)  (in FluidBench) + 96  [0x1000b7dcc]  /<compiler-generated>:0
+        + ! : | + 2 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! : | +   2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! : | +     1 _free  (in libsystem_malloc.dylib) + 64  [0x192301150]
+        + ! : | +     1 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! : | +       1 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x1924950f8]
+        + ! : | 2 static JSON.stringify(_:)  (in FluidBench) + 80  [0x1000b7dbc]  JSON.swift:7
+        + ! : | + 1 static String._fromUTF8Repairing(_:)  (in libswiftCore.dylib) + 32  [0x1a6c0ba18]
+        + ! : | + ! 1 validateUTF8(_:)  (in libswiftCore.dylib) + 36  [0x1a6d63640]
+        + ! : | + !   1 _allASCII(_:)  (in libswiftCore.dylib) + 104  [0x1a6d68ee4]
+        + ! : | + 1 static String._fromUTF8Repairing(_:)  (in libswiftCore.dylib) + 56  [0x1a6c0ba30]
+        + ! : | +   1 specialized static String._uncheckedFromUTF8(_:asciiPreScanResult:)  (in libswiftCore.dylib) + 248  [0x1a6e89d4c]
+        + ! : | 1 static JSON.stringify(_:)  (in FluidBench) + 48  [0x1000b7d9c]  JSON.swift:5
+        + ! : |   1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in FluidBench) + 132  [0x1000bb250]  /<compiler-generated>:0
+        + ! : |     1 malloc_size  (in libsystem_malloc.dylib) + 84  [0x1922c81e0]
+        + ! : 30 MapKernel.getSerializedStorage()  (in FluidBench) + 424  [0x10016e268]  MapKernel.swift:271
+        + ! : | 26 JSObject.subscript.setter  (in FluidBench) + 28  [0x1000bfbf4]  /<compiler-generated>:0
+        + ! : | + 18 specialized JSObject.subscript.setter  (in FluidBench) + 388  [0x1000c1270]  JSObject.swift:18
+        + ! : | + ! 13 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 696  [0x1a6c16f0c]
+        + ! : | + ! : 7 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 792  [0x1a6ce86e8]
+        + ! : | + ! : | 5 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 48  [0x1000c198c]  /<compiler-generated>:0
+        + ! : | + ! : | + 5 Hasher._finalize()  (in libswiftCore.dylib) + 192,176  [0x1a6b9992c,0x1a6b9991c]
+        + ! : | + ! : | 2 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        + ! : | + ! : |   2 JSString.hash(into:)  (in FluidBench) + 60  [0x1000c1894]  /<compiler-generated>:0
+        + ! : | + ! : 6 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 816  [0x1a6ce8700]
+        + ! : | + ! :   3 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 132  [0x1a6c2d49c]
+        + ! : | + ! :   + 3 ___chkstk_darwin  (in libsystem_pthread.dylib) + 4  [0x1924d4cf4]
+        + ! : | + ! :   3 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 48,72  [0x1a6c2d448,0x1a6c2d460]
+        + ! : | + ! 2 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 620  [0x1a6c16ec0]
+        + ! : | + ! : 1 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 288  [0x1a6c2d538]
+        + ! : | + ! : | 1 specialized static ContiguousArray<A>.== infix(_:_:)  (in FluidBench) + 76  [0x1000c1848]  /<compiler-generated>:0
+        + ! : | + ! : 1 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 316  [0x1a6c2d554]
+        + ! : | + ! :   1 swift_release  (in libswiftCore.dylib) + 4  [0x1a6a4b568]
+        + ! : | + ! 1 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 628  [0x1a6c16ec8]
+        + ! : | + ! 1 Dictionary.updateValue(_:forKey:)  (in libswiftCore.dylib) + 52  [0x1a6c16c24]
+        + ! : | + ! : 1 __swift_instantiateGenericMetadata  (in libswiftCore.dylib) + 36  [0x1a6ed4ac0]
+        + ! : | + ! :   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | + ! :     1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 664  [0x1a6abeff4]
+        + ! : | + ! :       1 swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const  (in libswiftCore.dylib) + 1692  [0x1a6a9a534]
+        + ! : | + ! 1 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 392  [0x1a6c2d5a0]
+        + ! : | + 4 specialized JSObject.subscript.setter  (in FluidBench) + 360  [0x1000c1254]  JSObject.swift:18
+        + ! : | + ! 4 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | + !   2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | + !   : 1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 192  [0x1a6ad0838]
+        + ! : | + !   : | 1 swift::MetadataCacheEntryBase<swift::GenericCacheEntry, void const*>::awaitSatisfyingState(swift::ConcurrencyControl&, swift::MetadataRequest)  (in libswiftCore.dylib) + 96  [0x1a6acf58c]
+        + ! : | + !   : 1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 56  [0x1a6ad07b0]
+        + ! : | + !   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | + !   : 1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 276  [0x1a6abee70]
+        + ! : | + !   1 swift_getCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 68  [0x1a6abf9e8]
+        + ! : | + 1 specialized JSObject.subscript.setter  (in FluidBench) + 488  [0x1000c12d4]  /<compiler-generated>:0
+        + ! : | + ! 1 swift_release  (in libswiftCore.dylib) + 4  [0x1a6a4b568]
+        + ! : | + 1 specialized JSObject.subscript.setter  (in FluidBench) + 104  [0x1000c1154]  <stdin>:0
+        + ! : | + ! 1 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | + !   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | + !     1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 664  [0x1a6abeff4]
+        + ! : | + !       1 swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const  (in libswiftCore.dylib) + 168  [0x1a6a99f40]
+        + ! : | + 1 specialized JSObject.subscript.setter  (in FluidBench) + 328  [0x1000c1234]  JSObject.swift:18
+        + ! : | + ! 1 initializeBufferWithCopyOfBuffer for ISerializedValue  (in FluidBench) + 48  [0x10016c110]
+        + ! : | + !   1 swift_retain  (in libswiftCore.dylib) + 4  [0x1a6a4b45c]
+        + ! : | + 1 specialized JSObject.subscript.setter  (in FluidBench) + 308  [0x1000c1220]  JSObject.swift:18
+        + ! : | 1 JSObject.subscript.setter  (in FluidBench) + 40  [0x1000bfc00]  /<compiler-generated>:0
+        + ! : | + 1 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | +   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | +     1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 664  [0x1a6abeff4]
+        + ! : | +       1 swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const  (in libswiftCore.dylib) + 1524  [0x1a6a9a48c]
+        + ! : | 1 destroy for ClosedRange<>.Index  (in libswiftCore.dylib) + 56  [0x1a6ecb420]
+        + ! : | 1 destroy for ISerializedValue  (in FluidBench) + 32  [0x10016c0b4]  /<compiler-generated>:0
+        + ! : | + 1 swift_release  (in libswiftCore.dylib) + 56  [0x1a6a4b59c]
+        + ! : | 1 swift_release  (in libswiftCore.dylib) + 16  [0x1a6a4b574]
+        + ! : 4 MapKernel.getSerializedStorage()  (in FluidBench) + 284  [0x10016e1dc]  MapKernel.swift:270
+        + ! : | 2 JSString.init(stringLiteral:)  (in FluidBench) + 48  [0x1000c16a0]  /<compiler-generated>:0
+        + ! : | + 2 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in FluidBench) + 64  [0x1000c0f54]  /<compiler-generated>:0
+        + ! : | +   1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 112  [0x1a6ab329c]
+        + ! : | +   1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! : | +     1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! : | +       1 malloc_type_malloc  (in libsystem_malloc.dylib) + 72  [0x1922df784]
+        + ! : | 2 JSString.init(stringLiteral:)  (in FluidBench) + 76  [0x1000c16bc]  /<compiler-generated>:0
+        + ! : |   2 specialized Sequence._copySequenceContents(initializing:)  (in FluidBench) + 168  [0x1000c0eb0]  /<compiler-generated>:0
+        + ! : |     2 String.UTF16View.Iterator.next()  (in libswiftCore.dylib) + 32,44  [0x1a6d85634,0x1a6d85640]
+        + ! : 2 MapKernel.getSerializedStorage()  (in FluidBench) + 312  [0x10016e1f8]  /<compiler-generated>:0
+        + ! : | 2 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! : |   2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! : |     1 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! : |     + 1 mach_absolute_time  (in libsystem_kernel.dylib) + 112  [0x1924950fc]
+        + ! : |     1 _xzm_free_main  (in libsystem_malloc.dylib) + 268  [0x1922fcfc8]
+        + ! : 1 MapKernel.getSerializedStorage()  (in FluidBench) + 468  [0x10016e294]  LocalValue.swift:0
+        + ! : | 1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! : |   1 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! : |     1 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! : |       1 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        + ! : |         1 tuple_destroy<false, true>(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)  (in libswiftCore.dylib) + 84  [0x1a6a70590]
+        + ! : |           1 destroy for ILocalValue  (in FluidBench) + 0  [0x10016be88]  /<compiler-generated>:0
+        + ! : 1 MapKernel.getSerializedStorage()  (in FluidBench) + 324  [0x10016e204]  MapKernel.swift:271
+        + ! : | 1 swift_retain  (in libswiftCore.dylib) + 4  [0x1a6a4b45c]
+        + ! : 1 MapKernel.getSerializedStorage()  (in FluidBench) + 384  [0x10016e240]  MapKernel.swift:271
+        + ! :   1 JSString.init(_:)  (in FluidBench) + 32  [0x1000c1530]  JSString.swift:12
+        + ! :     1 String.UTF16View._nativeGetOffset(for:)  (in libswiftCore.dylib) + 12  [0x1a6a50158]
+        + ! 40 SharedMap.summarize()  (in FluidBench) + 436  [0x10017a104]  SharedMap.swift:94
+        + ! : 36 JSObject.subscript.setter  (in FluidBench) + 28  [0x1000bfbf4]  /<compiler-generated>:0
+        + ! : | 32 specialized JSObject.subscript.setter  (in FluidBench) + 388  [0x1000c1270]  JSObject.swift:18
+        + ! : | + 18 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 696  [0x1a6c16f0c]
+        + ! : | + ! 5 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 316  [0x1a6ce850c]
+        + ! : | + ! : 5 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | + ! :   3 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | + ! :   | 2 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 0,60  [0x1a6ad0778,0x1a6ad07b4]
+        + ! : | + ! :   | 1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 380  [0x1a6ad0b40]
+        + ! : | + ! :   2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | + ! :     1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 664  [0x1a6abeff4]
+        + ! : | + ! :     + 1 swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const  (in libswiftCore.dylib) + 572  [0x1a6a9a0d4]
+        + ! : | + ! :     1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 676  [0x1a6abf000]
+        + ! : | + ! 4 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 352  [0x1a6ce8530]
+        + ! : | + ! : 2 static _DictionaryStorage.allocate(scale:age:seed:)  (in libswiftCore.dylib) + 356  [0x1a6c2f730]
+        + ! : | + ! : | 2 specialized static Hasher._hash(seed:_:)  (in libswiftCore.dylib) + 304  [0x1a6e8a128]
+        + ! : | + ! : 1 static _DictionaryStorage.allocate(scale:age:seed:)  (in libswiftCore.dylib) + 268  [0x1a6c2f6d8]
+        + ! : | + ! : | 1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! : | + ! : |   1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! : | + ! : |     1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 668  [0x1922f4ce8]
+        + ! : | + ! : 1 static _DictionaryStorage.allocate(scale:age:seed:)  (in libswiftCore.dylib) + 104  [0x1a6c2f634]
+        + ! : | + ! 4 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 792  [0x1a6ce86e8]
+        + ! : | + ! : 2 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 48  [0x1000c198c]  /<compiler-generated>:0
+        + ! : | + ! : | 2 Hasher._finalize()  (in libswiftCore.dylib) + 0,192  [0x1a6b9986c,0x1a6b9992c]
+        + ! : | + ! : 1 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        + ! : | + ! : | 1 JSString.hash(into:)  (in FluidBench) + 36  [0x1000c187c]  /<compiler-generated>:0
+        + ! : | + ! : |   1 Hasher._combine(_:)  (in libswiftCore.dylib) + 0  [0x1a6c97774]
+        + ! : | + ! : 1 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 0  [0x1000c195c]  /<compiler-generated>:0
+        + ! : | + ! 4 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 1080  [0x1a6ce8808]
+        + ! : | + ! : 4 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! : | + ! :   4 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! : | + ! :     2 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        + ! : | + ! :     | 2 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x1924950f8]
+        + ! : | + ! :     2 _xzm_free_main  (in libsystem_malloc.dylib) + 392  [0x1922fd044]
+        + ! : | + ! 1 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 816  [0x1a6ce8700]
+        + ! : | + !   1 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 132  [0x1a6c2d49c]
+        + ! : | + !     1 ___chkstk_darwin  (in libsystem_pthread.dylib) + 4  [0x1924d4cf4]
+        + ! : | + 6 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 620  [0x1a6c16ec0]
+        + ! : | + ! 5 __RawDictionaryStorage.find<A>(_:)  (in libswiftCore.dylib) + 60  [0x1a6c2cec4]
+        + ! : | + ! : 2 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        + ! : | + ! : | 2 JSString.hash(into:)  (in FluidBench) + 52  [0x1000c188c]  /<compiler-generated>:0
+        + ! : | + ! : |   2 Hasher._combine(_:)  (in libswiftCore.dylib) + 160  [0x1a6c97944]
+        + ! : | + ! : 2 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 48  [0x1000c198c]  /<compiler-generated>:0
+        + ! : | + ! : | 2 Hasher._finalize()  (in libswiftCore.dylib) + 148,152  [0x1a6b99900,0x1a6b99904]
+        + ! : | + ! : 1 Hasher.init(_seed:)  (in libswiftCore.dylib) + 68  [0x1a6a52bd4]
+        + ! : | + ! 1 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 12  [0x1a6c2d424]
+        + ! : | + 5 Dictionary.updateValue(_:forKey:)  (in libswiftCore.dylib) + 52  [0x1a6c16c24]
+        + ! : | + ! 5 __swift_instantiateGenericMetadata  (in libswiftCore.dylib) + 36  [0x1a6ed4ac0]
+        + ! : | + !   2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | + !   : 2 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 664  [0x1a6abeff4]
+        + ! : | + !   :   2 swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const  (in libswiftCore.dylib) + 1168,1692  [0x1a6a9a328,0x1a6a9a534]
+        + ! : | + !   2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | + !   : 2 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! : | + !   :   2 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! : | + !   :     1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 132  [0x1a6aceac4]
+        + ! : | + !   :     | 1 _platform_memcmp  (in libsystem_platform.dylib) + 56  [0x1924e11a8]
+        + ! : | + !   :     1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! : | + !   :       1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 80  [0x1a6acea90]
+        + ! : | + !   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 184  [0x1a6abf93c]
+        + ! : | + 2 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 716  [0x1a6c16f20]
+        + ! : | + ! 2 __RawDictionaryStorage.find<A>(_:)  (in libswiftCore.dylib) + 60  [0x1a6c2cec4]
+        + ! : | + !   2 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        + ! : | + !     2 JSString.hash(into:)  (in FluidBench) + 52  [0x1000c188c]  /<compiler-generated>:0
+        + ! : | + !       1 DYLD-STUB$$Hasher._combine(_:)  (in FluidBench) + 4  [0x10020b164]
+        + ! : | + !       1 Hasher._combine(_:)  (in libswiftCore.dylib) + 40  [0x1a6c978cc]
+        + ! : | + 1 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 1184  [0x1a6c170f4]
+        + ! : | +   1 _NativeDictionary._insert(at:key:value:)  (in libswiftCore.dylib) + 76  [0x1a6c14d00]
+        + ! : | 2 specialized JSObject.subscript.setter  (in FluidBench) + 360  [0x1000c1254]  JSObject.swift:18
+        + ! : | + 2 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | +   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | +   ! 1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 616  [0x1a6abefc4]
+        + ! : | +   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | +     1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! : | +       1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 0  [0x1a6ad09c4]
+        + ! : | 1 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 1264  [0x1a6c17144]
+        + ! : | 1 specialized JSObject.subscript.setter  (in FluidBench) + 104  [0x1000c1154]  <stdin>:0
+        + ! : |   1 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : |     1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 28  [0x1a6abf8a0]
+        + ! : 4 JSObject.subscript.setter  (in FluidBench) + 40  [0x1000bfc00]  /<compiler-generated>:0
+        + ! :   2 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! :   + 1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! :   + ! 1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! :   + !   1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! :   + !     1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 524  [0x1a6acec4c]
+        + ! :   + 1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 304  [0x1a6ad08a8]
+        + ! :   1 DYLD-STUB$$type metadata accessor for Optional  (in FluidBench) + 4  [0x10020ada4]
+        + ! :   1 type metadata accessor for Optional  (in libswiftCore.dylib) + 0  [0x1a6e8ee8c]
+        + ! 26 SharedMap.summarize()  (in FluidBench) + 144  [0x100179fe0]  SharedMap.swift:73
+        + ! : 26 JSObject.entries.getter  (in FluidBench) + 196  [0x1000bfb34]  JSObject.swift:32
+        + ! :   14 Collection.map<A, B>(_:)  (in FluidBench) + 516  [0x1000c0928]  /<compiler-generated>:0
+        + ! :   | 11 partial apply for thunk for @callee_guaranteed (@guaranteed JSString) -> (@owned JSString, @out A)  (in FluidBench) + 84  [0x1000c0b78]  /<compiler-generated>:0
+        + ! :   | + 6 closure #1 in JSObject.entries.getter  (in FluidBench) + 144  [0x1000c0ab8]  JSObject.swift:32
+        + ! :   | + ! 6 Dictionary._Variant.lookup(_:)  (in libswiftCore.dylib) + 188  [0x1a6c14380]
+        + ! :   | + !   4 __RawDictionaryStorage.find<A>(_:)  (in libswiftCore.dylib) + 60  [0x1a6c2cec4]
+        + ! :   | + !   : 3 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        + ! :   | + !   : | 2 JSString.hash(into:)  (in FluidBench) + 52  [0x1000c188c]  /<compiler-generated>:0
+        + ! :   | + !   : | + 1 DYLD-STUB$$Hasher._combine(_:)  (in FluidBench) + 4  [0x10020b164]
+        + ! :   | + !   : | + 1 Hasher._combine(_:)  (in libswiftCore.dylib) + 40  [0x1a6c978cc]
+        + ! :   | + !   : | 1 JSString.hash(into:)  (in FluidBench) + 36  [0x1000c187c]  /<compiler-generated>:0
+        + ! :   | + !   : |   1 Hasher._combine(_:)  (in libswiftCore.dylib) + 56  [0x1a6c977ac]
+        + ! :   | + !   : 1 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 28  [0x1000c1978]  /<compiler-generated>:0
+        + ! :   | + !   :   1 Hasher.init(_seed:)  (in libswiftCore.dylib) + 12  [0x1a6a52b9c]
+        + ! :   | + !   2 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 288  [0x1a6c2d538]
+        + ! :   | + !     2 specialized static ContiguousArray<A>.== infix(_:_:)  (in FluidBench) + 28  [0x1000c1818]  /<compiler-generated>:0
+        + ! :   | + 3 closure #1 in JSObject.entries.getter  (in FluidBench) + 52  [0x1000c0a5c]  <stdin>:0
+        + ! :   | + ! 3 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! :   | + !   2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! :   | + !   : 1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! :   | + !   : 1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 376  [0x1a6ad0b3c]
+        + ! :   | + !   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 228  [0x1a6abf968]
+        + ! :   | + 2 closure #1 in JSObject.entries.getter  (in FluidBench) + 152  [0x1000c0ac0]  /<compiler-generated>:0
+        + ! :   | +   2 swift_release  (in libswiftCore.dylib) + 32  [0x1a6a4b584]
+        + ! :   | 3 partial apply for thunk for @callee_guaranteed (@guaranteed JSString) -> (@owned JSString, @out A)  (in FluidBench) + 68  [0x1000c0b68]  /<compiler-generated>:0
+        + ! :   |   2 swift_getTupleTypeMetadata  (in libswiftCore.dylib) + 560  [0x1a6a494c0]
+        + ! :   |   1 swift_getTupleTypeMetadata2  (in libswiftCore.dylib) + 28  [0x1a6a49254]
+        + ! :   7 Collection.map<A, B>(_:)  (in FluidBench) + 460  [0x1000c08f0]  /<compiler-generated>:0
+        + ! :   | 5 protocol witness for Collection.subscript.read in conformance [A]  (in libswiftCore.dylib) + 68  [0x1a6b8e0fc]
+        + ! :   | + 3 Array.subscript.read  (in libswiftCore.dylib) + 128  [0x1a6a5b7bc]
+        + ! :   | + ! 3 _malloc_zone_malloc  (in libsystem_malloc.dylib) + 0,28  [0x1923004f0,0x19230050c]
+        + ! :   | + 1 ???  (in <unknown binary>)  [0x1a9d43190]
+        + ! :   | + 1 ???  (in <unknown binary>)  [0x1a9d43198]
+        + ! :   | 2 protocol witness for Collection.subscript.read in conformance [A]  (in libswiftCore.dylib) + 44  [0x1a6b8e0e4]
+        + ! :   |   2 <deduplicated_symbol>  (in libsystem_malloc.dylib) + 336  [0x1922fb958]
+        + ! :   4 Collection.map<A, B>(_:)  (in FluidBench) + 492  [0x1000c0910]  /<compiler-generated>:0
+        + ! :   | 4 protocol witness for Collection.subscript.read in conformance _ArrayBuffer<A>  (in libswiftCore.dylib) + 40  [0x1a6e1e914]
+        + ! :   |   2 _free  (in libsystem_malloc.dylib) + 0  [0x192301110]
+        + ! :   |   2 _xzm_free_main  (in libsystem_malloc.dylib) + 184,476  [0x1922fcf74,0x1922fd098]
+        + ! :   1 Collection.map<A, B>(_:)  (in FluidBench) + 436  [0x1000c08d8]  /<compiler-generated>:0
+        + ! 26 SharedMap.summarize()  (in FluidBench) + 384  [0x10017a0d0]  SharedMap.swift:94
+        + ! : 25 JSObject.subscript.setter  (in FluidBench) + 28  [0x1000bfbf4]  /<compiler-generated>:0
+        + ! : | 16 specialized JSObject.subscript.setter  (in FluidBench) + 388  [0x1000c1270]  JSObject.swift:18
+        + ! : | + 5 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 620  [0x1a6c16ec0]
+        + ! : | + ! 4 __RawDictionaryStorage.find<A>(_:)  (in libswiftCore.dylib) + 60  [0x1a6c2cec4]
+        + ! : | + ! : 1 Hasher.init(_seed:)  (in libswiftCore.dylib) + 68  [0x1a6a52bd4]
+        + ! : | + ! : 1 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 28  [0x1000c1978]  /<compiler-generated>:0
+        + ! : | + ! : | 1 Hasher.init(_seed:)  (in libswiftCore.dylib) + 64  [0x1a6a52bd0]
+        + ! : | + ! : 1 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        + ! : | + ! : | 1 JSString.hash(into:)  (in FluidBench) + 52  [0x1000c188c]  /<compiler-generated>:0
+        + ! : | + ! : |   1 Hasher._combine(_:)  (in libswiftCore.dylib) + 40  [0x1a6c978cc]
+        + ! : | + ! : 1 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        + ! : | + ! 1 __RawDictionaryStorage.find<A>(_:)  (in libswiftCore.dylib) + 44  [0x1a6c2ceb4]
+        + ! : | + 4 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 696  [0x1a6c16f0c]
+        + ! : | + ! 2 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 316  [0x1a6ce850c]
+        + ! : | + ! : 2 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | + ! :   2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | + ! :     2 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! : | + ! :       1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! : | + ! :       | 1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 132  [0x1a6aceac4]
+        + ! : | + ! :       |   1 _platform_memcmp  (in libsystem_platform.dylib) + 96  [0x1924e11d0]
+        + ! : | + ! :       1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad0a1c]
+        + ! : | + ! 2 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 352  [0x1a6ce8530]
+        + ! : | + !   1 static _DictionaryStorage.allocate(scale:age:seed:)  (in libswiftCore.dylib) + 356  [0x1a6c2f730]
+        + ! : | + !   | 1 specialized static Hasher._hash(seed:_:)  (in libswiftCore.dylib) + 304  [0x1a6e8a128]
+        + ! : | + !   1 static _DictionaryStorage.allocate(scale:age:seed:)  (in libswiftCore.dylib) + 344  [0x1a6c2f724]
+        + ! : | + 3 Dictionary.updateValue(_:forKey:)  (in libswiftCore.dylib) + 52  [0x1a6c16c24]
+        + ! : | + ! 3 __swift_instantiateGenericMetadata  (in libswiftCore.dylib) + 36  [0x1a6ed4ac0]
+        + ! : | + !   2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | + !   : 2 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 616  [0x1a6abefc4]
+        + ! : | + !   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 244  [0x1a6abf978]
+        + ! : | + 2 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 148  [0x1a6c16ce8]
+        + ! : | + ! 2 ___chkstk_darwin  (in libsystem_pthread.dylib) + 4  [0x1924d4cf4]
+        + ! : | + 1 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 572  [0x1a6c16e90]
+        + ! : | + ! 1 swift_isUniquelyReferenced_nonNull_native  (in libswiftCore.dylib) + 24  [0x1a6a4b9b0]
+        + ! : | + 1 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 676  [0x1a6c16ef8]
+        + ! : | +   1 __swift_instantiateGenericMetadata  (in libswiftCore.dylib) + 36  [0x1a6ed4ac0]
+        + ! : | +     1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | +       1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! : | +         1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! : | +           1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 524  [0x1a6acec4c]
+        + ! : | 4 specialized JSObject.subscript.setter  (in FluidBench) + 444  [0x1000c12a8]  JSObject.swift:18
+        + ! : | + 3 JSObject.insertKey(_:)  (in FluidBench) + 64  [0x1000c01cc]  JSObject.swift:37
+        + ! : | + ! 3 specialized Array._makeUniqueAndReserveCapacityIfNotUnique()  (in libswiftCore.dylib) + 80  [0x1a6b8ef08]
+        + ! : | + !   1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 156  [0x1a6b858f8]
+        + ! : | + !   : 1 canonical specialized generic type metadata accessor for _ContiguousArrayStorage<Swift.AnyObject>  (in libswiftCore.dylib) + 16  [0x1a6e8f238]
+        + ! : | + !   :   1 ???  (in <unknown binary>)  [0x199d285a0]
+        + ! : | + !   1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 172  [0x1a6b85908]
+        + ! : | + !   : 1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! : | + !   :   1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! : | + !   :     1 xzm_malloc_zone_malloc_type_malloc_main  (in libsystem_malloc.dylib) + 0  [0x1922fb314]
+        + ! : | + !   1 specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)  (in libswiftCore.dylib) + 180  [0x1a6b85910]
+        + ! : | + 1 JSObject.insertKey(_:)  (in FluidBench) + 52  [0x1000c01c0]  /<compiler-generated>:0
+        + ! : | +   1 swift_retain  (in libswiftCore.dylib) + 4  [0x1a6a4b45c]
+        + ! : | 1 JSObject.insertKey(_:)  (in FluidBench) + 104  [0x1000c01f4]  JSObject.swift:41
+        + ! : | 1 specialized JSObject.subscript.setter  (in FluidBench) + 132  [0x1000c1170]  <stdin>:0
+        + ! : | + 1 ___chkstk_darwin  (in libsystem_pthread.dylib) + 4  [0x1924d4cf4]
+        + ! : | 1 specialized JSObject.subscript.setter  (in FluidBench) + 168  [0x1000c1194]  <stdin>:0
+        + ! : | + 1 ___chkstk_darwin  (in libsystem_pthread.dylib) + 4  [0x1924d4cf4]
+        + ! : | 1 specialized JSObject.subscript.setter  (in FluidBench) + 360  [0x1000c1254]  JSObject.swift:18
+        + ! : | + 1 DYLD-STUB$$type metadata accessor for Dictionary  (in FluidBench) + 4  [0x10020a834]
+        + ! : | 1 specialized JSObject.subscript.setter  (in FluidBench) + 428  [0x1000c1298]  JSObject.swift:18
+        + ! : |   1 destroy for ClosedRange<>.Index  (in libswiftCore.dylib) + 112  [0x1a6ecb458]
+        + ! : |     1 getEnumTagSinglePayload for JSONValue  (in FluidBench) + 64  [0x1000bf2f0]  /<compiler-generated>:0
+        + ! : 1 DYLD-STUB$$swift_release  (in FluidBench) + 4  [0x10020b518]
+        + ! 21 SharedMap.summarize()  (in FluidBench) + 496  [0x10017a140]  SharedMap.swift:94
+        + ! : 20 JSObject.subscript.setter  (in FluidBench) + 28  [0x1000bfbf4]  /<compiler-generated>:0
+        + ! : | 14 specialized JSObject.subscript.setter  (in FluidBench) + 388  [0x1000c1270]  JSObject.swift:18
+        + ! : | + 7 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 696  [0x1a6c16f0c]
+        + ! : | + ! 5 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 816  [0x1a6ce8700]
+        + ! : | + ! : 4 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 200,48  [0x1a6c2d4e0,0x1a6c2d448]
+        + ! : | + ! : 1 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 288  [0x1a6c2d538]
+        + ! : | + ! :   1 specialized static ContiguousArray<A>.== infix(_:_:)  (in FluidBench) + 72  [0x1000c1844]  /<compiler-generated>:0
+        + ! : | + ! 2 _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)  (in libswiftCore.dylib) + 792  [0x1a6ce86e8]
+        + ! : | + !   1 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 28  [0x1000c1978]  /<compiler-generated>:0
+        + ! : | + !   | 1 Hasher.init(_seed:)  (in libswiftCore.dylib) + 12  [0x1a6a52b9c]
+        + ! : | + !   1 protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        + ! : | + !     1 JSString.hash(into:)  (in FluidBench) + 36  [0x1000c187c]  /<compiler-generated>:0
+        + ! : | + !       1 Hasher._combine(_:)  (in libswiftCore.dylib) + 124  [0x1a6c977f0]
+        + ! : | + 4 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 620  [0x1a6c16ec0]
+        + ! : | + ! 2 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 356  [0x1a6c2d57c]
+        + ! : | + ! 1 __RawDictionaryStorage.find<A>(_:)  (in libswiftCore.dylib) + 60  [0x1a6c2cec4]
+        + ! : | + ! : 1 JSString.hash(into:)  (in FluidBench) + 68  [0x1000c189c]  /<compiler-generated>:0
+        + ! : | + ! 1 __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 248  [0x1a6c2d510]
+        + ! : | + !   1 swift::metadataimpl::ValueWitnesses<swift::metadataimpl::SwiftRetainableBox>::initializeWithCopy(swift::OpaqueValue*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)  (in libswiftCore.dylib) + 16  [0x1a6a5488c]
+        + ! : | + 2 Dictionary.updateValue(_:forKey:)  (in libswiftCore.dylib) + 52  [0x1a6c16c24]
+        + ! : | + ! 2 __swift_instantiateGenericMetadata  (in libswiftCore.dylib) + 36  [0x1a6ed4ac0]
+        + ! : | + !   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | + !   : 1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 616  [0x1a6abefc4]
+        + ! : | + !   1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 244  [0x1a6abf978]
+        + ! : | + 1 Dictionary._Variant.updateValue(_:forKey:)  (in libswiftCore.dylib) + 1184  [0x1a6c170f4]
+        + ! : | +   1 _NativeDictionary._insert(at:key:value:)  (in libswiftCore.dylib) + 188  [0x1a6c14d70]
+        + ! : | 3 specialized JSObject.subscript.setter  (in FluidBench) + 360  [0x1000c1254]  JSObject.swift:18
+        + ! : | + 2 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | + ! 1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        + ! : | + ! : 1 getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 676  [0x1a6abf000]
+        + ! : | + ! 1 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | + !   1 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! : | + !     1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! : | + 1 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 20  [0x1a6ed4ae0]
+        + ! : | 2 specialized JSObject.subscript.setter  (in FluidBench) + 104  [0x1000c1154]  <stdin>:0
+        + ! : | + 2 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! : | +   2 _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        + ! : | +     2 swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        + ! : | +       2 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! : | +         1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 132  [0x1a6aceac4]
+        + ! : | +         ! 1 _platform_memcmp  (in libsystem_platform.dylib) + 272  [0x1924e1280]
+        + ! : | +         1 swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        + ! : | +           1 swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 80  [0x1a6acea90]
+        + ! : | 1 specialized JSObject.subscript.setter  (in FluidBench) + 328  [0x1000c1234]  JSObject.swift:18
+        + ! : |   1 ???  (in FluidBench)  load address 0x100090000 + 0x2f218  [0x1000bf218]
+        + ! : |     1 swift_retain  (in libswiftCore.dylib) + 0  [0x1a6a4b458]
+        + ! : 1 JSObject.subscript.setter  (in FluidBench) + 40  [0x1000bfc00]  /<compiler-generated>:0
+        + ! :   1 __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        + ! :     1 swift_getCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6abf9cc]
+        + ! 16 SharedMap.summarize()  (in FluidBench) + 1876  [0x10017a6a4]  /<compiler-generated>:0
+        + ! : 16 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   16 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :     16 _DictionaryStorage.__deallocating_deinit  (in libswiftCore.dylib) + 16  [0x1a6c2d5cc]
+        + ! :       16 _DictionaryStorage.deinit  (in libswiftCore.dylib) + 568  [0x1a6a556cc]
+        + ! :         15 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :         | 15 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :         |   8 __swift__destructor.2  (in FluidBench) + 32  [0x10017aa68]  /<compiler-generated>:0
+        + ! :         |   + 7 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :         |   + ! 7 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :         |   + !   6 _DictionaryStorage.__deallocating_deinit  (in libswiftCore.dylib) + 16  [0x1a6c2d5cc]
+        + ! :         |   + !   : 5 _DictionaryStorage.deinit  (in libswiftCore.dylib) + 388  [0x1a6a55618]
+        + ! :         |   + !   : | 4 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :         |   + !   : | + 2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :         |   + !   : | + ! 2 _free  (in libsystem_malloc.dylib) + 36  [0x192301134]
+        + ! :         |   + !   : | + 1 ???  (in <unknown binary>)  [0x1a9d380e8]
+        + ! :         |   + !   : | + 1 _xzm_free_main  (in libsystem_malloc.dylib) + 1072  [0x1922fd2ec]
+        + ! :         |   + !   : | 1 _swift_release_dealloc  (in libswiftCore.dylib) + 84  [0x1a6a4f2b8]
+        + ! :         |   + !   : 1 _DictionaryStorage.deinit  (in libswiftCore.dylib) + 568  [0x1a6a556cc]
+        + ! :         |   + !   :   1 swift_release  (in libswiftCore.dylib) + 16  [0x1a6a4b574]
+        + ! :         |   + !   1 _xzm_free_main  (in libsystem_malloc.dylib) + 164  [0x1922fcf60]
+        + ! :         |   + 1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 80  [0x1a6ab5a8c]
+        + ! :         |   6 __swift__destructor.2  (in FluidBench) + 24  [0x10017aa60]  /<compiler-generated>:0
+        + ! :         |   + 6 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :         |   +   5 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :         |   +   ! 2 swift_deallocClassInstance  (in libswiftCore.dylib) + 12,132  [0x1a6a4f350,0x1a6a4f3c8]
+        + ! :         |   +   ! 1 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! :         |   +   ! : 1 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        + ! :         |   +   ! :   1 swift_release$lazyLoadStub  (in libobjc.A.dylib) + 20  [0x19208f340]
+        + ! :         |   +   ! 1 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 60  [0x1a6a4f2fc]
+        + ! :         |   +   ! 1 _free  (in libsystem_malloc.dylib) + 12  [0x19230111c]
+        + ! :         |   +   1 _swift_release_dealloc  (in libswiftCore.dylib) + 24  [0x1a6a4f27c]
+        + ! :         |   1 _free  (in libsystem_malloc.dylib) + 0  [0x192301110]
+        + ! :         1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 120  [0x1a6ab5ab4]
+        + ! 6 SharedMap.summarize()  (in FluidBench) + 1740  [0x10017a61c]  SharedMap.swift:90
+        + ! : 6 JSString.init(_:)  (in FluidBench) + 76  [0x1000c155c]  JSString.swift:12
+        + ! :   3 String.UTF16View.Iterator.next()  (in libswiftCore.dylib) + 180  [0x1a6d856c8]
+        + ! :   3 specialized Sequence._copySequenceContents(initializing:)  (in FluidBench) + 168  [0x1000c0eb0]  /<compiler-generated>:0
+        + ! :     2 String.UTF16View.Iterator.next()  (in libswiftCore.dylib) + 56,68  [0x1a6d8564c,0x1a6d85658]
+        + ! :     1 DYLD-STUB$$String.UTF16View.Iterator.next()  (in FluidBench) + 4  [0x10020aa74]
+        + ! 4 SharedMap.summarize()  (in FluidBench) + 276  [0x10017a064]  SharedMap.swift:94
+        + ! : 2 JSObject.init()  (in FluidBench) + 92  [0x1000bfbb8]  JSObject.swift:7
+        + ! : | 1 Dictionary.init(dictionaryLiteral:)  (in libswiftCore.dylib) + 24  [0x1a6a865d8]
+        + ! : | + 1 specialized Dictionary.init(dictionaryLiteral:)  (in libswiftCore.dylib) + 68  [0x1a6e947ac]
+        + ! : | +   1 swift_getTupleTypeMetadata2  (in libswiftCore.dylib) + 32  [0x1a6a49258]
+        + ! : | 1 Dictionary.init(dictionaryLiteral:)  (in libswiftCore.dylib) + 36  [0x1a6a865e4]
+        + ! : |   1 swift_release  (in libswiftCore.dylib) + 80  [0x1a6a4b5b4]
+        + ! : 1 JSObject.init()  (in FluidBench) + 52  [0x1000bfb90]  JSObject.swift:7
+        + ! : | 1 swift_getTupleTypeMetadata2  (in libswiftCore.dylib) + 48  [0x1a6a49268]
+        + ! : |   1 swift_getTupleTypeMetadata  (in libswiftCore.dylib) + 96  [0x1a6a492f0]
+        + ! : |     1 swift::LockingConcurrentMap<(anonymous namespace)::TupleCacheEntry, (anonymous namespace)::TupleCacheStorage>::getOrInsert<(anonymous namespace)::TupleCacheEntry::Key, swift::MetadataRequest&, swift::TargetValueWitnessTable<swift::InProcess> const*&>((anonymous namespace)::TupleCacheEntry::Key, swift::MetadataRequest&, swift::TargetValueWitnessTable<swift::InProcess> const*&)  (in libswiftCore.dylib) + 176  [0x1a6a495b0]
+        + ! : 1 JSObject.init()  (in FluidBench) + 64  [0x1000bfb9c]  JSObject.swift:7
+        + ! 3 SharedMap.summarize()  (in FluidBench) + 2060  [0x10017a75c]  /<compiler-generated>:0
+        + ! : 3 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   3 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :     3 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! :       3 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        + ! :         3 tuple_destroy<false, false>(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)  (in libswiftCore.dylib) + 84  [0x1a6a67f08]
+        + ! :           3 destroy for ISerializedValue  (in FluidBench) + 32  [0x10016c0b4]  /<compiler-generated>:0
+        + ! :             3 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :               3 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :                 1 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! :                 | 1 swift_arrayDestroy  (in libswiftCore.dylib) + 88  [0x1a6a4d714]
+        + ! :                 1 _xzm_free_main  (in libsystem_malloc.dylib) + 184  [0x1922fcf74]
+        + ! :                 1 swift_deallocClassInstance  (in libswiftCore.dylib) + 68  [0x1a6a4f388]
+        + ! 3 SharedMap.summarize()  (in FluidBench) + 404  [0x10017a0e4]  SharedMap.swift:94
+        + ! : 2 JSString.init(stringLiteral:)  (in FluidBench) + 76  [0x1000c16bc]  /<compiler-generated>:0
+        + ! : | 1 specialized Sequence._copySequenceContents(initializing:)  (in FluidBench) + 100  [0x1000c0e6c]  /<compiler-generated>:0
+        + ! : | + 1 String.UTF16View.Iterator.next()  (in libswiftCore.dylib) + 20  [0x1a6d85628]
+        + ! : | 1 specialized Sequence._copySequenceContents(initializing:)  (in FluidBench) + 168  [0x1000c0eb0]  /<compiler-generated>:0
+        + ! : |   1 String.UTF16View.Iterator.next()  (in libswiftCore.dylib) + 20  [0x1a6d85628]
+        + ! : 1 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in FluidBench) + 112  [0x1000c0f84]  /<compiler-generated>:0
+        + ! 2 SharedMap.summarize()  (in FluidBench) + 156  [0x100179fec]  /<compiler-generated>:0
+        + ! : 2 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :     2 _DictionaryStorage.__deallocating_deinit  (in libswiftCore.dylib) + 16  [0x1a6c2d5cc]
+        + ! :       2 _DictionaryStorage.deinit  (in libswiftCore.dylib) + 568  [0x1a6a556cc]
+        + ! 2 SharedMap.summarize()  (in FluidBench) + 300  [0x10017a07c]  SharedMap.swift:94
+        + ! : 2 JSString.init(stringLiteral:)  (in FluidBench) + 48  [0x1000c16a0]  /<compiler-generated>:0
+        + ! :   1 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in FluidBench) + 64  [0x1000c0f54]  /<compiler-generated>:0
+        + ! :   | 1 swift_allocObject  (in libswiftCore.dylib) + 28  [0x1a6a48e68]
+        + ! :   1 specialized _ContiguousArrayBuffer.init(_uninitializedCount:minimumCapacity:)  (in FluidBench) + 72  [0x1000c0f5c]  /<compiler-generated>:0
+        + ! :     1 malloc_size  (in libsystem_malloc.dylib) + 40  [0x1922c81b4]
+        + ! 2 SharedMap.summarize()  (in FluidBench) + 320  [0x10017a090]  SharedMap.swift:94
+        + ! : 1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 116  [0x1a6ab32a0]
+        + ! : 1 swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        + ! :   1 swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        + ! :     1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 456  [0x1922f4c14]
+        + ! 1 JSString.init(stringLiteral:)  (in FluidBench) + 128  [0x1000c16f0]  /<compiler-generated>:0
+        + ! 1 SharedMap.summarize()  (in FluidBench) + 264  [0x10017a058]  /<compiler-generated>:0
+        + ! : 1 DYLD-STUB$$swift_retain  (in FluidBench) + 4  [0x10020b530]
+        + ! 1 SharedMap.summarize()  (in FluidBench) + 420  [0x10017a0f4]  /<compiler-generated>:0
+        + ! : 1 swift_retain  (in libswiftCore.dylib) + 4  [0x1a6a4b45c]
+        + ! 1 SharedMap.summarize()  (in FluidBench) + 1884  [0x10017a6ac]  /<compiler-generated>:0
+        + ! : 1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        + ! :   1 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        + ! :     1 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        + ! :       1 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        + ! :         1 objc_release  (in libobjc.A.dylib) + 0  [0x192057bcc]
+        + ! 1 SharedMap.summarize()  (in FluidBench) + 504  [0x10017a148]  /<compiler-generated>:0
+        + ! 1 SharedMap.summarize()  (in FluidBench) + 540  [0x10017a16c]  SharedMap.swift:73
+        + ! 1 SharedMap.summarize()  (in FluidBench) + 568  [0x10017a188]  SharedMap.swift:74
+        + ! : 1 JSString.length.getter  (in FluidBench) + 0  [0x1000c16fc]  JSString.swift:19
+        + ! 1 destroy for ClosedRange<>.Index  (in libswiftCore.dylib) + 152  [0x1a6ecb480]
+        + 1 specialized measure(_:count:_:)  (in FluidBench) + 1224  [0x100093978]  main.swift:52
+        +   1 fflush  (in libsystem_c.dylib) + 112  [0x19237155c]
+        +     1 __sflush  (in libsystem_c.dylib) + 232  [0x1923716bc]
+        +       1 _swrite  (in libsystem_c.dylib) + 108  [0x192373970]
+        +         1 __swrite  (in libsystem_c.dylib) + 24  [0x192393294]
+        +           1 __write_nocancel  (in libsystem_kernel.dylib) + 8  [0x192498be8]
+        4 main  (in FluidBench) + 3652  [0x100092144]  /<compiler-generated>:0
+          4 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+            4 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+              4 SharedMap.__deallocating_deinit  (in FluidBench) + 28  [0x10017b274]  /<compiler-generated>:0
+                4 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+                  4 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+                    2 MapKernel.__deallocating_deinit  (in FluidBench) + 52  [0x100170220]  <stdin>:0
+                    ! 2 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+                    !   2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+                    !     2 _DictionaryStorage.__deallocating_deinit  (in libswiftCore.dylib) + 16  [0x1a6c2d5cc]
+                    !       1 _DictionaryStorage.deinit  (in libswiftCore.dylib) + 568  [0x1a6a556cc]
+                    !       : 1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 120  [0x1a6ab5ab4]
+                    !       1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 60  [0x1a6ab5a78]
+                    2 MapKernel.__deallocating_deinit  (in FluidBench) + 60  [0x100170228]  <stdin>:0
+                      2 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+                        2 _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+                          2 _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+                            1 swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 60  [0x1a6ab5a78]
+                            1 swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+                              1 swift_release$lazyLoadStub  (in libobjc.A.dylib) + 20  [0x19208f340]
+
+Total number in stack (recursive counted multiple, when >=5):
+        24       _swift_release_dealloc  (in libswiftCore.dylib) + 64  [0x1a6a4f2a4]
+        24       swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 168  [0x1a6ab5ae4]
+        14       __swift_instantiateCanonicalPrespecializedGenericMetadata  (in libswiftCore.dylib) + 40  [0x1a6ed4af4]
+        14       swift_release  (in libswiftCore.dylib) + 0  [0x1a6a4b564]
+        13       _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 0  [0x1922f4a4c]
+        13       swift::swift_slowAllocTyped(unsigned long, unsigned long, unsigned long long)  (in libswiftCore.dylib) + 64  [0x1a6ab326c]
+        13       swift_allocObject  (in libswiftCore.dylib) + 136  [0x1a6a48ed4]
+        12       _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 268  [0x1a6abf990]
+        11       _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 40  [0x1a6abf8ac]
+        10       _ContiguousArrayStorage.__deallocating_deinit  (in libswiftCore.dylib) + 96  [0x1a6a4f320]
+        9       _xzm_free_main  (in libsystem_malloc.dylib) + 0  [0x1922fcebc]
+        9       _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x1922fd19c]
+        9       mach_absolute_time  (in libsystem_kernel.dylib) + 0  [0x19249508c]
+        9       swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 88  [0x1a6ad07d0]
+        9       swift_arrayDestroy  (in libswiftCore.dylib) + 204  [0x1a6a4d788]
+        8       swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 104  [0x1a6ad0a2c]
+        7       _free  (in libsystem_malloc.dylib) + 0  [0x192301110]
+        7       getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 0  [0x1a6abed5c]
+        7       protocol witness for Hashable._rawHashValue(seed:) in conformance JSString  (in FluidBench) + 40  [0x1000c1984]  /<compiler-generated>:0
+        7       swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 0  [0x1a6acea40]
+        7       swift_retain  (in libswiftCore.dylib) + 0  [0x1a6a4b458]
+        6       <deduplicated_symbol>  (in libsystem_malloc.dylib) + 0  [0x1922fb808]
+        6       Hasher.init(_seed:)  (in libswiftCore.dylib) + 0  [0x1a6a52b90]
+        6       swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib) + 0  [0x1a6ab5a3c]
+        5       String.UTF16View.Iterator.next()  (in libswiftCore.dylib) + 0  [0x1a6d85614]
+        5       __RawDictionaryStorage.find<A>(_:)  (in libswiftCore.dylib) + 60  [0x1a6c2cec4]
+        5       __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib) + 0  [0x1a6c2d418]
+        5       ___chkstk_darwin  (in libsystem_pthread.dylib) + 0  [0x1924d4cf0]
+        5       __swift_instantiateGenericMetadata  (in libswiftCore.dylib) + 36  [0x1a6ed4ac0]
+        5       _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib) + 0  [0x1a6abf884]
+        5       getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib) + 664  [0x1a6abeff4]
+        5       swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 0  [0x1a6ad0778]
+        5       swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib) + 132  [0x1a6aceac4]
+        5       swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib) + 0  [0x1a6ad09c4]
+        5       swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const  (in libswiftCore.dylib) + 0  [0x1a6a99e98]
+
+Sort by top of stack, same collapsed (when >= 5):
+        mach_absolute_time  (in libsystem_kernel.dylib)        25
+        _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib)        20
+        _xzm_free_main  (in libsystem_malloc.dylib)        15
+        swift_release  (in libswiftCore.dylib)        15
+        __RawDictionaryStorage.find<A>(_:hashValue:)  (in libswiftCore.dylib)        11
+        <deduplicated_symbol>  (in libsystem_malloc.dylib)        9
+        Hasher._finalize()  (in libswiftCore.dylib)        9
+        String.UTF16View.Iterator.next()  (in libswiftCore.dylib)        9
+        _free  (in libsystem_malloc.dylib)        9
+        Hasher._combine(_:)  (in libswiftCore.dylib)        8
+        ___chkstk_darwin  (in libsystem_pthread.dylib)        8
+        getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)  (in libswiftCore.dylib)        8
+        swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const  (in libswiftCore.dylib)        7
+        swift_retain  (in libswiftCore.dylib)        7
+        Hasher.init(_seed:)  (in libswiftCore.dylib)        6
+        _malloc_zone_malloc  (in libsystem_malloc.dylib)        6
+        protocol witness for IteratorProtocol.next() in conformance IndexingIterator<A>  (in libswiftCore.dylib)        6
+        specialized Collection.firstIndex(where:)  (in FluidBench)        6
+        specialized static JSON.shortestDigits(_:)  (in FluidBench)        6
+        swift::LockingConcurrentMap<swift::GenericCacheEntry, swift::LockingConcurrentMapStorage<swift::GenericCacheEntry, (unsigned short)14>>::getOrInsert<swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib)        6
+        swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)  (in libswiftCore.dylib)        6
+        swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const  (in libswiftCore.dylib)        6
+        _swift_getGenericMetadata(swift::MetadataRequest, void const* const*, swift::TargetTypeContextDescriptor<swift::InProcess> const*)  (in libswiftCore.dylib)        5
+        swift::StableAddressConcurrentReadableHashMap<swift::GenericCacheEntry, swift::TaggedMetadataAllocator<(unsigned short)14>, swift::Mutex>::getOrInsert<swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&>(swift::MetadataCacheKey, swift::MetadataWaitQueue::Worker&, swift::MetadataRequest&, swift::TargetTypeContextDescriptor<swift::InProcess> const*&, void const* const*&)  (in libswiftCore.dylib)        5
+
+Binary Images:
+       0x100090000 -        0x10024449b +FluidBench (0) <853DBFB7-0961-3DE6-9229-181270741EBC> /Users/*/FluidBench
+       0x192050000 -        0x19209f5f7  libobjc.A.dylib (973.1) <C0680DF6-9900-3C29-A071-95A031686EF8> /usr/lib/libobjc.A.dylib
+       0x1920a0000 -        0x1920aa23f  libsharedcache.dylib (0) <117C1ED6-AE11-3D9E-B05B-844F35395552> /usr/lib/libsharedcache.dylib
+       0x1920ab000 -        0x1920d1d3b  libdyld.dylib (27062) <62863BCA-DD60-3D32-A9DB-89099BA6F3D7> /usr/lib/system/libdyld.dylib
+       0x1920d2000 -        0x1921916e3  dyld (1.0.0 - 27062) <D341DDCB-7969-3A9C-8E03-0CF4751398A9> /usr/lib/dyld
+       0x192192000 -        0x19219501f  libsystem_blocks.dylib (98.1) <6F304731-D95D-3501-B4AD-F2934F7F2446> /usr/lib/system/libsystem_blocks.dylib
+       0x192196000 -        0x1921eb0df  libxpc.dylib (3298.1.1) <0791121F-B5FC-3F84-BF04-115E86D2D882> /usr/lib/system/libxpc.dylib
+       0x1921ec000 -        0x19220bc13  libsystem_trace.dylib (1966.1.1) <B48A8E3E-A12A-3342-8321-428B555E965E> /usr/lib/system/libsystem_trace.dylib
+       0x19220c000 -        0x1922c0f27  libcorecrypto.dylib (2109.0.22) <807AA6C9-5D8A-3CA5-B4CE-FACE5296EF6A> /usr/lib/system/libcorecrypto.dylib
+       0x1922c1000 -        0x192316c5f  libsystem_malloc.dylib (886.0.8) <2339CB57-FE5A-3154-A206-A76059C749EB> /usr/lib/system/libsystem_malloc.dylib
+       0x192317000 -        0x19235d19f  libdispatch.dylib (1605.0.2) <022BF08F-0B3A-3225-9E65-16D1553CE90D> /usr/lib/system/libdispatch.dylib
+       0x19235e000 -        0x192360d2b  libsystem_featureflags.dylib (108) <20C1CAB2-1F13-3426-8146-9CAE9FF2A33D> /usr/lib/system/libsystem_featureflags.dylib
+       0x192361000 -        0x1923e3ca3  libsystem_c.dylib (1786.0.3) <FBA7B23E-AA60-3A90-9AA4-A7A2E0AD63EE> /usr/lib/system/libsystem_c.dylib
+       0x1923e4000 -        0x192479033  libc++.1.dylib (2200.27) <1E9BA4AA-B5DA-3CF3-80AC-4B880049573F> /usr/lib/libc++.1.dylib
+       0x19247a000 -        0x192493eff  libc++abi.dylib (2200.27) <A21743EE-6E1C-3E74-97EA-7AF793DE4BDF> /usr/lib/libc++abi.dylib
+       0x192494000 -        0x1924d29ab  libsystem_kernel.dylib (13432.1.9) <F63BF418-8F75-34A4-AAF1-8CAF2B9B6A05> /usr/lib/system/libsystem_kernel.dylib
+       0x1924d3000 -        0x1924df91b  libsystem_pthread.dylib (553.0.1) <5A1828C3-CBC2-3B85-BD07-C8ED10021A41> /usr/lib/system/libsystem_pthread.dylib
+       0x1924e0000 -        0x1924e94f3  libsystem_platform.dylib (402.0.1.0.1) <080E4444-A0FB-3913-9756-4E470015F32F> /usr/lib/system/libsystem_platform.dylib
+       0x1924ea000 -        0x192518903  libsystem_info.dylib (603) <BC387AEB-1CEF-3513-92D7-D7F913596711> /usr/lib/system/libsystem_info.dylib
+       0x192519000 -        0x1929a9e9f  com.apple.CoreFoundation (6.9 - 5027.0.69) <727E905E-F344-3823-8E13-E7A096388321> /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation
+       0x1929aa000 -        0x192ca9ae7  com.apple.LaunchServices (1141.1 - 1141.1) <00ED6A89-5E67-37AA-9342-51EB93F68EE5> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/LaunchServices
+       0x192caa000 -        0x192e584f3  com.apple.gpusw.MetalTools (1.0 - 1) <8317EBC9-11A1-3C21-B224-FF97B6275A67> /System/Library/PrivateFrameworks/MetalTools.framework/Versions/A/MetalTools
+       0x192e59000 -        0x19362c7df  libBLAS.dylib (1617.1.1) <31104D4F-4A7E-3FA7-9E18-55937B2011F2> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib
+       0x19362d000 -        0x19373e3db  com.apple.Lexicon-framework (1.0 - 216) <15A671C9-C620-33E0-9813-D5746EC5ECEF> /System/Library/PrivateFrameworks/Lexicon.framework/Versions/A/Lexicon
+       0x19373f000 -        0x1938ab107  libSparse.dylib (196.0.1) <5375A133-2487-3429-B891-9917A51A23B9> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libSparse.dylib
+       0x1938ac000 -        0x19393d193  com.apple.SystemConfiguration (1.21 - 1.21) <10869E21-4B5A-3D06-9A03-F0BA544A6DC8> /System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration
+       0x19393e000 -        0x19397252f  libCRFSuite.dylib (55) <2D2C2F35-AB83-332B-88F0-F3BC4A3D8463> /usr/lib/libCRFSuite.dylib
+       0x193c43000 -        0x194f00287  com.apple.Foundation (6.9 - 5027.0.69) <4317F7C6-73D2-3BE9-B010-F318F1198A1B> /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation
+       0x1950af000 -        0x1951c6afb  com.apple.CoreDisplay (291.4 - 291.4) <D83242DE-F9D7-35F7-BDB1-2D0741AAB3B4> /System/Library/Frameworks/CoreDisplay.framework/Versions/A/CoreDisplay
+       0x1951c7000 -        0x19558c6e3  com.apple.audio.AudioToolboxCore (1.0 - 1638.104.3) <49229A03-C7B7-38DE-99D1-C8A923169FAB> /System/Library/PrivateFrameworks/AudioToolboxCore.framework/Versions/A/AudioToolboxCore
+       0x19558d000 -        0x1957b05ff  com.apple.CoreText (904 - 904) <D53BFD8D-65E8-389D-B9A5-1223E1EE9ACC> /System/Library/Frameworks/CoreText.framework/Versions/A/CoreText
+       0x1957b1000 -        0x195f4e633  com.apple.audio.CoreAudio (5.0 - 5.0) <3AB8F076-7437-38AA-9F5B-B083CF020ADA> /System/Library/Frameworks/CoreAudio.framework/Versions/A/CoreAudio
+       0x195f4f000 -        0x19635e5cf  com.apple.security (7.0 - 62460.1.3) <7B094BB2-DD4D-3A81-8C29-5879451255F5> /System/Library/Frameworks/Security.framework/Versions/A/Security
+       0x19635f000 -        0x1966417e5  libicucore.A.dylib (78132) <7C675D41-84B1-395F-80CA-4FF1837F0DA0> /usr/lib/libicucore.A.dylib
+       0x196642000 -        0x19664bb13  libsystem_darwin.dylib (1786.0.3) <4E66C888-993C-3E6A-A8DA-A949C01C5B67> /usr/lib/system/libsystem_darwin.dylib
+       0x19664c000 -        0x19693cf23  com.apple.CoreServices.CarbonCore (1333 - 1333) <A2180BAC-D51D-3E70-ACCE-E33F35587CB7> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/CarbonCore.framework/Versions/A/CarbonCore
+       0x19693d000 -        0x19697b3a3  com.apple.CoreServicesInternal (505 - 505) <6F8147E6-5C1E-3606-94D8-E74383900808> /System/Library/PrivateFrameworks/CoreServicesInternal.framework/Versions/A/CoreServicesInternal
+       0x19697c000 -        0x1969b5507  com.apple.CSStore (1141.1 - 1141.1) <AAC9E652-2F49-3855-BD1B-5973CCA58C5D> /System/Library/PrivateFrameworks/CoreServicesStore.framework/Versions/A/CoreServicesStore
+       0x1969b6000 -        0x196a9b707  com.apple.framework.IOKit (2.0.2 - 100288.0.9) <0E4CF3E4-B0C2-312A-B147-0BD4978EF0B7> /System/Library/Frameworks/IOKit.framework/Versions/A/IOKit
+       0x196a9c000 -        0x196aadb8b  libsystem_notify.dylib (368) <58FD36D8-37A7-311C-80F2-8E64DD8710CF> /usr/lib/system/libsystem_notify.dylib
+       0x1982d0000 -        0x1982e31df  com.apple.UniformTypeIdentifiers (709 - 709) <7EEC2F07-8F37-3EAB-94C9-9625F7AF5532> /System/Library/Frameworks/UniformTypeIdentifiers.framework/Versions/A/UniformTypeIdentifiers
+       0x1987a7000 -        0x19887ccff  libboringssl.dylib (583) <A958707F-4E4B-3E4E-BACE-DCD225F57C58> /usr/lib/libboringssl.dylib
+       0x19887d000 -        0x198bf80f7  com.apple.CFNetwork (1.0 - 3896.100.1.1.1) <F78B7942-C45B-3520-92C8-DD66E11C46FE> /System/Library/Frameworks/CFNetwork.framework/Versions/A/CFNetwork
+       0x198bf9000 -        0x198c13d93  libsystem_networkextension.dylib (2340.1.2) <22E1D190-486F-324F-ABA4-F36AB841BFE9> /usr/lib/system/libsystem_networkextension.dylib
+       0x198c14000 -        0x198c14ee7  libenergytrace.dylib (23) <09E921A2-6FB1-33A4-8DB0-2BB45A8DBBE2> /usr/lib/libenergytrace.dylib
+       0x198c15000 -        0x198ca0277  libMobileGestalt.dylib (1622.0.5) <EA99C094-01F2-3A79-8AFE-368392B35226> /usr/lib/libMobileGestalt.dylib
+       0x198ca1000 -        0x198cb8247  libsystem_asl.dylib (409) <B4D449B7-A821-3A9A-8019-E917B291F10A> /usr/lib/system/libsystem_asl.dylib
+       0x198cb9000 -        0x198cdef0f  com.apple.TCC (1.0 - 1) <6EB227C1-E59C-35DD-B07F-888EABAFD85F> /System/Library/PrivateFrameworks/TCC.framework/Versions/A/TCC
+       0x198cdf000 -        0x19931a77f  com.apple.SkyLight (1.600.0 - 953.5.5) <8A3B348E-4637-3685-92D0-6CBC2F36A234> /System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight
+       0x19931b000 -        0x199acf357  com.apple.CoreGraphics (2.0 - 2050) <B0FB9AC2-E3CC-31C2-A90E-0D38A776BAE2> /System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics
+       0x199bee000 -        0x199c0457f  com.apple.ProtocolBuffer (1 - 325.20.6.4.1) <02B6311A-FAEA-3D68-BCEA-466709877974> /System/Library/PrivateFrameworks/ProtocolBuffer.framework/Versions/A/ProtocolBuffer
+       0x199c05000 -        0x199c16877  libdns_services.dylib (3111.0.5.0.1) <FA5EA1EF-D140-32BB-86DE-8ABECF70EB95> /usr/lib/libdns_services.dylib
+       0x199c4c000 -        0x199c4cf2f  libobjcMsgSend.dylib (973.1) <41179EDE-DC97-3BBE-8848-6400D12C1436> /usr/lib/objc/libobjcMsgSend.dylib
+       0x19a050000 -        0x19a20375f  com.apple.ColorSync (4.13.0 - 3929) <2EAFBBEE-E9E2-33FA-BDF4-1A4F3C60334E> /System/Library/Frameworks/ColorSync.framework/Versions/A/ColorSync
+       0x19a51e000 -        0x19a95cc7f  com.apple.CoreData (120 - 1629.1) <0D53CA68-008E-3228-8AE7-8738FA67143C> /System/Library/Frameworks/CoreData.framework/Versions/A/CoreData
+       0x19a95d000 -        0x19ab57057  libsqlite3.dylib (406) <73D616F2-7B6C-3046-8DE6-656F74793D5F> /usr/lib/libsqlite3.dylib
+       0x19abf7000 -        0x19accbd13  com.apple.BaseBoard (827 - 827) <56EC64E5-6042-3349-B16D-BD9331FE2EE2> /System/Library/PrivateFrameworks/BaseBoard.framework/Versions/A/BaseBoard
+       0x19accc000 -        0x19ad24d83  com.apple.RunningBoardServices (1.0 - 1080) <EACC9165-43B0-302D-B4BA-44BDE05DEBE4> /System/Library/PrivateFrameworks/RunningBoardServices.framework/Versions/A/RunningBoardServices
+       0x19ad25000 -        0x19ad971d7  com.apple.AE (944 - 944) <75E434BB-9CD3-39A5-9BB9-87BBD3A2BC3B> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/AE.framework/Versions/A/AE
+       0x19ad98000 -        0x19ad9fedf  libsystem_symptoms.dylib (2394.0.4) <60EE7884-9F4E-3184-A6AC-FA40A7A0297D> /usr/lib/system/libsystem_symptoms.dylib
+       0x19ada0000 -        0x19c68c187  com.apple.Network (1.0 - 6681.1.1) <174B455B-2DE6-3364-BFF6-3802CFA599CE> /System/Library/Frameworks/Network.framework/Versions/A/Network
+       0x19c68d000 -        0x19c6c3a1f  com.apple.analyticsd (1.0 - 1) <BD3F050B-5131-3206-A468-4B4F18965F11> /System/Library/PrivateFrameworks/CoreAnalytics.framework/Versions/A/CoreAnalytics
+       0x19c6c4000 -        0x19c6c5643  libDiagnosticMessagesClient.dylib (113) <B97372C5-7A87-378A-9EE0-77B6DD4825D0> /usr/lib/libDiagnosticMessagesClient.dylib
+       0x19c6c6000 -        0x19c74cc73  com.apple.spotlight.metadata.utilities (1.0 - 2459.405) <86E8A8A2-12CC-3F59-8EFD-074A26A19E5A> /System/Library/PrivateFrameworks/MetadataUtilities.framework/Versions/A/MetadataUtilities
+       0x19c74d000 -        0x19c7cd427  com.apple.Metadata (27.0 - 2459.405) <DB51BB9F-F63F-30C7-88B8-0F23756F2571> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Metadata
+       0x19c7ce000 -        0x19c7d7513  com.apple.DiskArbitration (2.7 - 2.7) <BCE1A22D-CE13-3F92-B7D5-C21E22BD8B19> /System/Library/Frameworks/DiskArbitration.framework/Versions/A/DiskArbitration
+       0x19c7d8000 -        0x19cc1c38b  com.apple.vImage (8.1 - 650.0.1) <54CF15B0-6AB6-360D-A4BE-F3130D8EEEDB> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vImage.framework/Versions/A/vImage
+       0x19cc1d000 -        0x19d08db47  com.apple.QuartzCore (1223.2.3 - 1223.2.3) <216F70F6-AEF9-3D60-942B-F64C636DEF69> /System/Library/Frameworks/QuartzCore.framework/Versions/A/QuartzCore
+       0x19d08e000 -        0x19d0de683  libFontRegistry.dylib (424) <6744349A-6836-3ED2-A2A2-9BCD309D768F> /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ATS.framework/Versions/A/Resources/libFontRegistry.dylib
+       0x19d35d000 -        0x19d36670b  com.apple.OpenDirectory (27.0 - 737) <ED898655-1F26-371A-B87A-E00B455DA537> /System/Library/Frameworks/OpenDirectory.framework/Versions/A/OpenDirectory
+       0x19d367000 -        0x19d3cb357  com.apple.CFOpenDirectory (27.0 - 737) <537D9D7D-9092-3692-BE4D-447AFB0465F7> /System/Library/Frameworks/OpenDirectory.framework/Versions/A/Frameworks/CFOpenDirectory.framework/Versions/A/CFOpenDirectory
+       0x19d3cc000 -        0x19d3d7bdb  com.apple.CoreServices.FSEvents (1433 - 1433) <43D6AFA4-5794-3DC0-AC1F-6EB406B5E1DE> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/FSEvents
+       0x19d3d8000 -        0x19d3f93c3  com.apple.coreservices.SharedFileList (225 - 225) <81C1A25D-B0A6-39F3-9872-8472670F05FD> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/SharedFileList.framework/Versions/A/SharedFileList
+       0x19d3fa000 -        0x19d3fce47  libapp_launch_measurement.dylib (17) <7815B21D-226C-3E90-83AE-77E0623B1737> /usr/lib/libapp_launch_measurement.dylib
+       0x19d3fd000 -        0x19d43b4e7  com.apple.CoreAutoLayout (1.0 - 35) <759521BC-E562-3BE6-8AA2-3248573B8E1E> /System/Library/PrivateFrameworks/CoreAutoLayout.framework/Versions/A/CoreAutoLayout
+       0x19d43c000 -        0x19d5225bb  libxml2.2.dylib (40.1) <BB183DA3-EF8E-3F22-8150-E158BF761C0B> /usr/lib/libxml2.2.dylib
+       0x19d523000 -        0x19d5c7bc3  com.apple.CoreVideo (1.8 - 758.27) <2DD9BDAC-2339-34E3-B1D4-3C6680F85485> /System/Library/Frameworks/CoreVideo.framework/Versions/A/CoreVideo
+       0x19d5c8000 -        0x19d5caba3  com.apple.loginsupport (3.0 - 273) <AD64998C-2323-3410-AD8E-E2871B210CA4> /System/Library/PrivateFrameworks/login.framework/Versions/A/Frameworks/loginsupport.framework/Versions/A/loginsupport
+       0x19d600000 -        0x19d626e9f  com.apple.UserManagement (1.0 - 1) <ED7940B6-BF1D-3B80-9DF4-0DB10F9BFF52> /System/Library/PrivateFrameworks/UserManagement.framework/Versions/A/UserManagement
+       0x19f130000 -        0x19f16aaeb  libsystem_containermanager.dylib (833.0.8.0.1) <08A57205-555D-3792-8931-9D5B585AF326> /usr/lib/system/libsystem_containermanager.dylib
+       0x19f16b000 -        0x19f1836af  com.apple.IOSurface (402.5 - 402.5) <B7A5EC30-BFB0-3E94-8055-507FD98DB913> /System/Library/Frameworks/IOSurface.framework/Versions/A/IOSurface
+       0x19f184000 -        0x19f18d5c3  com.apple.IOAccelerator (491 - 491) <A1E30BDD-E8D3-3159-A93E-F601837B956B> /System/Library/PrivateFrameworks/IOAccelerator.framework/Versions/A/IOAccelerator
+       0x19f18e000 -        0x19f413d77  com.apple.Metal (382.5.3 - 382.5.3) <B0BC74FE-7080-347D-92EE-38195058CCCE> /System/Library/Frameworks/Metal.framework/Versions/A/Metal
+       0x19f414000 -        0x19f43e053  com.apple.audio.caulk (1.0 - 247) <C7BA2B3E-B175-30E9-ABF6-4D568D9DAA51> /System/Library/PrivateFrameworks/caulk.framework/Versions/A/caulk
+       0x19f43f000 -        0x19f6706d7  com.apple.CoreMedia (1.0 - 3350.77.5.6) <976829D2-C1F5-35E4-9FDE-3CCCAF19ED9C> /System/Library/Frameworks/CoreMedia.framework/Versions/A/CoreMedia
+       0x19f671000 -        0x19f910e87  libFontParser.dylib (459) <6B07DF95-1102-3971-A1B0-F92CD10792EF> /System/Library/PrivateFrameworks/FontServices.framework/libFontParser.dylib
+       0x19fc4a000 -        0x1a0111b8b  com.apple.ImageIO (3.3.0 - 2851) <9F466BFF-CD36-33EB-9240-A9DC03202193> /System/Library/Frameworks/ImageIO.framework/Versions/A/ImageIO
+       0x1a0112000 -        0x1a06d0027  com.apple.CoreImage (27.0.0 - 1667.21.2) <374BB926-BF7C-3439-843C-D6E5F0D518F6> /System/Library/Frameworks/CoreImage.framework/Versions/A/CoreImage
+       0x1a06d1000 -        0x1a07822c7  com.apple.MetalPerformanceShaders.MPSCore (1.0 - 130.0.19) <95E809A5-CD68-36B9-8C22-5B11055368D4> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSCore.framework/Versions/A/MPSCore
+       0x1a0783000 -        0x1a0787317  libsystem_configuration.dylib (1446) <F3EB66A7-7A24-3AE5-B6E8-9A37BB00F119> /usr/lib/system/libsystem_configuration.dylib
+       0x1a0788000 -        0x1a078ee03  libsystem_sandbox.dylib (3051.0.52) <1E892B56-092E-3832-BDE3-DCE356D7A4FA> /usr/lib/system/libsystem_sandbox.dylib
+       0x1a078f000 -        0x1a0790043  com.apple.AggregateDictionary (1.0 - 1) <CDCFA5A2-D392-384C-A334-2D3873F61CF8> /System/Library/PrivateFrameworks/AggregateDictionary.framework/Versions/A/AggregateDictionary
+       0x1a0791000 -        0x1a0794f8b  com.apple.AppleSystemInfo (3.1.5 - 3.1.5) <0C53A195-E323-368E-9A0A-88AABFB4AF66> /System/Library/PrivateFrameworks/AppleSystemInfo.framework/Versions/A/AppleSystemInfo
+       0x1a0795000 -        0x1a079635b  liblangid.dylib (140) <AE74F74F-21E6-3FA5-AA06-6BBD2D3E3626> /usr/lib/liblangid.dylib
+       0x1a0797000 -        0x1a08b25c3  com.apple.CoreNLP (1.0 - 313) <A8A964E1-9979-3E3C-AC50-DD9C02DE142F> /System/Library/PrivateFrameworks/CoreNLP.framework/Versions/A/CoreNLP
+       0x1a08b3000 -        0x1a08b8d6b  com.apple.LinguisticData (1.0 - 483.10) <35CC48A6-0E31-368D-944C-2248C8B34CB7> /System/Library/PrivateFrameworks/LinguisticData.framework/Versions/A/LinguisticData
+       0x1a08b9000 -        0x1a1aee8f7  libBNNS.dylib (2212.1.1) <21ACE428-0EFB-3080-AFE4-A86EF66D84C6> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBNNS.dylib
+       0x1a1b22000 -        0x1a1b69c13  com.apple.IOMobileFramebuffer (343.0.0 - 343.0.0) <B1C5BB2D-DB25-332B-AD82-CF1EC6170E8B> /System/Library/PrivateFrameworks/IOMobileFramebuffer.framework/Versions/A/IOMobileFramebuffer
+       0x1a1bd6000 -        0x1a1beb09f  com.apple.MobileKeyBag (2.0 - 1.0) <3E21D7E4-5C92-3781-940A-F1D90D3E7501> /System/Library/PrivateFrameworks/MobileKeyBag.framework/Versions/A/MobileKeyBag
+       0x1a1bec000 -        0x1a1bf635b  com.apple.AssertionServices (1.0 - 1080) <C57E2645-3386-395F-88D1-82C3944647DD> /System/Library/PrivateFrameworks/AssertionServices.framework/Versions/A/AssertionServices
+       0x1a1bf7000 -        0x1a1c1e5cb  com.apple.coreservices.BackgroundTaskManagement (1.0 - 104) <1A1A491B-B068-3842-B7E6-2DF944B668FA> /System/Library/PrivateFrameworks/BackgroundTaskManagement.framework/Versions/A/BackgroundTaskManagement
+       0x1a1c4c000 -        0x1a1c4cf2f  libobjcMsgSend1.dylib (973.1) <B40D9B2A-E1EE-37ED-8004-711A1F263DE1> /usr/lib/objc/libobjcMsgSend1.dylib
+       0x1a2050000 -        0x1a218c4eb  libvDSP.dylib (1155) <0826F134-170A-3E0B-A99F-B2CF01A56680> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libvDSP.dylib
+       0x1a22e3000 -        0x1a2362307  com.apple.securityfoundation (6.0 - 55294.0.2) <B4C1FCB9-3A20-316C-A7BB-160A0C9099AF> /System/Library/Frameworks/SecurityFoundation.framework/Versions/A/SecurityFoundation
+       0x1a236c000 -        0x1a236ef93  libquarantine.dylib (217.0.4) <7FD4AE22-86EF-382B-83F5-ADF9336C1160> /usr/lib/system/libquarantine.dylib
+       0x1a236f000 -        0x1a237b0a7  libCheckFix.dylib (33) <DAB53395-F433-3E13-A6CC-A028029F379C> /usr/lib/libCheckFix.dylib
+       0x1a237c000 -        0x1a239316b  libcoretls.dylib (189) <431C2F12-0081-3638-8B2F-D1F650B40942> /usr/lib/libcoretls.dylib
+       0x1a2394000 -        0x1a23a4fb3  libbsm.0.dylib (91.0.1) <E1D17FEE-E5F2-307D-A0A4-A7DA07424E2E> /usr/lib/libbsm.0.dylib
+       0x1a23a5000 -        0x1a24052ff  libmecab.dylib (1159) <DCFF867C-64AB-34E3-A2D1-B1BF117C5700> /usr/lib/libmecab.dylib
+       0x1a2406000 -        0x1a24082fb  libgermantok.dylib (31) <66456142-BA99-3D22-9E97-0EAD77D8FE5F> /usr/lib/libgermantok.dylib
+       0x1a2409000 -        0x1a241ca6b  libLinearAlgebra.dylib (1617.1.1) <34C0511A-9A4D-3302-9E1D-0DD4ABD6E9D1> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libLinearAlgebra.dylib
+       0x1a241d000 -        0x1a2639dbf  com.apple.MetalPerformanceShaders.MPSNeuralNetwork (1.0 - 130.0.19) <532F2FFA-8383-3586-973A-910FF82F7F40> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSNeuralNetwork.framework/Versions/A/MPSNeuralNetwork
+       0x1a263a000 -        0x1a268d53f  com.apple.MetalPerformanceShaders.MPSRayIntersector (1.0 - 130.0.19) <C91F6D93-6F2C-37FD-9CDF-90063BEFCC3C> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSRayIntersector.framework/Versions/A/MPSRayIntersector
+       0x1a27d5000 -        0x1a2803167  com.apple.MetalPerformanceShaders.MPSMatrix (1.0 - 130.0.19) <D0C6726A-1AF1-3C81-9050-C3ED0E7EBC5E> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSMatrix.framework/Versions/A/MPSMatrix
+       0x1a2804000 -        0x1a29d6757  com.apple.MetalPerformanceShaders.MPSNDArray (1.0 - 130.0.19) <556369D5-2B69-3CD5-8383-54A36A42ED24> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSNDArray.framework/Versions/A/MPSNDArray
+       0x1a29d7000 -        0x1a2a654df  com.apple.MetalPerformanceShaders.MPSImage (1.0 - 130.0.19) <D09927CC-5C30-3542-AC58-DAC8507B7E10> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSImage.framework/Versions/A/MPSImage
+       0x1a2a66000 -        0x1a2a70d63  com.apple.AppleFSCompression (182 - 1.0) <3B5065D1-5D8A-3443-B4B8-293DA9FE47C3> /System/Library/PrivateFrameworks/AppleFSCompression.framework/Versions/A/AppleFSCompression
+       0x1a2a71000 -        0x1a2a7d48b  libbz2.1.0.dylib (49) <C53E464D-6E83-37EE-8454-ACC2C20EF446> /usr/lib/libbz2.1.0.dylib
+       0x1a2a7e000 -        0x1a2a841e7  libsystem_coreservices.dylib (203) <57248E07-11A5-3857-918E-4A3A63B69FE8> /usr/lib/system/libsystem_coreservices.dylib
+       0x1a2a85000 -        0x1a2ab5db7  com.apple.CoreServices.OSServices (1141.1 - 1141.1) <EFDD75A9-C053-36E5-AC5A-E61CE1312712> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/OSServices.framework/Versions/A/OSServices
+       0x1a3037000 -        0x1a3045b87  libz.1.dylib (105) <09881E57-159D-3E5F-B9EB-B708249AC31E> /usr/lib/libz.1.dylib
+       0x1a3046000 -        0x1a3083b27  libsystem_m.dylib (3326.0.1) <A3FB340F-3ED5-30F4-8B64-9D5860F64D35> /usr/lib/system/libsystem_m.dylib
+       0x1a3084000 -        0x1a3084b47  libcharset.1.dylib (121) <3C9B584E-740A-3664-A1B0-52E561EA4B0B> /usr/lib/libcharset.1.dylib
+       0x1a3085000 -        0x1a30884f7  libmacho.dylib (27062) <50DEADEC-3E99-3519-AFC3-4A3FEB3F14C3> /usr/lib/system/libmacho.dylib
+       0x1a3089000 -        0x1a30a1c4f  libkxld.dylib (13432.1.9) <E83FDCCE-F143-360F-A06A-9BC9993989B0> /usr/lib/system/libkxld.dylib
+       0x1a30a2000 -        0x1a30ae707  libcommonCrypto.dylib (600041) <41C99F45-C5E6-39DB-B1F2-A1BEA9D242A4> /usr/lib/system/libcommonCrypto.dylib
+       0x1a30af000 -        0x1a30b8c87  libunwind.dylib (2200.5) <3070AB81-B082-39E8-8A00-EF88DDE9AC47> /usr/lib/system/libunwind.dylib
+       0x1a30b9000 -        0x1a30bffe5  liboah.dylib (385) <E359944B-D230-33F9-A04E-0C3B17C3326E> /usr/lib/liboah.dylib
+       0x1a30c0000 -        0x1a30ca7eb  libcopyfile.dylib (260.0.3) <72D95AF9-BF5E-3A84-81A6-BCC5BDB99857> /usr/lib/system/libcopyfile.dylib
+       0x1a30cb000 -        0x1a30ce8bf  libcompiler_rt.dylib (103.4) <DFB5CE7F-A36E-36AA-BECE-1392D3D43607> /usr/lib/system/libcompiler_rt.dylib
+       0x1a30cf000 -        0x1a30d4077  libsystem_collections.dylib (1786.0.3) <1E8022D4-5A37-3A7A-8936-603E6FA88358> /usr/lib/system/libsystem_collections.dylib
+       0x1a30d5000 -        0x1a30d7f1f  libsystem_secinit.dylib (182) <DE037464-4C5D-3E96-A33F-2A4557CC6A20> /usr/lib/system/libsystem_secinit.dylib
+       0x1a30d8000 -        0x1a30da97f  libremovefile.dylib (96) <E6E6DFCF-6B2C-3F30-A59D-816CAB1190CE> /usr/lib/system/libremovefile.dylib
+       0x1a30db000 -        0x1a30dbe27  libkeymgr.dylib (31) <5EC997EF-3ADA-360B-9FCD-5F940C83FA4E> /usr/lib/system/libkeymgr.dylib
+       0x1a30dc000 -        0x1a30e4af7  libsystem_dnssd.dylib (3111.0.5.0.1) <DE22096F-1E5B-3D6E-8164-771582DD6391> /usr/lib/system/libsystem_dnssd.dylib
+       0x1a30e5000 -        0x1a30e9f1b  libcache.dylib (95) <80BAE197-E285-3F6E-A1EE-B77FE37D7E5D> /usr/lib/system/libcache.dylib
+       0x1a30ea000 -        0x1a30eb8f3  libSystem.B.dylib (1359) <4FDC9AA6-B344-37FE-B8C6-A4C94A038F57> /usr/lib/libSystem.B.dylib
+       0x1a30ec000 -        0x1a30eddf7  libfakelink.dylib (5) <76412133-41DC-3EE8-9AC1-12441AB8EE4E> /usr/lib/libfakelink.dylib
+       0x1a30ee000 -        0x1a30ee963  com.apple.SoftLinking (1.0 - 72) <467A5BB5-639E-31D1-8582-D5B0AB28D1F5> /System/Library/PrivateFrameworks/SoftLinking.framework/Versions/A/SoftLinking
+       0x1a3124000 -        0x1a312b0a3  libiconv.2.dylib (121) <C343D6F7-6932-30E8-8E8F-F756946D8413> /usr/lib/libiconv.2.dylib
+       0x1a313f000 -        0x1a32368c7  libarchive.2.dylib (182.0.1) <2869F71C-09C9-3037-B209-F5EE4ED7B73E> /usr/lib/libarchive.2.dylib
+       0x1a3237000 -        0x1a329bca7  com.apple.SearchKit (1.4.2 - 1.4.2) <E10E4CC4-CD23-36BC-B33C-BD33A3793509> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/SearchKit.framework/Versions/A/SearchKit
+       0x1a329c000 -        0x1a32a3ed7  libThaiTokenizer.dylib (28) <DDAFA8FA-194E-315B-8B0C-D1A801F6BCF9> /usr/lib/libThaiTokenizer.dylib
+       0x1a32a4000 -        0x1a32c752f  com.apple.applesauce (1.0 - 17.7) <FD3F8924-2D39-325A-A2A2-E15CB08C42F2> /System/Library/PrivateFrameworks/AppleSauce.framework/Versions/A/AppleSauce
+       0x1a32c8000 -        0x1a32e0803  libapple_nghttp2.dylib (42) <6486CF8F-DC50-35BF-A36C-080D6E27965D> /usr/lib/libapple_nghttp2.dylib
+       0x1a32e1000 -        0x1a338a0b7  libSparseBLAS.dylib (196.0.1) <C182284A-6122-3E5D-B910-5AAB4C981B00> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libSparseBLAS.dylib
+       0x1a338b000 -        0x1a338c3d3  com.apple.MetalPerformanceShaders.MetalPerformanceShaders (1.0 - 130.0.19) <CAC089E6-4489-3D36-B155-1BB2AF360A22> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/MetalPerformanceShaders
+       0x1a338d000 -        0x1a3392d0f  libpam.2.dylib (35) <B9C75402-03F2-3D7A-ACDE-A67D9859B499> /usr/lib/libpam.2.dylib
+       0x1a3393000 -        0x1a347085f  libcompression.dylib (212.0.1) <C25CA2C2-8DE6-3DBB-A03F-B81A9A0DAF50> /usr/lib/libcompression.dylib
+       0x1a3471000 -        0x1a3475437  libQuadrature.dylib (10) <6BA9713A-AEBB-3AFF-84F9-7E1F25BA9563> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libQuadrature.dylib
+       0x1a3476000 -        0x1a473776f  libLAPACK.dylib (1617.1.1) <8A02E4DB-01CA-32D3-9384-DC2AF9FAE7C0> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libLAPACK.dylib
+       0x1a4738000 -        0x1a478d85f  com.apple.DictionaryServices (1.2 - 383.7) <769713A5-4C54-3A47-A3A2-042FE798DD5D> /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/DictionaryServices.framework/Versions/A/DictionaryServices
+       0x1a478e000 -        0x1a47ac617  liblzma.5.dylib (21) <2B34F3EF-C505-3D29-9656-E7CEE143585C> /usr/lib/liblzma.5.dylib
+       0x1a47ad000 -        0x1a47ae53f  libcoretls_cfhelpers.dylib (189) <290FBB06-5D27-3C11-96B7-21D9770E7D8A> /usr/lib/libcoretls_cfhelpers.dylib
+       0x1a47af000 -        0x1a481fc4f  com.apple.APFS (3288.1.3 - 3288.1.3) <207380E2-6E65-3463-89A3-52B3A82FFD24> /System/Library/PrivateFrameworks/APFS.framework/Versions/A/APFS
+       0x1a4820000 -        0x1a482e0eb  libxar.1.dylib (514.0.1) <E5A8C033-10F5-305C-883B-3433D8EC6871> /usr/lib/libxar.1.dylib
+       0x1a482f000 -        0x1a48322bb  libutil.dylib (76) <38245F99-D78C-38F1-94EE-22DF75E72ADE> /usr/lib/libutil.dylib
+       0x1a4833000 -        0x1a485d0b7  libxslt.1.dylib (22) <993E7F4A-90F1-35C1-BD90-84203244D58A> /usr/lib/libxslt.1.dylib
+       0x1a4865000 -        0x1a48ded07  libvMisc.dylib (1155) <8E6D9B3D-641B-3BB7-ABA2-1A5F55E21535> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libvMisc.dylib
+       0x1a48df000 -        0x1a496f3a7  libate.dylib (3.0.11) <693A742F-B963-3654-B3E7-F7BAA5B9582F> /usr/lib/libate.dylib
+       0x1a4979000 -        0x1a498a0a7  com.apple.CrashReporterSupport (10.13 - 15146) <94F81559-B4AD-3BDD-A37B-75E023A5C9B9> /System/Library/PrivateFrameworks/CrashReporterSupport.framework/Versions/A/CrashReporterSupport
+       0x1a4ab1000 -        0x1a4ae3193  com.apple.pluginkit.framework (1.0 - 1) <AF2A6019-5213-368B-A1E3-03269B5E8993> /System/Library/PrivateFrameworks/PlugInKit.framework/Versions/A/PlugInKit
+       0x1a4b5a000 -        0x1a4ba30cf  com.apple.AppleVAFramework (6.2.10 - 6.2.10) <77418C1A-1CB1-3C54-A10D-B2B87798ACA7> /System/Library/PrivateFrameworks/AppleVA.framework/Versions/A/AppleVA
+       0x1a4ba4000 -        0x1a4bbeeb7  libexpat.1.dylib (47) <1A30E0DE-A426-3209-A3B4-2675027F2CF9> /usr/lib/libexpat.1.dylib
+       0x1a4bbf000 -        0x1a4bc8bb3  libheimdal-asn1.dylib (725.0.12) <3AB630AA-8755-33C3-B955-A3CECEBBFA4B> /usr/lib/libheimdal-asn1.dylib
+       0x1a4cbe000 -        0x1a4d7eb4f  com.apple.MediaExperience (1.0 - 1) <DFF7F55D-6EF0-39C4-886C-2A7DD31A81F5> /System/Library/PrivateFrameworks/MediaExperience.framework/Versions/A/MediaExperience
+       0x1a4da1000 -        0x1a4db7c87  com.apple.GraphVisualizer (1.0 - 310) <3ED4C650-0272-38D7-9EAC-BEFE69696E71> /System/Library/PrivateFrameworks/GraphVisualizer.framework/Versions/A/GraphVisualizer
+       0x1a4db8000 -        0x1a4df0e73  com.apple.OTSVG (1.0 - 904) <4E0C0BF7-EA1C-3CBA-B7B1-7E0AC107A174> /System/Library/PrivateFrameworks/OTSVG.framework/Versions/A/OTSVG
+       0x1a4df1000 -        0x1a4dfc05f  com.apple.xpc.AppServerSupport (1.0 - 3298.1.1) <0EA6AF48-F033-31DB-AE1B-4729F37CF2E5> /System/Library/PrivateFrameworks/AppServerSupport.framework/Versions/A/AppServerSupport
+       0x1a4dfd000 -        0x1a4e0348b  libspindump.dylib (448) <B59289A5-B57F-3D61-8C87-7D74456047A9> /usr/lib/libspindump.dylib
+       0x1a4e04000 -        0x1a4ec3343  com.apple.Heimdal (4.0 - 2.0) <61DDDEF4-D205-362E-B7C2-63DC75F3AFF5> /System/Library/PrivateFrameworks/Heimdal.framework/Versions/A/Heimdal
+       0x1a51b5000 -        0x1a51fa04f  com.apple.AppleJPEG (1.0 - 1) <453D6AE3-2DBA-3BD6-9CD7-82B023C2556E> /System/Library/PrivateFrameworks/AppleJPEG.framework/Versions/A/AppleJPEG
+       0x1a51fb000 -        0x1a5301347  libJP2.dylib (2851) <8C641091-4DF4-3BE2-BCE5-E38F88B81FC7> /System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libJP2.dylib
+       0x1a5302000 -        0x1a5303c67  com.apple.WatchdogClient.framework (1.0 - 334.0.4) <02171A1C-6E1D-3348-B7DB-CA81F61BD3AB> /System/Library/PrivateFrameworks/WatchdogClient.framework/Versions/A/WatchdogClient
+       0x1a5304000 -        0x1a53476b7  com.apple.MultitouchSupport.framework (10400.44 - 10400.44) <DA05747A-43DB-39DD-82DA-C9D6C2EDE68E> /System/Library/PrivateFrameworks/MultitouchSupport.framework/Versions/A/MultitouchSupport
+       0x1a5348000 -        0x1a58d176f  com.apple.VideoToolbox (1.0 - 3350.77.5.6) <6EDC2F05-B68B-3810-9103-16B2DCE770B4> /System/Library/Frameworks/VideoToolbox.framework/Versions/A/VideoToolbox
+       0x1a58d2000 -        0x1a58fc09f  libPng.dylib (2851) <2D9734E3-0991-3823-875A-A7A1ABDC63B4> /System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libPng.dylib
+       0x1a58fd000 -        0x1a595e34f  libTIFF.dylib (2851) <2FF49954-B5F5-3CD4-A4C7-39948EB833A7> /System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libTIFF.dylib
+       0x1a595f000 -        0x1a597d56f  com.apple.IOPresentment (67 - 67) <E2F60270-A88B-34B2-A6AB-6BE37B001B75> /System/Library/PrivateFrameworks/IOPresentment.framework/Versions/A/IOPresentment
+       0x1a597e000 -        0x1a59823a7  com.apple.GPUWrangler (8.1.12 - 8.1.12) <DD1A8136-0B38-32C0-A23D-794B162AF26A> /System/Library/PrivateFrameworks/GPUWrangler.framework/Versions/A/GPUWrangler
+       0x1a5983000 -        0x1a59852bf  libRadiance.dylib (2851) <447C6D93-DA95-3A0A-975B-F9BE9095CC28> /System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libRadiance.dylib
+       0x1a5986000 -        0x1a598ab13  com.apple.DSExternalDisplay (3.1 - 380) <A566E2B1-A7CC-3AE3-96A4-4E2994F8C1D0> /System/Library/PrivateFrameworks/DSExternalDisplay.framework/Versions/A/DSExternalDisplay
+       0x1a598b000 -        0x1a59b5f47  libJPEG.dylib (2851) <D27A6E08-328D-3560-A211-A182B505DAB8> /System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libJPEG.dylib
+       0x1a59e3000 -        0x1a59e8c27  libGIF.dylib (2851) <6830CD73-C87E-3B59-AD95-FEE4ECC0B759> /System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libGIF.dylib
+       0x1a59e9000 -        0x1a59facd3  com.apple.CMCaptureCore (1.0 - 764.21.3) <E5B093A6-E1AF-3ABD-8A1D-E1DCA943156C> /System/Library/PrivateFrameworks/CMCaptureCore.framework/Versions/A/CMCaptureCore
+       0x1a69d6000 -        0x1a6a430d7  libusrtcp.dylib (6681.1.1) <DD6DE768-C695-31DA-A1B8-B089AD8721FC> /usr/lib/libusrtcp.dylib
+       0x1a6a44000 -        0x1a6fdce2f  libswiftCore.dylib (6.4.0 - 6.4.0.31.5) <C9B36DA7-BB34-35AF-BC5D-91ECBCAA9ED0> /usr/lib/swift/libswiftCore.dylib
+       0x1a706d000 -        0x1a70bf9eb  libSessionUtility.dylib (449.108) <2D305F72-8E2A-3B72-8617-4278A3D605A4> /System/Library/PrivateFrameworks/AudioSession.framework/libSessionUtility.dylib
+       0x1a70c0000 -        0x1a7299fb3  com.apple.audio.toolbox.AudioToolbox (1.14 - 1.14) <C5FDDD2A-A45C-39E0-AF9C-64755A6BD394> /System/Library/Frameworks/AudioToolbox.framework/Versions/A/AudioToolbox
+       0x1a729a000 -        0x1a7304fe3  com.apple.audio.AudioSession (1.0 - 449.108) <51EBB45A-C823-3BCA-8A5B-5321EA1D636A> /System/Library/PrivateFrameworks/AudioSession.framework/Versions/A/AudioSession
+       0x1a7305000 -        0x1a730723b  libAudioStatistics.dylib (300) <E5F218A4-4EC6-3334-9EE3-F63E737AB26C> /usr/lib/libAudioStatistics.dylib
+       0x1a7333000 -        0x1a734ec23  libresolv.9.dylib (96) <7D890D7A-3C34-3E74-BBB6-83FA14A6BE0A> /usr/lib/libresolv.9.dylib
+       0x1a734f000 -        0x1a736157f  libsasl2.2.dylib (219) <ED27922C-C85D-3FE9-B7B6-41B5B7B4084E> /usr/lib/libsasl2.2.dylib
+       0x1a7517000 -        0x1a75f6eaf  libSMC.dylib (40) <EAF84B62-8A69-395A-9E31-DAE0F74E6A14> /usr/lib/libSMC.dylib
+       0x1a7655000 -        0x1a7661db7  com.apple.NetAuth (6.2 - 6.2) <6C13E8AF-2D7F-33FF-9BCB-D23227F8ADD8> /System/Library/PrivateFrameworks/NetAuth.framework/Versions/A/NetAuth
+       0x1a7670000 -        0x1a767a6f3  com.apple.perfdata (1.0 - 135.0.1) <5F510E06-26BE-33D3-8072-B516312A9FE4> /System/Library/PrivateFrameworks/perfdata.framework/Versions/A/perfdata
+       0x1a767b000 -        0x1a7687977  libperfcheck.dylib (46) <BE4BD34C-951A-3CB4-A9E8-C46E38E62E02> /usr/lib/libperfcheck.dylib
+       0x1a7688000 -        0x1a76983f7  com.apple.Kerberos (3.0 - 1) <B9E15097-7F2A-33AA-B86A-8942EB8F69BD> /System/Library/Frameworks/Kerberos.framework/Versions/A/Kerberos
+       0x1a7699000 -        0x1a76e8b6f  com.apple.GSS (4.0 - 2.0) <E935474F-DCEA-30FF-92C2-C3722F95E8ED> /System/Library/Frameworks/GSS.framework/Versions/A/GSS
+       0x1a76e9000 -        0x1a76f9a1f  com.apple.CommonAuth (4.0 - 2.0) <08F95713-D604-382B-B59F-0BD5D92E72E6> /System/Library/PrivateFrameworks/CommonAuth.framework/Versions/A/CommonAuth
+       0x1a76fa000 -        0x1a77bcaa7  com.apple.MobileAssets (1.0 - 2215.0.20) <242D2797-AA04-34DF-9308-70C298E0778A> /System/Library/PrivateFrameworks/MobileAsset.framework/Versions/A/MobileAsset
+       0x1a783c000 -        0x1a784aef7  com.apple.CorePhoneNumbers (1.0 - 1) <696A225A-F3BC-383E-A1DB-F8B793B1AA9A> /System/Library/PrivateFrameworks/CorePhoneNumbers.framework/Versions/A/CorePhoneNumbers
+       0x1a9270000 -        0x1a935c367  com.apple.combine (1.0 - 3023) <1D189755-83EB-3FC1-A86A-23A60CDAB34A> /System/Library/Frameworks/Combine.framework/Versions/A/Combine
+       0x1a9715000 -        0x1a971586f  com.apple.Accelerate.vecLib (3.11 - vecLib 3.11) <A85314AD-5F04-353C-B6FD-9CBDB885CF75> /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/vecLib
+       0x1a9732000 -        0x1a973298f  com.apple.CoreServices (1226 - 1226) <92E25F67-1006-322C-B4B8-9F3840F8D9B3> /System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices
+       0x1a993f000 -        0x1a993f417  com.apple.Accelerate (1.11 - Accelerate 1.11) <A697E7B9-8FF4-356C-A507-64B38AF1CCAA> /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate
+       0x1a9c4c000 -        0x1a9c4cf2f  libobjcMsgSend2.dylib (973.1) <BD27A84B-C9AE-3282-BBEA-3B6119837B5A> /usr/lib/objc/libobjcMsgSend2.dylib
+       0x1aded9000 -        0x1adee5afb  com.apple.SymptomDiagnosticReporter (1.0 - 469) <049798AF-EDA0-3108-9CF8-373B605AB558> /System/Library/PrivateFrameworks/SymptomDiagnosticReporter.framework/Versions/A/SymptomDiagnosticReporter
+       0x1adee6000 -        0x1adf0b443  com.apple.PowerLog (1.0 - 1) <5AE600A4-1463-3080-A50C-33517AA61B91> /System/Library/PrivateFrameworks/PowerLog.framework/Versions/A/PowerLog
+       0x1adf17000 -        0x1adfc08b3  com.apple.DiscRecording (9.0.3 - 9030.4.5) <B1B79268-6DC3-3611-9323-C0A14FDF44B3> /System/Library/Frameworks/DiscRecording.framework/Versions/A/DiscRecording
+       0x1adfc1000 -        0x1adff1687  com.apple.MediaKit (16 - 944) <B378DAE0-A2AF-3F1C-8AB3-E1EAB5B26E7A> /System/Library/PrivateFrameworks/MediaKit.framework/Versions/A/MediaKit
+       0x1ae9e2000 -        0x1ae9f821f  libswiftDispatch.dylib (1605.0.2) <C01F5E48-7D6C-3663-A336-0F66AC49B65D> /usr/lib/swift/libswiftDispatch.dylib
+       0x1aeccf000 -        0x1aed7764f  com.apple.BoardServices (1.0 - 827) <C248C55D-D69D-3D61-A345-443BA92B3F36> /System/Library/PrivateFrameworks/BoardServices.framework/Versions/A/BoardServices
+       0x1aeda7000 -        0x1aedb3c0f  com.apple.GraphicsServices (1.0 - 1.0) <B54AC2CC-7FBD-3302-91EA-6048A79CBA5B> /System/Library/PrivateFrameworks/GraphicsServices.framework/Versions/A/GraphicsServices
+       0x1aedb7000 -        0x1aee41cd7  com.apple.CryptoTokenKit (1.0 - 1) <53199204-082C-32EA-B379-818E92F45E77> /System/Library/Frameworks/CryptoTokenKit.framework/Versions/A/CryptoTokenKit
+       0x1af054000 -        0x1af0746a7  com.apple.DebugSymbols (219 - 219) <AE8A54B1-9840-3582-8480-45B38C2F4C30> /System/Library/PrivateFrameworks/DebugSymbols.framework/Versions/A/DebugSymbols
+       0x1af075000 -        0x1af1dce0b  com.apple.CoreSymbolication (16.0 - 64578.82.2) <D4672F79-1DDE-3AAE-95AC-C199B84B9355> /System/Library/PrivateFrameworks/CoreSymbolication.framework/Versions/A/CoreSymbolication
+       0x1af1dd000 -        0x1af1e6a73  com.apple.CoreTime (340.0.14 - 340.0.14) <090BF232-5377-30C2-A128-C72DC9152EBB> /System/Library/PrivateFrameworks/CoreTime.framework/Versions/A/CoreTime
+       0x1b0a8a000 -        0x1b0afc76f  com.apple.BackBoardServices (1.0 - 1.0) <A4C4201B-02FD-3B1B-B58A-A60BB4023B8C> /System/Library/PrivateFrameworks/BackBoardServices.framework/Versions/A/BackBoardServices
+       0x1b0afd000 -        0x1b0b37a4f  com.apple.LDAPFramework (2.4.28 - 194.5) <DF9EF86F-9E46-3DC5-8C25-31697C7AC19E> /System/Library/Frameworks/LDAP.framework/Versions/A/LDAP
+       0x1b0b38000 -        0x1b0b39637  com.apple.TrustEvaluationAgent (2.0 - 38) <8CB2434F-FFBE-3D9F-ABB0-24FA33527AB6> /System/Library/PrivateFrameworks/TrustEvaluationAgent.framework/Versions/A/TrustEvaluationAgent
+       0x1b0c66000 -        0x1b0d1bf87  com.apple.DiskImagesFramework (704 - 704) <6FC7DD54-CE06-30B3-9231-123022BF8CF8> /System/Library/PrivateFrameworks/DiskImages.framework/Versions/A/DiskImages
+       0x1b0d59000 -        0x1b0d6e093  com.apple.RemoteServiceDiscovery (1.0 - 245.0.7) <BCC760CB-6667-3798-8E4C-EEFC5F9130CD> /System/Library/PrivateFrameworks/RemoteServiceDiscovery.framework/Versions/A/RemoteServiceDiscovery
+       0x1b0d6f000 -        0x1b0d82807  com.apple.xpc.RemoteXPC (1.0 - 3298.1.1) <1C3FDABA-4DCB-3557-8126-5B437D640F24> /System/Library/PrivateFrameworks/RemoteXPC.framework/Versions/A/RemoteXPC
+       0x1b0e07000 -        0x1b0e8696b  libcurl.4.dylib (168.0.2) <C067B2C6-DD0E-3BEA-BCC0-F048B2A17545> /usr/lib/libcurl.4.dylib
+       0x1b0e8d000 -        0x1b0ec71f3  com.apple.AppSupport (1.0.0 - 29) <10780E13-654E-39C1-879A-B994F5B2990F> /System/Library/PrivateFrameworks/AppSupport.framework/Versions/A/AppSupport
+       0x1b1139000 -        0x1b113b943  com.apple.InternationalTextSearch (1.0 - 1) <5B798ABD-BB61-3D16-BB42-0167B3C55A0A> /System/Library/PrivateFrameworks/InternationalTextSearch.framework/Versions/A/InternationalTextSearch
+       0x1b1782000 -        0x1b1784fe3  com.apple.security.CryptoKit-C-Bridging (1.0 - 1) <EB7E15D5-312A-31D9-8B55-A7A6710B4F32> /System/Library/PrivateFrameworks/CryptoKitCBridging.framework/Versions/A/CryptoKitCBridging
+       0x1b1785000 -        0x1b17853f7  libHeimdalProxy.dylib (88) <6341E9AF-9CD5-3A7A-ACD4-829EE3E79A6D> /System/Library/Frameworks/Kerberos.framework/Versions/A/Libraries/libHeimdalProxy.dylib
+       0x1b17a8000 -        0x1b17c4973  com.apple.StreamingZip (1.0 - 1) <5651DFE8-5C8C-3921-8CC7-A62F564577C9> /System/Library/PrivateFrameworks/StreamingZip.framework/Versions/A/StreamingZip
+       0x1b1814000 -        0x1b1817397  libswiftObjectiveC.dylib (973.1) <3143A5EB-68CA-37E3-B414-98792711FF44> /usr/lib/swift/libswiftObjectiveC.dylib
+       0x1b1818000 -        0x1b1834257  libswiftos.dylib (1090) <010A7F00-D6F4-3E94-918D-39EF4E33EF95> /usr/lib/swift/libswiftos.dylib
+       0x1b191d000 -        0x1b1993f2f  com.apple.proactive.support.ProactiveSupport (1.0 - 423.0.1) <620CAB1D-5B4C-3449-AF3B-5D18989B8D76> /System/Library/PrivateFrameworks/ProactiveSupport.framework/Versions/A/ProactiveSupport
+       0x1b1a5f000 -        0x1b1a86e6f  com.apple.ASEProcessing (1.59.0 - 1.59.0) <6A028F2D-5B7E-324E-BE22-B589F34B1925> /System/Library/PrivateFrameworks/ASEProcessing.framework/Versions/A/ASEProcessing
+       0x1b1c4c000 -        0x1b1c4cf2f  libobjcMsgSend3.dylib (973.1) <C0860D68-DDFC-3BD7-8B06-DB0645CBBED4> /usr/lib/objc/libobjcMsgSend3.dylib
+       0x1b3e6e000 -        0x1b3f34353  com.apple.audio.midi.CoreMIDI (2.0 - 88) <DA3E2CF1-D70C-3055-BF59-0F604DA694A9> /System/Library/Frameworks/CoreMIDI.framework/Versions/A/CoreMIDI
+       0x1b4ae8000 -        0x1b4aec59f  com.apple.IOSurfaceAccelerator (1.0.0 - 1.0.0) <0499772A-AB15-393F-B655-6DB5E6D24755> /System/Library/PrivateFrameworks/IOSurfaceAccelerator.framework/Versions/A/IOSurfaceAccelerator
+       0x1b9b99000 -        0x1b9bb31ef  com.apple.HID (1.0 - 1) <EDB0E5D5-3547-3681-8291-DC8129EF0E41> /System/Library/PrivateFrameworks/HID.framework/Versions/A/HID
+       0x1b9c4c000 -        0x1b9c4cf2f  libobjcMsgSend4.dylib (973.1) <A6153BF5-622B-3B01-81B6-F64A365EF613> /usr/lib/objc/libobjcMsgSend4.dylib
+       0x1bf313000 -        0x1bf320d1b  com.apple.NetFS (6.0 - 4.0) <E3E650E1-6780-3A10-980D-3A7FACCB7288> /System/Library/Frameworks/NetFS.framework/Versions/A/NetFS
+       0x1bf7d3000 -        0x1bf7d5807  libswiftDarwin.dylib (428.0.10) <B4F37828-524C-32F7-94FD-63CB8177AEEC> /usr/lib/swift/libswiftDarwin.dylib
+       0x1c1a95000 -        0x1c1b829e3  libquic.dylib (6681.1.1) <E55B3940-F54E-35A0-9C42-345155D8E76F> /usr/lib/libquic.dylib
+       0x1c1b8c000 -        0x1c1bab953  com.apple.private.SystemPolicy (1.0 - 1) <DF086382-D2C6-3905-B921-2196A77E9180> /System/Library/PrivateFrameworks/SystemPolicy.framework/Versions/A/SystemPolicy
+       0x1c1c4c000 -        0x1c1c4cf2f  libobjcMsgSend5.dylib (973.1) <3913A71C-B29A-3AEA-820B-BEC40AC1861A> /usr/lib/objc/libobjcMsgSend5.dylib
+       0x1c2f55000 -        0x1c2fce39b  com.apple.LoggingSupport (1.0 - 1966.1.1) <1F7476AA-2F22-3C20-8FCA-C8B0E47ABB21> /System/Library/PrivateFrameworks/LoggingSupport.framework/Versions/A/LoggingSupport
+       0x1c2fcf000 -        0x1c2fdb437  com.apple.MallocStackLogging (1.0 - 65000) <FF92B432-827A-36CD-A3CB-7BAAA6581179> /System/Library/PrivateFrameworks/MallocStackLogging.framework/Versions/A/MallocStackLogging
+       0x1c2ff7000 -        0x1c3058ea3  libmis.dylib (487.0.2) <4A873AE2-BD1A-38D5-B98E-AAF4039D4133> /usr/lib/libmis.dylib
+       0x1c3059000 -        0x1c305b88f  com.apple.gpusw.GPURawCounter (35 - 35) <2383C07B-9F0E-3CAC-9C5A-5272664B255C> /System/Library/PrivateFrameworks/GPURawCounter.framework/Versions/A/GPURawCounter
+       0x1c305c000 -        0x1c307ac13  libswiftCoreAudio.dylib (482.102.10) <2F5D4013-D077-34C3-821E-9A376638588D> /usr/lib/swift/libswiftCoreAudio.dylib
+       0x1c307b000 -        0x1c3080caf  libswiftCoreFoundation.dylib (2412) <45079B74-1B3F-3EE0-8331-5A36B71C3530> /usr/lib/swift/libswiftCoreFoundation.dylib
+       0x1c308a000 -        0x1c30d3a9f  libswiftXPC.dylib (167.0.2) <A4ABDA3A-3856-3607-AC51-9229FA1D5777> /usr/lib/swift/libswiftXPC.dylib
+       0x1c30d5000 -        0x1c30d58a3  libswiftIOKit.dylib (1) <125C8CC5-3CFC-3F43-9C25-5DD08C2E4BBD> /usr/lib/swift/libswiftIOKit.dylib
+       0x1c4e2d000 -        0x1c4e742cf  libbootpolicy.dylib (304) <528B381C-8756-328F-BE20-8B9573A7EC3A> /usr/lib/libbootpolicy.dylib
+       0x1c67ef000 -        0x1c68064a3  libswiftsimd.dylib (25) <BE72A6EC-6A5C-30D2-BBA0-44111D3F604C> /usr/lib/swift/libswiftsimd.dylib
+       0x1c7d2f000 -        0x1c7d369fb  com.apple.IOAccelMemoryInfo (1.0 - 1) <3E60AA32-713B-3346-B95D-E97E10193F0F> /System/Library/PrivateFrameworks/IOAccelMemoryInfo.framework/Versions/A/IOAccelMemoryInfo
+       0x1c953f000 -        0x1c9547dc7  libswiftCoreMIDI.dylib (6) <BB0B90A6-1AAF-3A9C-998C-D4822F79B050> /usr/lib/swift/libswiftCoreMIDI.dylib
+       0x1c9c4c000 -        0x1c9c4cf2f  libobjcMsgSend6.dylib (973.1) <9BC523A3-E167-3F6C-8CAE-0F3EBA671791> /usr/lib/objc/libobjcMsgSend6.dylib
+       0x1ca147000 -        0x1ca14c71b  com.apple.MSUDataAccessor (1.0 - 1) <B575CE52-8A1C-35C6-B1EC-281FBF18E16E> /System/Library/PrivateFrameworks/MSUDataAccessor.framework/Versions/A/MSUDataAccessor
+       0x1ca5f2000 -        0x1ca63dbcb  com.apple.SoftwareUpdateCoreSupport (1.0 - 1) <ED2DBB36-9A42-3A54-958C-93F2B1D34546> /System/Library/PrivateFrameworks/SoftwareUpdateCoreSupport.framework/Versions/A/SoftwareUpdateCoreSupport
+       0x1cdfe7000 -        0x1ce02ea7b  com.apple.biome.BiomeFoundation (1.0 - 250.0.0.3) <85B9EA77-DAE9-3AAD-BD96-D90DE71BE680> /System/Library/PrivateFrameworks/BiomeFoundation.framework/Versions/A/BiomeFoundation
+       0x1d08cb000 -        0x1d08d2f5f  libswiftMetal.dylib (382.5.3) <FAE1B768-4D95-3EB2-BEF3-6D845C38988C> /usr/lib/swift/libswiftMetal.dylib
+       0x1d08d3000 -        0x1d08d96df  libswiftCompression.dylib (18) <A3677B2C-332E-3E7E-ACFF-F6DD4E6613F8> /usr/lib/swift/libswiftCompression.dylib
+       0x1d1703000 -        0x1d17b5bf3  libFDR.dylib (1636.0.17) <921820A7-BFA7-3D97-A82D-4276C08554C0> /usr/lib/libFDR.dylib
+       0x1d17b6000 -        0x1d182a8ef  com.apple.TimeSync (1.0 - 1501.7) <04424CE0-D831-3898-81A1-1E7E4FF2FE92> /System/Library/PrivateFrameworks/TimeSync.framework/Versions/A/TimeSync
+       0x1d1c4c000 -        0x1d1c4cf2f  libobjcMsgSend7.dylib (973.1) <248B7BCE-5B4C-34C7-A340-43D5228628C5> /usr/lib/objc/libobjcMsgSend7.dylib
+       0x1d2050000 -        0x1d259be37  com.apple.biome.BiomeStreams (1.0 - 250.0.0.3) <C751108F-893C-3D25-A648-222D9E14F46A> /System/Library/PrivateFrameworks/BiomeStreams.framework/Versions/A/BiomeStreams
+       0x1d276c000 -        0x1d277c05b  com.apple.SoftwareUpdateCoreConnect (1.0 - 1) <DF7BE13C-A22A-3EBB-9E5A-85DEB5C3E193> /System/Library/PrivateFrameworks/SoftwareUpdateCoreConnect.framework/Versions/A/SoftwareUpdateCoreConnect
+       0x1d3a8d000 -        0x1d3a942bb  com.apple.audio.IOKitten (300.1 - 300.1) <6B3DA7ED-00EF-31BB-894E-48B53F7C4593> /System/Library/PrivateFrameworks/IOKitten.framework/Versions/A/IOKitten
+       0x1d52ed000 -        0x1d534ad7f  com.apple.osanalytics.OSAnalytics (1.0 - 1) <FC435AAF-0915-3FEE-A21E-D5F8465C7605> /System/Library/PrivateFrameworks/OSAnalytics.framework/Versions/A/OSAnalytics
+       0x1d66d4000 -        0x1d66d5deb  libswiftQuartzCore.dylib (5) <303BA471-C8BD-3A89-B8AD-A54C26D39328> /usr/lib/swift/libswiftQuartzCore.dylib
+       0x1d6a1c000 -        0x1d6a2166f  com.apple.kperf (1.0 - 1) <D72F399E-388F-3C1E-8270-7208346C0088> /System/Library/PrivateFrameworks/kperf.framework/Versions/A/kperf
+       0x1d6b2e000 -        0x1d6b31ebf  com.apple.MobileSystemServices (1.0 - 1) <A415AF41-E605-36EA-AD1B-01200B7E1FCE> /System/Library/PrivateFrameworks/MobileSystemServices.framework/Versions/A/MobileSystemServices
+       0x1d8034000 -        0x1d80596bb  libamsupport.dylib (475.0.9) <53C7DA2C-3ACC-36FE-863A-2FC6D5902000> /usr/lib/libamsupport.dylib
+       0x1d8412000 -        0x1d84628c7  com.apple.biome.BiomePubSub (1.0 - 250.0.0.3) <3A1E7EDF-3D89-362E-876E-53D841BCB6BC> /System/Library/PrivateFrameworks/BiomePubSub.framework/Versions/A/BiomePubSub
+       0x1d8463000 -        0x1d8498d97  com.apple.biome.BiomeStorage (1.0 - 250.0.0.3) <34109228-69B3-359F-A58D-2930545A9651> /System/Library/PrivateFrameworks/BiomeStorage.framework/Versions/A/BiomeStorage
+       0x1d9c4c000 -        0x1d9c4cf2f  libobjcMsgSend8.dylib (973.1) <3E041BAD-A8E8-3069-B741-78CD1A45B176> /usr/lib/objc/libobjcMsgSend8.dylib
+       0x1daebc000 -        0x1daec94f7  libswiftUniformTypeIdentifiers.dylib (917.0.1.403) <9C27643C-CAC9-3687-A19B-0F3F40F9CAB1> /usr/lib/swift/libswiftUniformTypeIdentifiers.dylib
+       0x1daeca000 -        0x1daf8a0bb  libswiftAccelerate.dylib (82) <A57EBF98-4C09-3A2A-8266-6336537116C1> /usr/lib/swift/libswiftAccelerate.dylib
+       0x1db0ca000 -        0x1db0d8f03  libpartition2_dynamic.dylib (3696.0.12.0.3) <25AEE4A8-7C62-3A7F-A279-A3BB6F14E569> /usr/lib/libpartition2_dynamic.dylib
+       0x1db57f000 -        0x1db58894f  com.apple.AFKUser (1) <43A2F367-7736-3AE3-AA92-118D27D4DACF> /System/Library/PrivateFrameworks/AFKUser.framework/Versions/A/AFKUser
+       0x1e0c5b000 -        0x1e0c5c8e7  libswiftOSLog.dylib (10) <2243B3A2-A831-3F96-8D1B-29ACF2FD7FDE> /usr/lib/swift/libswiftOSLog.dylib
+       0x1e1605000 -        0x1e16f09bf  com.apple.Symbolication (16.0 - 64578.100.1) <8797C0C4-4EB6-3BA7-BA93-4F41FFAC09F7> /System/Library/PrivateFrameworks/Symbolication.framework/Versions/A/Symbolication
+       0x1e1c4c000 -        0x1e1c4cf2f  libobjcMsgSend9.dylib (973.1) <34A67969-21A0-39D6-BB81-8FDA5A2409DB> /usr/lib/objc/libobjcMsgSend9.dylib
+       0x1e99dd000 -        0x1e99eab8f  com.apple.OSLog (1.0 - 1966.1.1) <21AB9089-83D7-3BAC-8191-B2694336154A> /System/Library/Frameworks/OSLog.framework/Versions/A/OSLog
+       0x1e9aad000 -        0x1e9bb476f  com.apple.InternalSwiftProtobuf (1.0 - 1.26.0) <48D97BB1-9659-3732-94E3-AE6A574300CC> /System/Library/PrivateFrameworks/InternalSwiftProtobuf.framework/Versions/A/InternalSwiftProtobuf
+       0x1e9bb6000 -        0x1e9bbf15f  com.apple.HIDDisplay (1.0 - 1) <3494AB7C-6C5A-3B1A-AA34-E93D7EF29852> /System/Library/PrivateFrameworks/HIDDisplay.framework/Versions/A/HIDDisplay
+       0x1e9c4c000 -        0x1e9c4cf2f  libobjcMsgSend10.dylib (973.1) <678186C0-8EAD-3B35-8CBB-00285B41E4A0> /usr/lib/objc/libobjcMsgSend10.dylib
+       0x1ed6f7000 -        0x1ed79ba57  com.apple.security.CryptoKit (1.0 - 1) <8020B038-F796-37FC-93BE-7C31DEC2BD3F> /System/Library/Frameworks/CryptoKit.framework/Versions/A/CryptoKit
+       0x1f1c4c000 -        0x1f1c4cf2f  libobjcMsgSend11.dylib (973.1) <E05CB08C-E956-36FA-8967-AE8E346A8D2C> /usr/lib/objc/libobjcMsgSend11.dylib
+       0x21295d000 -        0x21295dae3  com.apple.FeatureFlags (1.0 - 108) <6A89074E-FDB5-3D09-8E6B-349D0EC61D9D> /System/Library/PrivateFrameworks/FeatureFlags.framework/Versions/A/FeatureFlags
+       0x219c4c000 -        0x219c4cf2f  libobjcMsgSend12.dylib (973.1) <10AB03AA-FF1F-3FDC-9DFB-BFC40042C501> /usr/lib/objc/libobjcMsgSend12.dylib
+       0x21bf54000 -        0x21bf56067  com.apple.ConfigProfileHelper (18.0 - 1800) <EDEA7AD5-09E2-3FF0-8DAA-6603FA706017> /System/Library/PrivateFrameworks/ConfigProfileHelper.framework/Versions/A/ConfigProfileHelper
+       0x220259000 -        0x22025fc43  libCoreFSCache.dylib (404) <DFF19406-D7F3-3D45-937A-042FA0AA5BA8> /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libCoreFSCache.dylib
+       0x220260000 -        0x220265627  libCoreVMClient.dylib (404) <C262ADF6-0E9A-3D9D-B18D-8525CB90B0DC> /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libCoreVMClient.dylib
+       0x220266000 -        0x220275857  com.apple.opengl (24.0.2 - 24.0.2) <1DD82D16-39F7-3822-998C-F8DE41F9BD6A> /System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL
+       0x220276000 -        0x22027869f  libCVMSPluginSupport.dylib (24.0.2) <A84E529F-47DE-35EE-8222-64A7EE00A1F3> /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libCVMSPluginSupport.dylib
+       0x220279000 -        0x22028117f  libGFXShared.dylib (24.0.2) <B475FA8D-63EF-369E-ADAC-37EEA94CF2BE> /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGFXShared.dylib
+       0x220282000 -        0x2202b578b  libGLImage.dylib (24.0.2) <3D0C3F87-6ECC-390D-B26B-5BB17F8EE6C0> /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGLImage.dylib
+       0x2202b6000 -        0x2202ef26f  libGLU.dylib (24.0.2) <4B9B9DFD-36B5-3E59-A0F7-9711B7FF0961> /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGLU.dylib
+       0x220445000 -        0x22044ebc7  libGL.dylib (24.0.2) <DC2FA229-1380-385E-AECD-C2881AD085A5> /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib
+       0x221c4c000 -        0x221c4cf2f  libobjcMsgSend13.dylib (973.1) <ABF53427-FA6F-3D0D-8F9D-7AD795CA5C92> /usr/lib/objc/libobjcMsgSend13.dylib
+       0x229c4c000 -        0x229c4cf2f  libobjcMsgSend14.dylib (973.1) <9A844C46-A6DA-34D4-8EBF-2AD775C30684> /usr/lib/objc/libobjcMsgSend14.dylib
+       0x22e6ae000 -        0x22e7fe2f7  com.apple.ExtensionFoundation (97 - 97) <231850D6-9680-3AED-890A-484D2BBEFC28> /System/Library/Frameworks/ExtensionFoundation.framework/Versions/A/ExtensionFoundation
+       0x23050d000 -        0x23054d387  com.apple.LightweightCodeRequirements (1.0 - 1) <C90102A4-551F-3EFC-9F72-2CE1D702E358> /System/Library/Frameworks/LightweightCodeRequirements.framework/Versions/A/LightweightCodeRequirements
+       0x231422000 -        0x231433207  com.apple.MPSBenchmarkLoop (1.0 - 130.0.19) <00087510-13F7-342F-B967-49761B4306C8> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSBenchmarkLoop.framework/Versions/A/MPSBenchmarkLoop
+       0x231434000 -        0x2314466bf  com.apple.MPSFunctions (1.0 - 130.0.19) <18D723C8-6584-3F46-AD20-843C1FD0CCB9> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSFunctions.framework/Versions/A/MPSFunctions
+       0x231447000 -        0x23144b813  com.apple.MPSHost (1.0 - 130.0.19) <EEB725E7-28BB-3F1A-A100-203078BB7B88> /System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/Frameworks/MPSHost.framework/Versions/A/MPSHost
+       0x231c4c000 -        0x231c4cf2f  libobjcMsgSend15.dylib (973.1) <7C995666-2B2D-3284-AA0A-EBF7C922838E> /usr/lib/objc/libobjcMsgSend15.dylib
+       0x235e87000 -        0x23603197b  com.apple.SwiftData (1.0 - 180) <80467BD4-1405-3400-9475-B5BFCE896E12> /System/Library/Frameworks/SwiftData.framework/Versions/A/SwiftData
+       0x239c4c000 -        0x239c4cf2f  libobjcMsgSend16.dylib (973.1) <B6C0E14B-53AE-3E22-9ED5-1729C49F46F2> /usr/lib/objc/libobjcMsgSend16.dylib
+       0x23d947000 -        0x23d9598f7  com.apple.AppleDeviceQuerySupport (1.0 - 459.0.15) <5E705AD8-327F-3FE0-9A83-173570CE79AC> /System/Library/PrivateFrameworks/AppleDeviceQuerySupport.framework/Versions/A/AppleDeviceQuerySupport
+       0x23e16f000 -        0x23e1fc83f  com.apple.AppleKeyStore (1.0 - 1.0) <7965DCDE-5074-391F-A878-324D84651857> /System/Library/PrivateFrameworks/AppleKeyStore.framework/Versions/A/AppleKeyStore
+       0x23ecb0000 -        0x23ecc4be3  com.apple.private.AppleMobileFileIntegrity-fmk (1.0 - 1) <76DA48C4-9F86-3D4B-BAE4-82B436938ABD> /System/Library/PrivateFrameworks/AppleMobileFileIntegrity.framework/Versions/A/AppleMobileFileIntegrity
+       0x23ecc5000 -        0x23ecde633  com.apple.AppleMSG (1.0 - 1) <41BF3334-137D-3619-B482-1FB98C162FDA> /System/Library/PrivateFrameworks/AppleMSG.framework/Versions/A/AppleMSG
+       0x240a17000 -        0x240a28b9f  com.apple.AtomicsInternal (1.1.0 - 5027.0.64) <3B48B13C-EC92-3B98-A685-E7AF32FD42F3> /System/Library/PrivateFrameworks/AtomicsInternal.framework/Versions/A/AtomicsInternal
+       0x240ac0000 -        0x240addfef  com.apple.imgaudio.AudioAnalytics (1.0 - 1) <B01007F1-B7AF-3FFF-BDE2-8DF9913CCC84> /System/Library/PrivateFrameworks/AudioAnalytics.framework/Versions/A/AudioAnalytics
+       0x2413e9000 -        0x2414397a7  com.apple.BackBoardHIDEventFoundation (1.0 - 1) <E43C4333-66A6-3453-84F6-B2EEFCFFEDD2> /System/Library/PrivateFrameworks/BackBoardHIDEventFoundation.framework/Versions/A/BackBoardHIDEventFoundation
+       0x24143a000 -        0x24148578f  com.apple.BackBoardHIDTouchEventProcessor (1.0 - 1) <CAB22CCA-C972-3E18-B0D5-5923BDDC9A55> /System/Library/PrivateFrameworks/BackBoardHIDTouchEventProcessor.framework/Versions/A/BackBoardHIDTouchEventProcessor
+       0x241530000 -        0x241543933  com.apple.biome.BiomeDSL (1.0 - 250.0.0.3) <F8DCC3F9-5846-35F6-BEF1-FBDDBFC389B1> /System/Library/PrivateFrameworks/BiomeDSL.framework/Versions/A/BiomeDSL
+       0x241544000 -        0x24154963b  com.apple.biome.BiomeSync (1.0 - 250.0.0.3) <FE07B092-2187-38FC-A475-D904C6A2A45D> /System/Library/PrivateFrameworks/BiomeSync.framework/Versions/A/BiomeSync
+       0x241c4c000 -        0x241c4cf2f  libobjcMsgSend17.dylib (973.1) <07B4CF85-251B-301B-832B-20B315A59E19> /usr/lib/objc/libobjcMsgSend17.dylib
+       0x242050000 -        0x2428a862f  com.apple.BiomeLibrary (436.6) <0042911B-273E-30D9-B87D-8F143EF1EBE6> /System/Library/PrivateFrameworks/BiomeLibrary.framework/Versions/A/BiomeLibrary
+       0x24386b000 -        0x243944957  com.apple.biome.CascadeSets (1.0 - 250.0.0.3) <A0246CBA-8AEE-3A2A-9932-804EE71D5290> /System/Library/PrivateFrameworks/CascadeSets.framework/Versions/A/CascadeSets
+       0x24596c000 -        0x245abd2c3  com.apple.CollectionsInternal (1.2.0 - 5027.0.64) <42FFA870-2B08-331F-9B93-8D67E4A9AA1E> /System/Library/PrivateFrameworks/CollectionsInternal.framework/Versions/A/CollectionsInternal
+       0x245e52000 -        0x245e5f7a7  com.apple.ConnectedMode (1.0 - 1) <D390876B-3179-3BEC-9CF0-C8F57CCB3B76> /System/Library/PrivateFrameworks/ConnectedMode.framework/Versions/A/ConnectedMode
+       0x249c4c000 -        0x249c4cf2f  libobjcMsgSend18.dylib (973.1) <43E575B7-04DB-3999-A633-1A3B638BA6E3> /usr/lib/objc/libobjcMsgSend18.dylib
+       0x2516f2000 -        0x251706f4b  com.apple.DeviceRecovery (1.0 - 1) <1A71D6DD-CAEC-393C-A79A-8CB6FB1A7E6E> /System/Library/PrivateFrameworks/DeviceRecovery.framework/Versions/A/DeviceRecovery
+       0x251c4c000 -        0x251c4cf2f  libobjcMsgSend19.dylib (973.1) <736F4D85-76F7-3B28-8D87-C07E8F7A0EF4> /usr/lib/objc/libobjcMsgSend19.dylib
+       0x257f22000 -        0x258030a3f  libXTFontStaticRegistryData.dylib (351) <5EB06DF3-EA80-3B1A-9EE4-87170C7D2EC9> /System/Library/PrivateFrameworks/FontServices.framework/libXTFontStaticRegistryData.dylib
+       0x258031000 -        0x258033baf  com.apple.FontServices (1.0 - 1) <1095A112-9900-3801-AE96-12DDB7CBE5EC> /System/Library/PrivateFrameworks/FontServices.framework/Versions/A/FontServices
+       0x258035000 -        0x2580716b7  com.apple.FramePacing (1.0 - 1) <7E7531CC-3812-331E-BC31-4FD430AC45DA> /System/Library/PrivateFrameworks/FramePacing.framework/Versions/A/FramePacing
+       0x259c4c000 -        0x259c4cf2f  libobjcMsgSend20.dylib (973.1) <74E67C8B-6BCA-3184-A18E-A97F370052C6> /usr/lib/objc/libobjcMsgSend20.dylib
+       0x25c12c000 -        0x25c66e7b7  com.apple.Gestures (9127.0.84 - 9127.0.84) <722C0EA0-8210-3433-8D57-B9092BE776E2> /System/Library/PrivateFrameworks/Gestures.framework/Versions/A/Gestures
+       0x25d4f6000 -        0x25d4fbfb7  libGPUCompilerUtils.dylib (32023.921.5) <FFFE6EBE-FB56-3144-9F59-E6ECCA97D0C2> /System/Library/PrivateFrameworks/GPUCompiler.framework/Versions/32023/Libraries/libGPUCompilerUtils.dylib
+       0x25d4fc000 -        0x25d53c6ff  libllvm-flatbuffers.dylib (32023.921.5) <613BEB0E-CB65-30BB-AF95-50F06C817D39> /System/Library/PrivateFrameworks/GPUCompiler.framework/Versions/32023/Libraries/libllvm-flatbuffers.dylib
+       0x261c4c000 -        0x261c4cf2f  libobjcMsgSend21.dylib (973.1) <CC0D732F-98E7-3888-9E15-70984DA2FB04> /usr/lib/objc/libobjcMsgSend21.dylib
+       0x269c4c000 -        0x269c4cf2f  libobjcMsgSend22.dylib (973.1) <85A60286-5DE3-32BA-B18C-2A498B065C88> /usr/lib/objc/libobjcMsgSend22.dylib
+       0x26b0d7000 -        0x26b1ca00f  com.apple.InstalledContentLibrary (1.0 - 1.0) <271E80B3-4E8C-3652-9B73-EF9CBEF8D7F7> /System/Library/PrivateFrameworks/InstalledContentLibrary.framework/Versions/A/InstalledContentLibrary
+       0x26ff32000 -        0x2707c54bf  com.apple.IntelligencePlatformLibrary (436.6) <9431DC2E-DC4F-3A48-BEE1-4BACF5B13FEE> /System/Library/PrivateFrameworks/IntelligencePlatformLibrary.framework/Versions/A/IntelligencePlatformLibrary
+       0x271c4c000 -        0x271c4cf2f  libobjcMsgSend23.dylib (973.1) <5452A0D2-6B19-39BE-ADDD-80B7BCDE3A98> /usr/lib/objc/libobjcMsgSend23.dylib
+       0x276692000 -        0x2766eebb7  com.apple.MessageSecurity (1.0 - 341.0.17) <030ECE37-158D-3E06-89F2-9D3CC3A18D39> /System/Library/PrivateFrameworks/MessageSecurity.framework/Versions/A/MessageSecurity
+       0x276dad000 -        0x27746a107  com.apple.MIL (3600.16 - 3600.16.1) <C53AA54F-53DF-30A7-A411-1D4EB634EA5D> /System/Library/PrivateFrameworks/MIL.framework/Versions/A/MIL
+       0x2799f2000 -        0x2799fd32b  com.apple.gpusw.MTL3On4 (1.0 - 1) <5738514A-41DE-3AEB-A3FE-767D60C8B457> /System/Library/PrivateFrameworks/MTL3On4.framework/Versions/A/MTL3On4
+       0x279c4c000 -        0x279c4cf2f  libobjcMsgSend24.dylib (973.1) <94BBF2D6-722B-350D-8557-4D25A8E8D53A> /usr/lib/objc/libobjcMsgSend24.dylib
+       0x280821000 -        0x28082af6b  com.apple.sear.NSPredicateSecurityPolicy (1.0 - 1) <031A156F-8BB6-36B2-96D2-4CCFF1D3174C> /System/Library/PrivateFrameworks/NSPredicateSecurityPolicy.framework/Versions/A/NSPredicateSecurityPolicy
+       0x281bd2000 -        0x281bfd067  com.apple.OSEligibility (446.1.3) <B05AB25F-83C0-3574-B5F3-A4E373624E77> /System/Library/PrivateFrameworks/OSEligibility.framework/Versions/A/OSEligibility
+       0x281c4c000 -        0x281c4cf2f  libobjcMsgSend25.dylib (973.1) <35481387-5A8E-3AE4-86A6-94CEB3CC8726> /usr/lib/objc/libobjcMsgSend25.dylib
+       0x292ba2000 -        0x292bfa357  com.apple.ParsingInternal (0.0.1 - 5027.0.64) <408A4BEF-67E6-3328-8017-54F85C8B6C74> /System/Library/PrivateFrameworks/ParsingInternal.framework/Versions/A/ParsingInternal
+       0x295716000 -        0x2957293af  com.apple.accessibility.PhotosensitivityProcessing (1.0 - 1) <5378D4F0-1832-3522-8FE3-25D775DF12BA> /System/Library/PrivateFrameworks/PhotosensitivityProcessing.framework/Versions/A/PhotosensitivityProcessing
+       0x296def000 -        0x296e6e00f  com.apple.PoirotSchematizer (1.0 - 1) <8F63B1C9-E53A-3D4F-8B12-665FCF11937E> /System/Library/PrivateFrameworks/PoirotSchematizer.framework/Versions/A/PoirotSchematizer
+       0x296e6f000 -        0x296eababf  com.apple.PoirotSQLite (1.0 - 1) <C14FEE63-4DFB-3C71-BB15-892F2BFEEF7B> /System/Library/PrivateFrameworks/PoirotSQLite.framework/Versions/A/PoirotSQLite
+       0x296eac000 -        0x296edf6e7  com.apple.PoirotUDFs (1.0 - 1) <B0AA646F-EDC3-3B2E-B85E-56C9BCFB77D2> /System/Library/PrivateFrameworks/PoirotUDFs.framework/Versions/A/PoirotUDFs
+       0x29888c000 -        0x2989ea29b  com.apple.ProDisplayLibrary (11.0.21 - 11.0.21) <A1059C52-147F-3275-BE00-CA7CA60D4980> /System/Library/PrivateFrameworks/ProDisplayLibrary.framework/Versions/A/ProDisplayLibrary
+       0x29955a000 -        0x299562023  com.apple.ReflectionInternal (1.0.0 - 5027.0.64) <84A8F5C2-03F0-378B-BDA5-7670124DCA98> /System/Library/PrivateFrameworks/ReflectionInternal.framework/Versions/A/ReflectionInternal
+       0x299c05000 -        0x299c183c7  com.apple.RuntimeInternal (1.0.0 - 5027.0.64) <4E29AB5B-73BC-35D0-942E-066A3B19ABC6> /System/Library/PrivateFrameworks/RuntimeInternal.framework/Versions/A/RuntimeInternal
+       0x299c4c000 -        0x299c4cf2f  libobjcMsgSend26.dylib (973.1) <9E0C8664-E7F4-39D1-AAFC-BD92B255E4E8> /usr/lib/objc/libobjcMsgSend26.dylib
+       0x29dfba000 -        0x29e02e21f  com.apple.SILManager (67.13 - 67.13) <42D7A7C9-BB41-3A05-BD71-72D9809D1002> /System/Library/PrivateFrameworks/SILManager.framework/Versions/A/SILManager
+       0x2a1c4c000 -        0x2a1c4cf2f  libobjcMsgSend27.dylib (973.1) <FD424935-55A9-3650-955A-EED3441A1D19> /usr/lib/objc/libobjcMsgSend27.dylib
+       0x2a9c4c000 -        0x2a9c4cf2f  libobjcMsgSend28.dylib (973.1) <09BA7B97-7DF7-3C7F-932A-B6847662FC49> /usr/lib/objc/libobjcMsgSend28.dylib
+       0x2aaca3000 -        0x2aacd2cbf  com.apple.security.SwiftASN1Internal (1.0 - 1) <D96B3E7B-6235-3989-ACCF-1B77C7BD3295> /System/Library/PrivateFrameworks/SwiftASN1Internal.framework/Versions/A/SwiftASN1Internal
+       0x2ae54c000 -        0x2ae59c76f  com.apple.tightbeam (1.0 - 631.0.5) <1B7DA405-96F3-3EFA-9653-3DE645E0E097> /System/Library/PrivateFrameworks/Tightbeam.framework/Versions/A/Tightbeam
+       0x2b1c4c000 -        0x2b1c4cf2f  libobjcMsgSend29.dylib (973.1) <36D5BA3F-2139-30B0-8558-556764BE9813> /usr/lib/objc/libobjcMsgSend29.dylib
+       0x2b46d5000 -        0x2b46d60ff  com.apple.VideoToolboxParavirtualizationSupport (71.0.14 - 71.0.14) <310A3A22-A78C-3557-8CCE-A975490C1D02> /System/Library/PrivateFrameworks/VideoToolboxParavirtualizationSupport.framework/Versions/A/VideoToolboxParavirtualizationSupport
+       0x2b9c4c000 -        0x2b9c4cf2f  libobjcMsgSend30.dylib (973.1) <9F05564A-9D12-372C-98FC-E9F0E6BE4F04> /usr/lib/objc/libobjcMsgSend30.dylib
+       0x2bd1ad000 -        0x2bd247033  libAppleArchive.dylib (469) <D62616FF-0C2C-343D-AD67-0FDEEFCF52B9> /usr/lib/libAppleArchive.dylib
+       0x2bd937000 -        0x2bd94100b  libCoreEntitlements.dylib (94) <8F204F37-23D4-3AAB-AD38-57B3D8CB73EC> /usr/lib/libCoreEntitlements.dylib
+       0x2bda9a000 -        0x2bdbac26f  libcrypto.46.dylib (111.0.5) <E2D5A8B9-C4E6-38A5-91F5-450D4A4152FD> /usr/lib/libcrypto.46.dylib
+       0x2bde46000 -        0x2bde60aff  libhvf.dylib (14) <EB152559-8134-3C36-AB2F-446A5A909BD1> /usr/lib/libhvf.dylib
+       0x2be95f000 -        0x2be9652bb  libReverseProxyDevice.dylib (114) <9227B01D-28CA-380B-B95A-8C1B10AEAC73> /usr/lib/libReverseProxyDevice.dylib
+       0x2be966000 -        0x2be96cfe5  libRosetta.dylib (385) <E359944B-D230-33F9-A04E-0C3B17C3326E> /usr/lib/libRosetta.dylib
+       0x2bea51000 -        0x2bea8800f  libssl.48.dylib (111.0.5) <563A2AF9-97E5-3D1E-80B8-954B9DC97E59> /usr/lib/libssl.48.dylib
+       0x2beac2000 -        0x2beafa007  libswiftPrespecialized.dylib (0) <13BA7326-3B46-3349-A093-3FA9E6F00CF2> /usr/lib/libswiftPrespecialized.dylib
+       0x2beb47000 -        0x2beb4fad3  libTLE.dylib (94) <6968082F-CBF6-356D-9B29-82B9FEC2FC2D> /usr/lib/libTLE.dylib
+       0x2bedc8000 -        0x2bedc8669  libswift_Builtin_float.dylib (6.4.0.31.5) <9CB6F7D2-F14F-3C51-9E30-EDCB674B970E> /usr/lib/swift/libswift_Builtin_float.dylib
+       0x2bedc9000 -        0x2bee559c7  libswift_Concurrency.dylib (6.4.0 - 6.4.0.31.5) <F2F652DD-14B0-35E2-BC9D-47FE153D579E> /usr/lib/swift/libswift_Concurrency.dylib
+       0x2bee56000 -        0x2bee58ab3  libswift_DarwinFoundation1.dylib (428.0.10) <8C802776-95AE-3ED7-BF1C-D9EB9A7DB358> /usr/lib/swift/libswift_DarwinFoundation1.dylib
+       0x2bee59000 -        0x2bee59d2b  libswift_DarwinFoundation2.dylib (428.0.10) <A659D9FC-0554-33A6-9F7A-479B268F8993> /usr/lib/swift/libswift_DarwinFoundation2.dylib
+       0x2bee5a000 -        0x2bee5a79f  libswift_DarwinFoundation3.dylib (428.0.10) <48A04494-256B-3CE1-88A6-79E4B8E9E7B8> /usr/lib/swift/libswift_DarwinFoundation3.dylib
+       0x2bee5d000 -        0x2beef58b7  libswift_RegexParser.dylib (6.4.0 - 6.4.0.31.5) <1E7009E2-B2B6-3A40-99BC-4C2D9DF18C76> /usr/lib/swift/libswift_RegexParser.dylib
+       0x2beef7000 -        0x2beef73cb  libswift_stdio.dylib (428.0.10) <11F95CC1-A998-3A61-9BA8-4606F297AC5F> /usr/lib/swift/libswift_stdio.dylib
+       0x2beef8000 -        0x2bef864ef  libswift_StringProcessing.dylib (6.4.0 - 6.4.0.31.5) <DA701840-2499-3238-AF4F-4AD3C96C6C55> /usr/lib/swift/libswift_StringProcessing.dylib
+       0x2befe9000 -        0x2beffa837  libswiftDistributed.dylib (6.4.0 - 6.4.0.31.5) <E5CE2297-9720-3FC8-BD0E-647F8C4F6AF0> /usr/lib/swift/libswiftDistributed.dylib
+       0x2bf00f000 -        0x2bf02812f  libswiftObservation.dylib (6.4.0 - 6.4.0.31.5) <01EDB949-A7D9-361F-812D-4C21E3F6537E> /usr/lib/swift/libswiftObservation.dylib
+       0x2bf034000 -        0x2bf03e427  libswiftRegexBuilder.dylib (6.4.0 - 6.4.0.31.5) <C15CF9E4-1D44-3567-A47E-07340F9F95A7> /usr/lib/swift/libswiftRegexBuilder.dylib
+       0x2bf1b8000 -        0x2bf1caf0f  libswiftSynchronization.dylib (6.4.0 - 6.4.0.31.5) <523DD911-05CA-39CE-A98A-27EAB3BA63A4> /usr/lib/swift/libswiftSynchronization.dylib
+       0x2bf1cc000 -        0x2bf1e9ea7  libswiftSystem.dylib (5027.0.67) <8131BBA8-DF06-3EA3-97AE-E7A0646F18BB> /usr/lib/swift/libswiftSystem.dylib
+       0x2bf355000 -        0x2bf35875b  libsystem_darwindirectory.dylib (129.0.1) <61264923-2AA5-3658-B8C4-550C71E9D4B3> /usr/lib/system/libsystem_darwindirectory.dylib
+       0x2bf359000 -        0x2bf363d9b  libsystem_eligibility.dylib (446.1.3) <EDDE8E9C-A2CF-3931-BBB3-321CB852EB30> /usr/lib/system/libsystem_eligibility.dylib
+       0x2bf364000 -        0x2bf36d42b  libsystem_sanitizers.dylib (32) <7138ED99-7AA0-34EA-B35B-20EF6ADB1EED> /usr/lib/system/libsystem_sanitizers.dylib
+       0x2bf36e000 -        0x2bf36ea13  libsystem_trial.dylib (511) <6AE48824-EC44-3A8C-B501-BE57DBE892E7> /usr/lib/system/libsystem_trial.dylib
+       0x2c1c4c000 -        0x2c1c4cf2f  libobjcMsgSend31.dylib (973.1) <0985E20F-78C3-3466-A2B2-DBB95F7104A3> /usr/lib/objc/libobjcMsgSend31.dylib
+       0x2c9c4c000 -        0x2c9c4cf2f  libobjcMsgSend32.dylib (973.1) <0D309D58-D576-3E5D-AD4B-6D55AB491702> /usr/lib/objc/libobjcMsgSend32.dylib
+       0x2d1c4c000 -        0x2d1c4cf2f  libobjcMsgSend33.dylib (973.1) <346E0484-48FA-369B-8A64-93B5F5341CFE> /usr/lib/objc/libobjcMsgSend33.dylib
+       0x2d9c4c000 -        0x2d9c4cf2f  libobjcMsgSend34.dylib (973.1) <6A31F809-BCBE-3E01-A367-E91FDACCE324> /usr/lib/objc/libobjcMsgSend34.dylib

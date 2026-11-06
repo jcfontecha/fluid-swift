@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-06T08:12:46-08:00",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0\nBuildVersion:\t\t26A428",
+  "hardware": "MacBookPro18,4\n34359738368\nApple M1 Max",
+  "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "node": "v22.22.3",
+  "baseCommit": "a357158d5f5dc7caf7d290226154344724b95603",
+  "fixtureSHA256": "8f4d9753402be1e51eab0f2f70c86205f56e279eb99883fbc7ccd5c6b091e88d",
+  "fixtureBytes": 5844641
+}
