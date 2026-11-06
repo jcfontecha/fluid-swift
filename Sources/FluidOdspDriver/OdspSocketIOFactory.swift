@@ -1,3 +1,4 @@
+import FluidDriverDefinitions
 import FluidJS
 import FluidSocketIO
 import Foundation
@@ -28,10 +29,10 @@ public actor OdspSocketIOFactory {
         let nonce: String
         let multiplex: Bool
         var requestedMode: JSONValue = .null
-        var disconnectError: Error = OdspNetworkError("genericNetworkError", canRetry: true)
+        var disconnectError: any Error = OdspNetworkError("genericNetworkError", canRetry: true)
         var handshake: CheckedContinuation<UUID, Error>?
         var timeout: Task<Void, Never>?
-        var connection: OdspDocumentDeltaConnection?
+        var connection: OdspDocumentDeltaConnectionState?
         var details: JSONValue?
         var ops: [JSONValue] = []
         var signals: [JSONValue] = []
@@ -41,6 +42,18 @@ public actor OdspSocketIOFactory {
         var flush: CheckedContinuation<JSONValue, Error>?
         var disconnectHandler: (@Sendable (OdspNetworkError?) async -> Void)?
         var disconnectNotified = false
+        /// The IDocumentDeltaConnection event stream, once `deltaConnection` handed it out.
+        var eventsContinuation: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.Continuation?
+        /// Events go to the contract stream once handed out (a malformed message ends it with the
+        /// error); before that they are kept as JSON for `takeEvents`.
+        func record(_ legacy: JSONValue, _ event: () throws -> DocumentDeltaConnectionEvent) {
+            guard let eventsContinuation else {
+                events.append(legacy)
+                return
+            }
+            do { eventsContinuation.yield(try event()) }
+            catch { eventsContinuation.finish(throwing: error) }
+        }
         init(key: String, documentId: String, nonce: String, multiplex: Bool) {
             self.key = key
             self.documentId = documentId
@@ -53,8 +66,8 @@ public actor OdspSocketIOFactory {
     public init() {}
 
     public func create(url: URL, tenantId: String, documentId: String, token: JSONValue, client: JSONValue, nonce: String = UUID().uuidString, epoch: String? = nil, prefix: String? = nil) async throws -> UUID {
-        let key = try OdspDocumentDeltaConnection.socketKey(url: url.absoluteString, tenantId: tenantId, documentId: documentId, prefix: prefix)
-        let multiplex = try OdspDocumentDeltaConnection.enableMultiplexing(url.absoluteString)
+        let key = try OdspDocumentDeltaConnectionState.socketKey(url: url.absoluteString, tenantId: tenantId, documentId: documentId, prefix: prefix)
+        let multiplex = try OdspDocumentDeltaConnectionState.enableMultiplexing(url.absoluteString)
         let session: Session
         if let existing = sessions[key], !existing.reference.disconnected {
             try existing.reference.addReference()
@@ -144,6 +157,27 @@ public actor OdspSocketIOFactory {
         let result = try (entry.details?.member("initialSignals").asArray() ?? []) + entry.signals
         entry.signals.removeAll()
         return result
+    }
+    /// The IDocumentDeltaConnection view of a connected handle: details carry the merged initial
+    /// messages and signals (TS `initialMessages`/`initialSignals` getters); later ops, signals,
+    /// nacks and the final disconnect arrive on the returned stream.
+    public func deltaConnection(_ id: UUID) throws -> (details: IConnected, events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>) {
+        let entry = try get(id)
+        guard let payload = entry.details else { throw JSONDecodingError("not connected") }
+        var details = try payload.asObject()
+        details["initialMessages"] = .array(try initialMessages(id))
+        details["initialSignals"] = .array(try initialSignals(id))
+        let connected = try IConnected(json: .object(details))
+        let (events, continuation) = AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.makeStream()
+        entry.eventsContinuation = continuation
+        return (connected, events)
+    }
+    /// A teardown assertion surfaces on the event stream; nothing else observes it.
+    public func failEvents(_ id: UUID, _ error: any Error) {
+        pending[id]?.eventsContinuation?.finish(throwing: error)
+    }
+    public func isDisposed(_ id: UUID) -> Bool {
+        pending[id]?.connection?.disposed ?? true
     }
     public func takeEvents(_ id: UUID) throws -> [JSONValue] {
         let entry = try get(id)
@@ -280,15 +314,33 @@ public actor OdspSocketIOFactory {
                     }
                     try entry.epochTracker.validateEpoch(fields["epoch"]?.asString().description)
                     guard let session = sessions[key] else { throw JSONDecodingError("missing session") }
-                    let connection = OdspDocumentDeltaConnection(reference: session.reference, documentId: entry.documentId, clientId: try response.member("clientId").asString().description, noncePrefix: UUID().uuidString + "-")
+                    let connection = OdspDocumentDeltaConnectionState(reference: session.reference, documentId: entry.documentId, clientId: try response.member("clientId").asString().description, noncePrefix: UUID().uuidString + "-")
                     connection.supportedGetOps = try fields["supportedFeatures"]?.asObject()["api_get_ops"] == .bool(true)
                     connection.supportedFlushOps = try fields["supportedFeatures"]?.asObject()["api_flush_ops"] == .bool(true)
-                    connection.onOps = { [weak entry] in entry?.events.append(.array([.string("op"), .array($0)])) }
-                    connection.onSignal = { [weak entry] in entry?.events.append(.array([.string("signal"), $0])) }
-                    connection.onNack = { [weak entry] in entry?.events.append(.array([.string("nack"), $0])) }
+                    connection.onOps = { [weak entry] ops in
+                        guard let entry else { return }
+                        entry.record(.array([.string("op"), .array(ops)])) {
+                            .op(documentId: JSString(entry.documentId), messages: try ops.map { try ISequencedDocumentMessage(json: $0) })
+                        }
+                    }
+                    connection.onSignal = { [weak entry] signal in
+                        entry?.record(.array([.string("signal"), signal])) {
+                            let signals: [JSONValue]
+                            if case .array(let values) = signal { signals = values } else { signals = [signal] }
+                            return .signal(try signals.map { try ISignalMessage(json: $0) })
+                        }
+                    }
+                    connection.onNack = { [weak entry] target, nacks in
+                        entry?.record(.array([.string("nack"), nacks])) {
+                            .nack(documentId: target, nacks: try nacks.asArray().map { try INack(json: $0) })
+                        }
+                    }
                     connection.onDisconnect = { [weak entry] in
                         guard let entry else { return }
-                        entry.events.append(.array([.string("disconnect"), .string(JSString(entry.documentId))]))
+                        entry.record(.array([.string("disconnect"), .string(JSString(entry.documentId))])) {
+                            .disconnect(reason: entry.disconnectError)
+                        }
+                        entry.eventsContinuation?.finish()
                     }
                     connection.onFlush = { [weak entry] response in
                         guard let entry else { return }

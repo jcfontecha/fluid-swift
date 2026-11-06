@@ -127,6 +127,9 @@ actor RedemptionPeer {
     }
 }
 
+/// Storage managers in the ODSP 2 snapshot scenarios never upload summaries.
+let unusedFlush: @Sendable () async throws -> JSONValue = { throw JSONDecodingError("flush is not part of this scenario") }
+
 func flushOutcome(_ factory: OdspSocketIOFactory, _ id: UUID) async throws -> JSONValue {
     do {
         _ = try await factory.flush(id)
@@ -143,6 +146,10 @@ func flushOutcome(_ factory: OdspSocketIOFactory, _ id: UUID) async throws -> JS
 while let line = readLine() {
     do {
         let input = try JSON.parse(line)
+        if let scenario = try input.asObject()["service"] {
+            FileHandle.standardOutput.write(Data((JSON.stringify(try await runServiceScenario(scenario)) + "\n").utf8))
+            continue
+        }
         if let mode = try input.asObject()["redemption"]?.asString().description {
             let clock = PrefetchClock()
             let attempts = RedemptionAttempts()
@@ -194,14 +201,14 @@ while let line = readLine() {
             var results: [JSONValue] = []
             for item in cases {
                 let fields = try item.asObject()
-                var puts: [JSONValue] = []
+                let puts = Mutex<[JSONValue]>([])
                 let tracker = EpochTracker(now: { 432000000 }, cacheGet: { _ in fields["value"] }, cachePut: { entry, value in
                     var put = JSObject<JSONValue>()
                     put["type"] = .string(JSString(entry.type))
                     put["key"] = .string(JSString(entry.key))
                     put["docId"] = .string("doc")
                     put["value"] = value
-                    puts.append(.object(put))
+                    puts.withLock { $0.append(.object(put)) }
                 })
                 if let epoch = try fields["epoch"]?.asString().description { try tracker.validateEpoch(epoch) }
                 let entry = EpochTracker.Entry(type: try item.member("type").asString().description, key: "key")
@@ -211,7 +218,7 @@ while let line = readLine() {
                 result["value"] = value ?? .null
                 result["epoch"] = tracker.fluidEpoch.map { .string(JSString($0)) } ?? .null
                 result["clears"] = .number(Double(tracker.cacheClearCount))
-                result["puts"] = .array(puts)
+                result["puts"] = .array(puts.withLock { $0 })
                 results.append(.object(result))
             }
             FileHandle.standardOutput.write(Data((JSON.stringify(.array(results)) + "\n").utf8))
@@ -224,10 +231,10 @@ while let line = readLine() {
             let network = OdspNetwork(resolvedUrl: resolved, epochTracker: EpochTracker(), tokenFetcher: { _ in .token("initial") })
             let put = PrefetchPutGate()
             let clock = PrefetchClock()
-            let storage = OdspDocumentStorageService(resolved: resolved, network: network, cachePut: { _ in try await put.put() }, sleep: { await clock.sleep($0) })
+            let storage = OdspDocumentStorageService(network: network, cachePut: { _ in try await put.put() }, flushCallback: unusedFlush, relayServiceTenantAndSessionId: { nil }, sleep: { await clock.sleep($0) })
             let result = await storage.prefetchLatestSnapshot()
             guard await storage.hasPrefetchedSnapshot else { throw JSONDecodingError("prefetch not published") }
-            let snapshot = try await storage.getSnapshot()
+            let snapshot = try await storage.fetchSnapshot(fetchSource: nil, loadingGroupIds: nil).snapshot
             await put.waitUntilEntered()
             let publishedBeforePut = await !put.finished
             await put.release(fail: failPut)
@@ -253,16 +260,16 @@ while let line = readLine() {
             let resolved = try OdspDriverUrlResolver().resolve(origin + "?driveId=d&itemId=i&path=")
             let network = OdspNetwork(resolvedUrl: resolved, epochTracker: EpochTracker(), tokenFetcher: { _ in .token("initial") })
             let put = SnapshotPutProbe()
-            let storage = OdspDocumentStorageService(resolved: resolved, network: network, concurrentSnapshotFetch: true, cacheRead: {
+            let storage = OdspDocumentStorageService(network: network, concurrentSnapshotFetch: true, cacheRead: {
                 if kind == "networkFirst" || kind == "networkFailure" || kind == "bothFailureNetworkFirst" { try await Task.sleep(for: .milliseconds(25)) }
                 if kind == "cacheMiss" { return nil }
                 if kind == "cacheFailure" || kind.hasPrefix("bothFailure") { throw JSONDecodingError("cache failure") }
                 let snapshot = CompactSnapshot(snapshotTree: .init(id: "cached"), blobContents: .init(), ops: [], sequenceNumber: 10)
                 return .init(snapshot: snapshot, fluidEpoch: "E", cacheEntryTime: Date().timeIntervalSince1970 * 1000)
-            }, cachePut: { _ in await put.put() })
+            }, cachePut: { _ in await put.put() }, flushCallback: unusedFlush, relayServiceTenantAndSessionId: { nil })
             var result = JSObject<JSONValue>()
             do {
-                let snapshot = try await storage.getSnapshot()
+                let snapshot = try await storage.fetchSnapshot(fetchSource: nil, loadingGroupIds: nil).snapshot
                 if kind != "networkFailure" { await put.wait() }
                 if let sequence = snapshot.sequenceNumber { result["sequenceNumber"] = .number(Double(sequence)) }
             } catch let error as OdspNetworkError {
@@ -279,19 +286,19 @@ while let line = readLine() {
         if let kind = try input.asObject()["snapshotManager"]?.asString().description {
             let origin = try input.member("origin").asString().description
             let resolved = try OdspDriverUrlResolver().resolve(origin + "?driveId=d&itemId=i&path=")
-            var timeouts: [JSONValue] = []
+            let timeouts = Mutex<[JSONValue]>([])
             let network = OdspNetwork(resolvedUrl: resolved, epochTracker: EpochTracker(), tokenFetcher: { _ in .token("initial") }, send: { request in
-                if let timeout = request.timeoutMs { timeouts.append(.number(timeout)) }
+                if let timeout = request.timeoutMs { timeouts.withLock { $0.append(.number(timeout)) } }
                 return try await fetchHelper(request)
             })
-            let storage = OdspDocumentStorageService(resolved: resolved, network: network)
             var options = JSObject<JSONValue>()
             options["blobs"] = .number(2)
             if kind == "limited" { options["mds"] = .number(123) }
             if kind == "timeout" { options["timeout"] = .number(5000) }
+            let storage = OdspDocumentStorageService(network: network, summarizerClient: kind == "summarizer", hostSnapshotOptions: options, flushCallback: unusedFlush, relayServiceTenantAndSessionId: { nil })
             var result = JSObject<JSONValue>()
             do {
-                let snapshot = try await storage.getSnapshot(noCache: true, summarizer: kind == "summarizer", options: options)
+                let snapshot = try await storage.fetchSnapshot(fetchSource: .noCache, loadingGroupIds: nil).snapshot
                 if let sequence = snapshot.sequenceNumber { result["sequenceNumber"] = .number(Double(sequence)) }
                 result["blobs"] = .number(Double(snapshot.blobContents.size))
             } catch let error as OdspNetworkError {
@@ -299,14 +306,14 @@ while let line = readLine() {
                 result["canRetry"] = .bool(error.canRetry)
                 if let status = error.statusCode { result["statusCode"] = .number(Double(status)) }
             }
-            result["timeouts"] = .array(timeouts)
+            result["timeouts"] = .array(timeouts.withLock { $0 })
             FileHandle.standardOutput.write(Data((JSON.stringify(.object(result)) + "\n").utf8))
             continue
         }
         if try input.asObject()["joinLive"] == .bool(true) {
             let clock = Mutex(0.0)
             let network = try JoinNetwork(origin: input.member("origin").asString().description)
-            let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), now: { clock.withLock { $0 } }, fetch: { requestSocketToken, displayName, _ in
+            let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), now: { clock.withLock { $0 } }, fetch: { requestSocketToken, displayName, _, _ in
                 try await network.fetch(requestSocketToken: requestSocketToken, displayName: displayName)
             })
             let factory = OdspSocketIOFactory()
@@ -328,7 +335,7 @@ while let line = readLine() {
         if try input.asObject()["joinCache"] == .bool(true) {
             let clock = Mutex(0.0)
             let network = try JoinNetwork(origin: input.member("origin").asString().description)
-            let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), now: { clock.withLock { $0 } }, fetch: { requestSocketToken, displayName, _ in
+            let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), now: { clock.withLock { $0 } }, fetch: { requestSocketToken, displayName, _, _ in
                 try await network.fetch(requestSocketToken: requestSocketToken, displayName: displayName)
             })
             var values: [JSONValue] = []
@@ -464,7 +471,7 @@ while let line = readLine() {
                 context["ackHandle"] = .string("parent")
                 context["referenceSequenceNumber"] = try input.member("seed")
                 let upload = OdspSummaryUploadManager(snapshotStorageUrl: resolved.snapshotStorageUrl, network: network)
-                output["summary"] = .string(JSString(try await upload.writeSummaryTree(tree, context: ISummaryContext(json: .object(context)), relayTenantId: "t", relaySessionId: "session")))
+                output["summary"] = .string(JSString(try await upload.writeSummaryTree(tree, context: ISummaryContext(json: .object(context)), relayServiceTenantAndSessionId: "t/session")))
             } else {
                 output["messages"] = .array(try await storage.get(from: input.member("from").asInt(), to: input.member("to").asInt()))
             }

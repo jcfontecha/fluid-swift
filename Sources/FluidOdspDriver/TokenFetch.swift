@@ -24,6 +24,10 @@ public enum TokenResponse: Sendable {
     }
 }
 
+/// odsp-driver-definitions/src/tokenFetch.ts TokenFetcher<OdspResourceTokenFetchOptions>: a string,
+/// a TokenResponse or null.
+public typealias TokenFetcher = @Sendable (TokenFetchOptions) async throws -> TokenResponse
+
 public struct TokenFetchOptions: Sendable {
     public var siteUrl = ""
     public var driveId: String?

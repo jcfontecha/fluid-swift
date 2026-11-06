@@ -12,7 +12,7 @@ nonisolated(nonsending) public func downloadSnapshot(resolved: IOdspResolvedUrl,
     try await fetchSnapshotCore(resolved: resolved, network: network, options: options, loadingGroupIds: loadingGroupIds, binaryOnly: binaryOnly).snapshot
 }
 
-nonisolated(nonsending) func fetchSnapshotCore(resolved: IOdspResolvedUrl, network: OdspNetwork, options: JSObject<JSONValue> = .init(), loadingGroupIds: [String]? = nil, binaryOnly: Bool = false, untracked: Bool = false) async throws -> SnapshotFetchResult {
+nonisolated(nonsending) func fetchSnapshotCore(resolved: IOdspResolvedUrl, network: OdspNetwork, options: JSObject<JSONValue> = .init(), loadingGroupIds: [String]? = nil, binaryOnly: Bool = false, untracked: Bool = false, scenarioName: String? = nil) async throws -> SnapshotFetchResult {
     var url = resolved.snapshotStorageUrl + "/trees/latest?ump=1"
     for (key, value) in options.entries where key != "timeout" {
         let text: String
@@ -24,7 +24,7 @@ nonisolated(nonsending) func fetchSnapshotCore(resolved: IOdspResolvedUrl, netwo
     if untracked { fetchResponse = { request in try await network.fetchWithoutEpoch(request) } }
     else { fetchResponse = nil }
     let response = try await network.authorized(url: url, make: { auth, boundary in
-        OdspRequest(url: url, headers: ["Content-Type": "multipart/form-data;boundary=" + boundary, "accept": (binaryOnly ? "" : "application/json, ") + "application/ms-fluid; v=1.0"], body: odspMultipart(boundary: boundary, lines: ["Authorization: " + auth, "X-HTTP-Method-Override: GET", "prefer: manualredirect"]), timeoutMs: try options["timeout"]?.asNumber(), fetchType: .treesLatest)
+        OdspRequest(url: url, headers: ["Content-Type": "multipart/form-data;boundary=" + boundary, "accept": (binaryOnly ? "" : "application/json, ") + "application/ms-fluid; v=1.0"], body: odspMultipart(boundary: boundary, lines: ["Authorization: " + auth, "X-HTTP-Method-Override: GET", "prefer: manualredirect"]), timeoutMs: try options["timeout"]?.asNumber(), fetchType: .treesLatest, fetchReason: scenarioName)
     }, fetchResponse: fetchResponse)
     guard !response.body.isEmpty else { throw OdspNetworkError("incorrectServerResponse", canRetry: false, statusCode: 712) }
     let type = response.headers["content-type"] ?? ""

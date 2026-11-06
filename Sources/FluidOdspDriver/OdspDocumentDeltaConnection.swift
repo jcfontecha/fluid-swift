@@ -1,3 +1,4 @@
+import FluidDriverDefinitions
 import FluidJS
 import Foundation
 
@@ -89,9 +90,10 @@ public final class OdspSocketCache {
     }
 }
 
-/// odspDocumentDeltaConnection.ts. Multiplex routing and synchronous teardown, with Socket.IO
-/// writes queued by the I/O adapter supplied to SocketReference.
-public final class OdspDocumentDeltaConnection {
+/// odspDocumentDeltaConnection.ts protocol state: multiplex routing and synchronous teardown, with
+/// Socket.IO writes queued by the I/O adapter supplied to SocketReference. Confined to the owning
+/// OdspSocketIOFactory actor; `OdspDocumentDeltaConnection` is its IDocumentDeltaConnection surface.
+public final class OdspDocumentDeltaConnectionState {
     public static let socketTimeoutMs = 60000
     public static let handshakeTimeoutMs = 62000
     public private(set) var disposed = false
@@ -102,7 +104,7 @@ public final class OdspDocumentDeltaConnection {
     public var onDisconnect: () -> Void = {}
     public var onOps: ([JSONValue]) -> Void = { _ in }
     public var onSignal: (JSONValue) -> Void = { _ in }
-    public var onNack: (JSONValue) -> Void = { _ in }
+    public var onNack: (JSString, JSONValue) -> Void = { _, _ in }
     private let reference: SocketReference
     private let noncePrefix: String
     private var counter = 0
@@ -196,7 +198,7 @@ public final class OdspDocumentDeltaConnection {
         case "nack":
             guard arguments.count >= 2 else { throw JSONDecodingError("missing nack arguments") }
             let target = try arguments[0].asString().description
-            if target.isEmpty || target == documentId || target == clientId { onNack(arguments[1]) }
+            if target.isEmpty || target == documentId || target == clientId { onNack(JSString(target), arguments[1]) }
         default: break
         }
     }
@@ -209,5 +211,64 @@ public final class OdspDocumentDeltaConnection {
         flushNonce = nil
         try reference.removeSocketIoReference(now: now)
         onDisconnect()
+    }
+}
+
+/// odspDocumentDeltaConnection.ts OdspDocumentDeltaConnection as the loader sees it: the
+/// IDocumentDeltaConnection surface of driver-base DocumentDeltaConnection plus requestOps/flush.
+/// The protocol state is OdspDocumentDeltaConnectionState on the factory's socket actor; every
+/// call hops there, so socket frames keep their synchronous TS order.
+public final class OdspDocumentDeltaConnection: IDocumentDeltaConnection {
+    public let details: IConnected
+    public let events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>
+    private let factory: OdspSocketIOFactory
+    private let id: UUID
+
+    init(factory: OdspSocketIOFactory, id: UUID, details: IConnected, events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>) {
+        self.factory = factory
+        self.id = id
+        self.details = details
+        self.events = events
+    }
+
+    public var clientId: String {
+        details.clientId.description
+    }
+
+    public var disposed: Bool {
+        get async { await factory.isDisposed(id) }
+    }
+
+    public func submit(_ messages: [IDocumentMessage]) async throws {
+        try await factory.submit(id, messages: messages.map(\.json))
+    }
+
+    /// Signals v2 (`{ content, targetClientId? }`) when the service supports them; otherwise v1
+    /// (`[content]`), which cannot target a client.
+    public func submitSignal(_ content: String, targetClientId: String?) async throws {
+        if details.supportedFeatures?["submit_signals_v2"] == .bool(true) {
+            var signal = JSObject<JSONValue>()
+            signal["content"] = .string(JSString(content))
+            if let targetClientId { signal["targetClientId"] = .string(JSString(targetClientId)) }
+            try await factory.submitSignal(id, signals: [.object(signal)])
+        } else if targetClientId == nil {
+            try await factory.submitSignal(id, signals: [.array([.string(JSString(content))])])
+        } else {
+            throw OdspNetworkError("usageError", canRetry: false)
+        }
+    }
+
+    public func requestOps(from: Int, to: Int) async throws {
+        try await factory.requestOps(id, from: from, to: to)
+    }
+
+    /// FlushResult JSON (`lastPersistedSequenceNumber`, `retryAfter`).
+    public func flush() async throws -> JSONValue {
+        try await factory.flush(id)
+    }
+
+    public func dispose() async {
+        do { try await factory.dispose(id) }
+        catch { await factory.failEvents(id, error) }
     }
 }

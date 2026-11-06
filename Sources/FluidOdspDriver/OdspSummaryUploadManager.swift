@@ -53,7 +53,8 @@ public final class OdspSummaryUploadManager {
             return .object(entry)
         }
     }
-    public func writeSummaryTree(_ tree: ISummaryTree, context: ISummaryContext, relayTenantId: String? = nil, relaySessionId: String? = nil) async throws -> String {
+    /// `relayServiceTenantAndSessionId` is `${tenantId}/${sessionId}` from the last join session, if any.
+    nonisolated(nonsending) public func writeSummaryTree(_ tree: ISummaryTree, context: ISummaryContext, relayServiceTenantAndSessionId: String?) async throws -> String {
         var payload = JSObject<JSONValue>()
         payload["entries"] = .array(try convertSummaryToSnapshotTree(tree, parentHandle: context.ackHandle?.description))
         payload["message"] = .string("app")
@@ -63,12 +64,12 @@ public final class OdspSummaryUploadManager {
         let url = snapshotStorageUrl + "/snapshot"
         let response = try await network.authorized(url: url) { auth, _ in
             var headers = ["Content-Type": "application/json", "Authorization": auth]
-            if let tenant = relayTenantId, let session = relaySessionId {
-                var match = "fluid:sessionid=" + tenant + "/" + session
+            if let relayServiceTenantAndSessionId {
+                var match = "fluid:sessionid=" + relayServiceTenantAndSessionId
                 if let parent = context.ackHandle?.description, !parent.isEmpty { match += ";containerid=" + parent }
                 headers["If-Match"] = match
             }
-            return OdspRequest(url: url, headers: headers, body: bytes)
+            return OdspRequest(url: url, headers: headers, body: bytes, timeoutMs: nil, fetchType: .uploadSummary)
         }
         let id = try response.json().member("id").asString().description
         guard !id.isEmpty else { throw JSONDecodingError("Failed to write summary tree") }

@@ -1,0 +1,34 @@
+Planted divergence (ODSP 3 document-service gate), 2026-11-06.
+
+Change: Sources/FluidOdspDriver/OdspDelayLoadedDeltaStream.swift, connectToDeltaStream:
+  self.joinSession(requestSocketToken: requestWebsocketTokenFromJoinSession, ...)
+  -> self.joinSession(requestSocketToken: true, ...)
+i.e. ask join session for a socket token even when the host supplies a websocket fetcher.
+
+Command: npm run fuzz:odsp-service -- --seeds=40   (exit 1)
+Seeds 0-2 have no websocket fetcher or no connection and passed; seed 3 failed:
+
+
+HTTP requests seed 3
++ actual - expected
+... Skipped lines
+
+  [
+    {
+      body: '--BOUNDARY\r\n' +
+        'X-RequestStats: driverId=NORMALIZED, RequestNumber=1, driverVersion=3.11.0, isSummarizer=false\r\n' +
+        'Authorization: Bearer initial\r\n' +
+...
+        '\r\n' +
++       '{"requestSocketToken":true}\r\n' +
++       '\r\n' +
+        '--BOUNDARY--',
+      headers: {
+        'content-type': 'multipart/form-data;boundary=BOUNDARY'
+      },
+      method: 'POST',
+...
+        '\r\n' +
++       '{"requestSocketToken":true}\r\n' +
+
+The source was restored afterwards (the line reads requestSocketToken: requestWebsocketTokenFromJoinSession).

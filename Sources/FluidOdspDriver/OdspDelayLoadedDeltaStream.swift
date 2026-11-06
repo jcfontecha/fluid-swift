@@ -1,3 +1,4 @@
+import FluidDriverDefinitions
 import FluidJS
 import Foundation
 
@@ -35,25 +36,27 @@ public actor OdspSessionJoinCache {
 public actor OdspDelayLoadedDeltaStream {
     private let key: String
     private let cache: OdspSessionJoinCache
-    private let fetch: @Sendable (Bool, String?, Bool) async throws -> JSONValue
+    /// fetchJoinSession(requestSocketToken, displayName, isRefreshingJoinSession, token options).
+    private let fetch: @Sendable (Bool, String?, Bool, TokenFetchOptions) async throws -> JSONValue
     private let now: @Sendable () -> Double
     private let disableRefresh: Bool
     private var timer: Task<Void, Never>?
     private var timerGeneration = 0
     private var currentClientId: String?
     public private(set) var currentDeltaConnection: UUID?
+    public private(set) var currentConnection: OdspDocumentDeltaConnection?
     public private(set) var relayServiceTenantAndSessionId: String?
     public private(set) var refreshDeadline: Double?
     public private(set) var refreshError: Error?
     public private(set) var disconnectError: Error?
-    public init(hashedDocumentId: String, cache: OdspSessionJoinCache, disableRefresh: Bool = false, now: @escaping @Sendable () -> Double = { Date().timeIntervalSince1970 * 1000 }, fetch: @escaping @Sendable (Bool, String?, Bool) async throws -> JSONValue) {
+    public init(hashedDocumentId: String, cache: OdspSessionJoinCache, disableRefresh: Bool = false, now: @escaping @Sendable () -> Double = { Date().timeIntervalSince1970 * 1000 }, fetch: @escaping @Sendable (Bool, String?, Bool, TokenFetchOptions) async throws -> JSONValue) {
         key = hashedDocumentId + "/joinsession"
         self.cache = cache
         self.disableRefresh = disableRefresh
         self.now = now
         self.fetch = fetch
     }
-    public func joinSession(requestSocketToken: Bool = true, displayName: String? = nil, refreshing: Bool = false, clientId: String? = nil) async throws -> JSONValue {
+    public func joinSession(requestSocketToken: Bool = true, displayName: String? = nil, refreshing: Bool = false, clientId: String? = nil, options: TokenFetchOptions = TokenFetchOptions()) async throws -> JSONValue {
         if refreshing, currentClientId == nil || (clientId != nil && clientId != currentClientId) {
             clearJoinSessionTimer()
             throw OdspNetworkError("genericError", canRetry: false)
@@ -61,7 +64,7 @@ public actor OdspDelayLoadedDeltaStream {
         let fetch = self.fetch
         let now = self.now
         let execute: @Sendable () async throws -> OdspSessionJoinCache.Entry = {
-            let response = try await fetch(requestSocketToken, displayName, refreshing)
+            let response = try await fetch(requestSocketToken, displayName, refreshing, options)
             return .init(entryTime: now(), response: response)
         }
         var entry = try await cache.addOrGet(key, fetch: execute)
@@ -110,12 +113,53 @@ public actor OdspDelayLoadedDeltaStream {
             throw error
         }
     }
+    /// odspDelayLoadedDeltaStream.ts connectToDeltaStream: one token-refresh retry around the
+    /// websocket token, join session and socket handshake. Without a host websocket fetcher the
+    /// token comes from the join-session response.
+    public func connectToDeltaStream(_ client: IClient, factory: OdspSocketIOFactory, getWebsocketToken: (@Sendable (TokenFetchOptions) async throws -> String?)?, epochTracker: EpochTracker, displayName: String?) async throws -> OdspDocumentDeltaConnection {
+        guard currentDeltaConnection == nil else { throw JSONDecodingError("0x4ad") }
+        return try await getWithRetryForTokenRefresh { options in
+            let requestWebsocketTokenFromJoinSession = getWebsocketToken == nil
+            // TS starts the websocket token request before joinSession, so its fetcher runs first.
+            let websocketToken = try await getWebsocketToken?(options)
+            let endpoint = try await self.joinSession(requestSocketToken: requestWebsocketTokenFromJoinSession, displayName: displayName, options: options)
+            let fields = try endpoint.asObject()
+            var finalToken = websocketToken
+            if finalToken == nil, case .string(let token) = fields["socketToken"] { finalToken = token.description }
+            guard let finalToken else { throw OdspNetworkError("fetchTokenError", canRetry: false) }
+            guard let url = URL(string: try endpoint.member("deltaStreamSocketUrl").asString().description) else { throw JSONDecodingError("invalid relay URL") }
+            do {
+                let id = try await factory.create(url: url, tenantId: endpoint.member("tenantId").asString().description, documentId: endpoint.member("id").asString().description, token: .string(JSString(finalToken)), client: client.json, nonce: UUID().uuidString.lowercased(), epoch: epochTracker.fluidEpoch)
+                try epochTracker.validateEpoch(try await factory.details(id).asObject()["epoch"]?.asString().description)
+                let (details, events) = try await factory.deltaConnection(id)
+                let connection = OdspDocumentDeltaConnection(factory: factory, id: id, details: details, events: events)
+                currentDeltaConnection = id
+                currentConnection = connection
+                currentClientId = details.clientId.description
+                try await factory.setDisconnectHandler(id) { [weak self] error in
+                    await self?.disconnected(error: error)
+                    do { try await factory.release(id) }
+                    catch { await self?.recordDisconnectError(error) }
+                }
+                return connection
+            } catch {
+                await connectionFailed(scenarioName: (error as? OdspNetworkError)?.scenarioName)
+                throw error
+            }
+        }
+    }
+    public func dispose() async {
+        clearJoinSessionTimer()
+        await currentConnection?.dispose()
+        currentConnection = nil
+    }
     private func recordDisconnectError(_ error: Error) { disconnectError = error }
     public func connected(clientId: String) { currentClientId = clientId }
     public func disconnected(error: OdspNetworkError? = nil) async {
         clearJoinSessionTimer()
         currentClientId = nil
         currentDeltaConnection = nil
+        currentConnection = nil
         if error?.errorType == "authorizationError" { await cache.remove(key) }
     }
     public func connectionFailed(scenarioName: String?) async {
@@ -133,7 +177,9 @@ public actor OdspDelayLoadedDeltaStream {
     private func refresh(generation: Int, requestSocketToken: Bool, displayName: String?, clientId: String?) async {
         guard generation == timerGeneration else { return }
         do {
-            _ = try await joinSession(requestSocketToken: requestSocketToken, displayName: displayName, refreshing: true, clientId: clientId)
+            _ = try await getWithRetryForTokenRefresh { options in
+                try await self.joinSession(requestSocketToken: requestSocketToken, displayName: displayName, refreshing: true, clientId: clientId, options: options)
+            }
         } catch { refreshError = error }
     }
 }

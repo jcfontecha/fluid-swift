@@ -1,11 +1,12 @@
 import FluidJS
 import Foundation
+import Synchronization
 
-/// epochTracker.ts. Owned by the container's serial executor, not an independently scheduled actor.
-public class EpochTracker {
-    public private(set) var fluidEpoch: String?
-    public private(set) var cacheClearCount = 0
-    public var onCacheClear: () -> Void = {}
+/// epochTracker.ts. One tracker is shared by every component of a file (storage, delta storage,
+/// join session, summary upload, create-new), as `createOdspCacheAndTracker` shares it in TS.
+/// Its mutable state lives behind a mutex; each synchronous TS segment (validate, learn, count)
+/// is one critical section. Non-final because `EpochTrackerWithRedemption` extends it, as in TS.
+public class EpochTracker: @unchecked Sendable {
     public struct Entry: Sendable {
         public let type: String
         public let key: String
@@ -14,18 +15,35 @@ public class EpochTracker {
             self.key = key
         }
     }
+    private struct State {
+        var fluidEpoch: String?
+        var cacheClearCount = 0
+    }
+    private let state = Mutex(State())
     public let rateLimiter = RateLimiter(24)
-    public var onCacheError: (Error) -> Void = { _ in }
-    private let cacheGet: ((Entry) async throws -> JSONValue?)?
-    private let cachePut: ((Entry, JSONValue) async throws -> Void)?
-    private let cacheRemove: (() async throws -> Void)?
-    private let now: () -> Double
-    public init(now: @escaping () -> Double = { Date().timeIntervalSince1970 * 1000 }, cacheGet: ((Entry) async throws -> JSONValue?)? = nil, cachePut: ((Entry, JSONValue) async throws -> Void)? = nil, cacheRemove: (() async throws -> Void)? = nil) {
+    /// `isSummarizer=${clientIsSummarizer}` in X-RequestStats.
+    public let clientIsSummarizer: Bool
+    private let cacheGet: (@Sendable (Entry) async throws -> JSONValue?)?
+    private let cachePut: (@Sendable (Entry, JSONValue) async throws -> Void)?
+    private let cacheRemove: (@Sendable () async throws -> Void)?
+    private let now: @Sendable () -> Double
+
+    public init(clientIsSummarizer: Bool = false, now: @escaping @Sendable () -> Double = { Date().timeIntervalSince1970 * 1000 }, cacheGet: (@Sendable (Entry) async throws -> JSONValue?)? = nil, cachePut: (@Sendable (Entry, JSONValue) async throws -> Void)? = nil, cacheRemove: (@Sendable () async throws -> Void)? = nil) {
+        self.clientIsSummarizer = clientIsSummarizer
         self.now = now
         self.cacheGet = cacheGet
         self.cachePut = cachePut
         self.cacheRemove = cacheRemove
     }
+
+    public var fluidEpoch: String? {
+        state.withLock { $0.fluidEpoch }
+    }
+
+    public var cacheClearCount: Int {
+        state.withLock { $0.cacheClearCount }
+    }
+
     nonisolated(nonsending) public func get(_ entry: Entry) async -> JSONValue? {
         do {
             guard let envelope = try await cacheGet?(entry), try envelope.asObject()["version"] == .number(3) else { return nil }
@@ -42,7 +60,7 @@ public class EpochTracker {
             }
             return value
         } catch {
-            onCacheError(error)
+            // TS logs cacheFetchError and treats the entry as missing.
             return nil
         }
     }
@@ -58,11 +76,7 @@ public class EpochTracker {
         envelope["value"] = value
         envelope["version"] = .number(3)
         envelope["fluidEpoch"] = .string(JSString(epoch))
-        do { try await cachePut?(entry, .object(envelope)) }
-        catch {
-            onCacheError(error)
-            throw error
-        }
+        try await cachePut?(entry, .object(envelope))
     }
     nonisolated(nonsending) public func removeEntries() async throws {
         clearCache()
@@ -82,18 +96,23 @@ public class EpochTracker {
 
     public func validateEpoch(_ epoch: String?) throws {
         guard let epoch else { throw JSONDecodingError("0x584") }
-        if let current = fluidEpoch, !current.isEmpty, !epoch.isEmpty, current != epoch {
-            clearCache()
+        let mismatch = state.withLock { state -> Bool in
+            if let current = state.fluidEpoch, !current.isEmpty, !epoch.isEmpty, current != epoch {
+                state.cacheClearCount += 1
+                return true
+            }
+            if state.fluidEpoch == nil { state.fluidEpoch = epoch }
+            return false
+        }
+        if mismatch {
             var error = OdspNetworkError("fileOverwrittenInStorage", canRetry: false)
             error.serverEpoch = epoch
             throw error
         }
-        if fluidEpoch == nil { fluidEpoch = epoch }
     }
 
     public func clearCache() {
-        cacheClearCount += 1
-        onCacheClear()
+        state.withLock { $0.cacheClearCount += 1 }
     }
 
     public func classify(status: Int, headers: [String: String], body: String = "") throws -> OdspNetworkError {
@@ -112,33 +131,51 @@ public class EpochTracker {
     }
 }
 
-/// odspCache.ts. Clock injection preserves expiry equality and makes tests independent of wall time.
-public final class LocalPersistentCache {
-    public struct Entry {
-        public let value: JSONValue
+/// A persisted-cache value. Snapshots keep their native buffers (TS stores the ISnapshot object
+/// with its `Map` of ArrayBuffers as is); other entries are JSON.
+public enum PersistedCacheValue: Sendable {
+    case json(JSONValue)
+    case snapshot(CompactSnapshot)
+}
+
+/// odspCache.ts LocalPersistentCache. The per-docId 1-hour expiry restarts on every put (TS
+/// `updateExpirationEntry`); clock injection preserves expiry equality without wall time.
+public final class LocalPersistentCache: Sendable {
+    public struct Entry: Sendable {
+        public let value: PersistedCacheValue
         public let fluidEpoch: String
         public let version: Int
         public let cacheEntryTime: Double?
-        public init(value: JSONValue, fluidEpoch: String, version: Int = 3, cacheEntryTime: Double? = nil) {
+        public init(value: PersistedCacheValue, fluidEpoch: String, version: Int = 3, cacheEntryTime: Double? = nil) {
             self.value = value
             self.fluidEpoch = fluidEpoch
             self.version = version
             self.cacheEntryTime = cacheEntryTime
         }
     }
-    private var entries: [String: Entry] = [:]
-    private var expires: [String: Double] = [:]
+    private struct State {
+        var entries: [String: Entry] = [:]
+        var expires: [String: Double] = [:]
+    }
+    private let state = Mutex(State())
     public init() {}
     public func put(docId: String, key: String, entry: Entry, now: Double) {
-        entries[docId + "_" + key] = entry
-        expires[docId] = now + 3600000
+        state.withLock { state in
+            state.entries[docId + "_" + key] = entry
+            state.expires[docId] = now + 3600000
+        }
     }
     public func get(docId: String, key: String, now: Double) -> Entry? {
-        if let expiry = expires[docId], now >= expiry { removeEntries(docId: docId) }
-        return entries[docId + "_" + key]
+        state.withLock { state in
+            if let expiry = state.expires[docId], now >= expiry { Self.remove(docId: docId, from: &state) }
+            return state.entries[docId + "_" + key]
+        }
     }
     public func removeEntries(docId: String) {
-        entries = entries.filter { $0.key.components(separatedBy: "_").first != docId }
-        expires.removeValue(forKey: docId)
+        state.withLock { Self.remove(docId: docId, from: &$0) }
+    }
+    private static func remove(docId: String, from state: inout State) {
+        state.entries = state.entries.filter { $0.key.components(separatedBy: "_").first != docId }
+        state.expires.removeValue(forKey: docId)
     }
 }

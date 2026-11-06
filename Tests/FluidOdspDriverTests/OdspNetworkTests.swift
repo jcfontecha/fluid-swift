@@ -1,5 +1,6 @@
 import Foundation
 import FluidDriverDefinitions
+import Synchronization
 import Testing
 import FluidJS
 @testable import FluidOdspDriver
@@ -88,7 +89,7 @@ struct OdspSocketTests {
         var closed = false
         let reference = SocketReference(key: "relay", send: { _, _ in }, close: { closed = true })
         reference.connected = true
-        let connection = OdspDocumentDeltaConnection(reference: reference, documentId: "doc", clientId: "client", noncePrefix: "n")
+        let connection = OdspDocumentDeltaConnectionState(reference: reference, documentId: "doc", clientId: "client", noncePrefix: "n")
         var observedDisposed = false
         connection.onDisconnect = {
             observedDisposed = connection.disposed && reference.disconnected
@@ -100,8 +101,8 @@ struct OdspSocketTests {
     }
 
     @Test func multiplexingUsesPresenceNotTruthiness() throws {
-        #expect(try OdspDocumentDeltaConnection.enableMultiplexing("https://relay/?documentId=") == false)
-        #expect(try OdspDocumentDeltaConnection.enableMultiplexing("https://relay/") == true)
+        #expect(try OdspDocumentDeltaConnectionState.enableMultiplexing("https://relay/?documentId=") == false)
+        #expect(try OdspDocumentDeltaConnectionState.enableMultiplexing("https://relay/") == true)
     }
 }
 
@@ -127,7 +128,7 @@ struct OdspURLAndSnapshotTests {
 
     @Test func localCacheExpiresOnlyFromPut() {
         let cache = LocalPersistentCache()
-        cache.put(docId: "d", key: "ops", entry: .init(value: .string("ops"), fluidEpoch: "E"), now: 0)
+        cache.put(docId: "d", key: "ops", entry: .init(value: .json(.string("ops")), fluidEpoch: "E"), now: 0)
         #expect(cache.get(docId: "d", key: "ops", now: 3599999) != nil)
         #expect(cache.get(docId: "d", key: "ops", now: 3600000) == nil)
     }
@@ -135,37 +136,63 @@ struct OdspURLAndSnapshotTests {
 
 struct OdspDeltaCacheTests {
     @Test func cacheMissDisablesFurtherReads() async throws {
-        var reads = 0
-        var storageReads = 0
-        var socketRequests = 0
-        let service = OdspDeltaStorageWithCache(snapshotOps: nil, getFromStorage: { _, _ in
-            storageReads += 1
+        let counts = Mutex((reads: 0, storageReads: 0, socketRequests: 0))
+        let service = OdspDeltaStorageWithCache(snapshotOps: nil, batchSize: 5000, concurrency: 1, getFromStorage: { _, _, _ in
+            counts.withLock { $0.storageReads += 1 }
             return .init(messages: [], partialResult: false)
         }, getCached: { _, _ in
-            reads += 1
+            counts.withLock { $0.reads += 1 }
             return []
-        }, requestFromSocket: { _, _ in socketRequests += 1 }, opsReceived: { _ in })
-        service.beginFetch(isFirstSnapshotFromNetwork: false)
-        _ = try await service.fetchMessages(from: 1, to: 3)
-        _ = try await service.fetchMessages(from: 3, to: 5)
-        #expect(reads == 1)
-        #expect(storageReads == 2)
-        #expect(socketRequests == 2)
+        }, requestFromSocket: { _, _ in counts.withLock { $0.socketRequests += 1 } }, opsReceived: { _ in }, storageManagerGetter: { nil })
+        _ = try await service.requestCallback(from: 1, to: 3, cachedOnly: false, fetchReason: nil)
+        _ = try await service.requestCallback(from: 3, to: 5, cachedOnly: false, fetchReason: nil)
+        let final = counts.withLock { $0 }
+        // The first miss turns the cache off for the rest of the fetch.
+        #expect(final.reads == 1)
+        #expect(final.storageReads == 2)
+        #expect(final.socketRequests == 2)
+    }
+
+    /// driver-base validateMessages (strict): a gap drops the whole batch instead of failing.
+    @Test func nonContiguousBatchIsDropped() throws {
+        var messages = [try JSON.parse("{\"sequenceNumber\":1}"), try JSON.parse("{\"sequenceNumber\":3}")]
+        try validateMessages(&messages, from: 1)
+        #expect(messages.isEmpty)
+    }
+
+    /// requestOps over an empty fixed range fails 0x270 ("All requested ops fetched"), as in TS.
+    @Test func emptyFixedRangeFailsAllFetchedAssert() async throws {
+        let stream = requestOps(concurrency: 1, fromTotal: 5, toTotal: 5, payloadSize: 5000) { _, _ in ([], false) }
+        await #expect(throws: JSONDecodingError.self) {
+            for try await _ in stream {}
+        }
+    }
+
+    /// An open-ended fetch ends at the first short, non-partial batch.
+    @Test func openEndedFetchStopsAtShortBatch() async throws {
+        let stream = requestOps(concurrency: 1, fromTotal: 1, toTotal: nil, payloadSize: 2) { from, to in
+            let available = Array(from..<min(to, 4))
+            return (try available.map { try JSON.parse("{\"sequenceNumber\":\($0)}") }, false)
+        }
+        var batches: [[JSONValue]] = []
+        for try await batch in stream { batches.append(batch) }
+        #expect(batches.map(\.count) == [2, 1])
     }
 }
 
 struct OdspSummaryTests {
     @Test func protocolAloneIsNotCombinedSummary() async throws {
         let resolved = try OdspDriverUrlResolver().resolve("https://t.sharepoint.com/?driveId=d&itemId=i&path=")
-        var body: JSONValue?
+        let body = Mutex<JSONValue?>(nil)
         let network = OdspNetwork(resolvedUrl: resolved, epochTracker: EpochTracker(), tokenFetcher: { _ in .token("token") }, send: { request in
-            body = try JSON.parse(String(decoding: request.body, as: UTF8.self))
+            let parsed = try JSON.parse(String(decoding: request.body, as: UTF8.self))
+            body.withLock { $0 = parsed }
             return OdspResponse(status: 200, headers: [:], body: Data("{\"id\":\"proposal\"}".utf8))
         })
         let upload = OdspSummaryUploadManager(snapshotStorageUrl: resolved.snapshotStorageUrl, network: network)
         let tree = try ISummaryTree(json: JSON.parse("{\"type\":1,\"tree\":{\".protocol\":{\"type\":1,\"tree\":{}}}}"))
         let context = try ISummaryContext(json: JSON.parse("{\"ackHandle\":\"parent\",\"referenceSequenceNumber\":0}"))
-        #expect(try await upload.writeSummaryTree(tree, context: context) == "proposal")
-        #expect(try body?.member("type") == .string("channel"))
+        #expect(try await upload.writeSummaryTree(tree, context: context, relayServiceTenantAndSessionId: nil) == "proposal")
+        #expect(try body.withLock { $0 }?.member("type") == .string("channel"))
     }
 }

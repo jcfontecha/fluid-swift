@@ -1252,3 +1252,95 @@ ordinary string/v5 identifiers plus unfinalized v4 identifiers. Op encoding uses
 originator session for negative IDs; summaries preserve unfinalized UUID strings.
 A planted empty-array shape index of `999999` was rejected by the byte comparison and
 restored to the dictionary index before the final passing run.
+
+## ODSP 3 — document service
+
+`npm run fuzz:odsp-service` builds `FluidOdspNetPeer` (`--scratch-path .build/odsp-service`) and drives the installed 3.11.0 TS
+`OdspDocumentServiceFactory` and the Swift `OdspDocumentServiceFactory` through the same scripted fake ODSP endpoint on
+127.0.0.1:7091 (REST plus websocket-only Socket.IO). It runs 300 seeds by default; `--seeds=N` and `--from=N` choose
+the range, `--self` runs TS twice as a determinism check, `--all` keeps going and saves every failing trace, and
+`--coverage` prints what the seeds exercised. Sources are `harness/src/odsp-net/service/` (`scenario.ts` generator,
+`fake.ts` endpoint, `oracle.ts` TS script, `fuzz.ts` driver) and `Sources/FluidOdspNetPeer/ServiceScenario.swift`.
+Failures save `harness/traces/odsp-net-service/<seed>.json` with the scenario, both outcomes and both wire traces.
+
+**Per seed** (Mulberry32), one of three kinds:
+- Load (two thirds of seeds): `createOdspUrl` → `OdspDriverUrlResolver.resolve` → `createDocumentService`.
+- Create from summary: `createOdspCreateContainerRequest` → resolve → `createContainer`, with `.app`/`.protocol` at
+  sequence 0, a binary blob and a grouped tree.
+- Create an empty file: the same with no summary.
+
+Then, through the contract objects only:
+- Storage: either `getSnapshot()` or the default loader path `getVersions(null, 1)` → `getSnapshotTree(version)`.
+  Then `readBlob` of snapshot blobs (blob cache) and of a blob missing from the snapshot (attachments GET), and
+  optionally `getSnapshotTree()` and `getVersions` with count 1 (cache) or 2 (versions GET).
+- `connectToDeltaStorage().fetchMessages(from, to?)` over the snapshot's ops plus the REST delta feed: wrapped or
+  plain ops, open or fixed ranges, and the empty fixed range TS fails with 0x270.
+- `connectToDeltaStream` before or after the fetch, with a host websocket fetcher or the join-session token; submits
+  the fake sequences and echoes; one signal.
+- `uploadSummaryWithContext`: a container summary with a handle after a socket flush, a channel summary, or the
+  empty file's first summary followed by the PATCH rename.
+- `createBlob`; then connection dispose and service dispose.
+
+The fake serves JSON or compact (`application/ms-fluid`) snapshots. It can fail one request class (trees/latest,
+join session, ops, blob, createBlob, upload, versions, createFile, push handshake) with 401 (claims challenge),
+403, 404, 409 (coherency, retried with backoff), 429 (`retry-after: 0`) or 500, or answer it with a mismatched epoch
+(`x-fluid-epoch: F`, or a handshake epoch). It answers `get_ops` without ops: a response with ops races the
+script's dispose when the REST fetch fails at once, in TS as in Swift; ODSP 2 covers that routing.
+
+**Compared** exactly (`deepStrictEqual` after a JSON round trip), per seed:
+- The outcome: resolved URLs as JSON (load, create-new request, created file, after rename), the absolute URL and
+  policies. Every host token-fetch call, with refresh, claims, tenant, URL parts, request URL and method.
+- Every step result: snapshot trees, blob bytes as hex, versions, delta batches, connection details with merged
+  initial messages and signals, upload handles, created blob IDs. Errors compare as errorType/canRetry/statusCode
+  or the assert message.
+- The connection events, in order.
+- Every HTTP request (method, raw URL, protocol headers, body with CRLF boundaries) and every socket frame the
+  server observes, in order.
+
+Multipart boundaries and the driverId are normalized as in ODSP 2. So are UUIDs in socket frames (connection nonces,
+get_ops/flush nonce prefixes) and create-new blob IDs (renamed by first-seen index). Transport headers are excluded as
+in ODSP 2. A 500-seed run passed: 303 seeds end with every step done, the rest with one of 10 error classes; 57
+fault classes (target × status) occur; 248 connections; 190 summary uploads; 170 loads on the versions path.
+
+**Swift structure** (one TS class per type, in `Sources/FluidOdspDriver`):
+- `OdspDocumentServiceFactoryCore` (`OdspDocumentServiceFactory` is a typealias: the TS subclass adds nothing).
+- `OdspDocumentService`, plus `RetryErrorsStorageAdapter` (what `connectToStorage` returns).
+- `OdspDocumentStorageService`; the abstract base members are an extension in
+  `OdspDocumentStorageServiceBase.swift`, with `BlobCache`.
+- `OdspDeltaStorageWithCache`, over `requestOps`/`ParallelRequests` (driver-utils, internal for now).
+- `OdspDocumentDeltaConnection`, the IDocumentDeltaConnection the loader holds. The ODSP 2 protocol-state class it
+  wraps is renamed `OdspDocumentDeltaConnectionState`; the code is unchanged and still confined to the factory's
+  socket actor.
+- `createFile`/`createNewUtils` in `CreateFile.swift`/`CreateNewUtils.swift`.
+
+`EpochTracker` and `OdspNetwork` are now shared Sendable objects, with mutex-protected state and an `OdspFileEntry`.
+Storage, delta storage, join session, summary upload and create-new share one tracker and file entry, as
+`createOdspCacheAndTracker` makes them do in TS. `IOdspResolvedUrl` is the typed view of the contract
+`IResolvedUrl`. Its JSON is the source of truth, so TS property order survives resolve, create-new and rename.
+
+`fetchHelper` now sends `Pragma`/`Cache-Control: no-cache` only for conditional requests (`If-Match` etc.), which is
+what Node's fetch does. The old "any Authorization header" rule only matched because the one authorized request in
+ODSP 2 also carried `If-Match`. ODSP 2 stays green.
+
+**Deliberate differences:**
+1. TS shares sockets across factories (a module-global cache) unless `isolateSocketCache`; the Swift registry is per
+   factory. The oracle runs with `isolateSocketCache: true`.
+2. TS starts the websocket token fetch and the join session concurrently; Swift awaits the token first. The calls and
+   their order are the same, but a failing token fetcher would skip the join request.
+3. `SnapshotBlobContents.buffers` is a JSObject, which puts integer-like blob IDs first where the TS Map keeps
+   insertion order. Lookups are unaffected; the fake uses non-numeric IDs.
+
+`harness/src/odsp-net/service/planted-divergence.txt` records the planted divergence: the join-session request
+asked for a socket token despite a host websocket fetcher, and seed 3 failed on its HTTP body.
+
+**Not covered or not ported:**
+- The ops cache (opsCaching.ts) is not wired: `getCached` always misses and `opsReceived` drops ops. TS writes ops to
+  the persisted cache only after a full 100-op batch or a 5-second flush timer, so no scenario here can observe the
+  gap. A reload in the same factory that is served from cache would differ.
+- Share links and redeem fallback; sensitivity labels; sessionForbidden storage-only facets; point-in-time loads;
+  `getRelayServiceSessionInfo`; the factory-level prefetch-result cache. Also loading groups,
+  `snapshotFormatFetchType`, host request headers and telemetry.
+- Persisted-cache JSON entries through `EpochTracker.get`/`put`. Snapshots use the factory's native cache instead,
+  and an epoch-tracker cache hit does not complete the redemption deferral.
+- `createNewContainerOnExistingFile` is ported but not exercised; OdspClient never creates into an existing item.
+- The handshake timeout, socket transport errors and nacks are left to ODSP 2.

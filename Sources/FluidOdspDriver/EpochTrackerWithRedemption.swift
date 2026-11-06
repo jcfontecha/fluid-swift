@@ -1,5 +1,6 @@
 import FluidJS
 import Foundation
+import Synchronization
 
 private actor RedemptionDeferral {
     private struct Waiter {
@@ -35,13 +36,18 @@ private actor RedemptionDeferral {
 }
 
 /// epochTracker.ts EpochTrackerWithRedemption. First join failure waits for access discovery or 15 s.
-public final class EpochTrackerWithRedemption: EpochTracker {
+public final class EpochTrackerWithRedemption: EpochTracker, @unchecked Sendable {
     private let treesLatestDeferral = RedemptionDeferral()
-    private var completed = false
+    /// `treesLatestDeferral.isCompleted`, readable synchronously as in TS.
+    private let completedState = Mutex(false)
     private let sleep: @Sendable (Double) async throws -> Void
-    public init(now: @escaping () -> Double = { Date().timeIntervalSince1970 * 1000 }, cacheGet: ((Entry) async throws -> JSONValue?)? = nil, cachePut: ((Entry, JSONValue) async throws -> Void)? = nil, cacheRemove: (() async throws -> Void)? = nil, sleep: @escaping @Sendable (Double) async throws -> Void = { try await Task.sleep(for: .milliseconds($0)) }) {
+    public init(clientIsSummarizer: Bool = false, now: @escaping @Sendable () -> Double = { Date().timeIntervalSince1970 * 1000 }, cacheGet: (@Sendable (Entry) async throws -> JSONValue?)? = nil, cachePut: (@Sendable (Entry, JSONValue) async throws -> Void)? = nil, cacheRemove: (@Sendable () async throws -> Void)? = nil, sleep: @escaping @Sendable (Double) async throws -> Void = { try await Task.sleep(for: .milliseconds($0)) }) {
         self.sleep = sleep
-        super.init(now: now, cacheGet: cacheGet, cachePut: cachePut, cacheRemove: cacheRemove)
+        super.init(clientIsSummarizer: clientIsSummarizer, now: now, cacheGet: cacheGet, cachePut: cachePut, cacheRemove: cacheRemove)
+    }
+    private var completed: Bool {
+        get { completedState.withLock { $0 } }
+        set { completedState.withLock { $0 = newValue } }
     }
     nonisolated(nonsending) public override func get(_ entry: Entry) async -> JSONValue? {
         let result = await super.get(entry)

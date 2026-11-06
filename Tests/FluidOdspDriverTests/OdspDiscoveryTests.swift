@@ -14,11 +14,14 @@ private actor DiscoveryProbe {
 @Suite struct OdspDiscoveryTests {
     @Test func timerActuallyRefreshesAndDisconnectCancelsIt() async throws {
         let probe = DiscoveryProbe()
-        let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), fetch: { _, _, _ in try await probe.fetch() })
+        let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), fetch: { _, _, _, _ in try await probe.fetch() })
         await stream.connected(clientId: "client")
         _ = try await stream.joinSession()
         try await Task.sleep(for: .milliseconds(100))
         await stream.disconnected()
+        // A refresh already past its client check finishes its fetch and re-arms (as in TS); the
+        // next timer stops at the check. Count once that has settled.
+        try await Task.sleep(for: .milliseconds(60))
         let count = await probe.calls
         #expect(count >= 2)
         #expect(await stream.refreshDeadline == nil)
@@ -28,7 +31,7 @@ private actor DiscoveryProbe {
 
     @Test func staleRefreshDoesNotFetch() async throws {
         let probe = DiscoveryProbe()
-        let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), fetch: { _, _, _ in try await probe.fetch() })
+        let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), fetch: { _, _, _, _ in try await probe.fetch() })
         await stream.connected(clientId: "new-client")
         await #expect(throws: OdspNetworkError.self) {
             _ = try await stream.joinSession(refreshing: true, clientId: "old-client")
@@ -38,7 +41,7 @@ private actor DiscoveryProbe {
 
     @Test func nonAuthorizationDisconnectKeepsDiscovery() async throws {
         let probe = DiscoveryProbe()
-        let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), disableRefresh: true, now: { 0 }, fetch: { _, _, _ in try await probe.fetch() })
+        let stream = OdspDelayLoadedDeltaStream(hashedDocumentId: "doc", cache: OdspSessionJoinCache(), disableRefresh: true, now: { 0 }, fetch: { _, _, _, _ in try await probe.fetch() })
         _ = try await stream.joinSession()
         await stream.disconnected(error: OdspNetworkError("genericNetworkError", canRetry: true))
         _ = try await stream.joinSession()
