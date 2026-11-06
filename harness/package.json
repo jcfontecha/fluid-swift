@@ -12,6 +12,7 @@
     "socketio-fixtures": "tsx src/socketio-fixtures.ts",
     "socketio-check": "tsx src/socketio-check.ts",
     "fuzz": "tsx src/driver.ts",
+    "foundation": "tsx src/foundation-check.ts",
     "replay": "tsx src/replay.ts",
     "peer:ts": "tsx src/peer.ts",
     "fixtures": "tsx src/fixtures.ts",

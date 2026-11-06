@@ -19,7 +19,7 @@ implementation), all consuming one sequenced op log.
 
 The driver is the only component that sequences. Peers never talk to each other.
 
-## Scope (phase 0)
+## Scope (channel foundation)
 
 Channel level: each client hosts **one DDS channel** behind a mock container runtime, mirroring
 `MockContainerRuntime` + `MockFluidDataStoreRuntime` from `@fluidframework/test-runtime-utils`.
@@ -68,14 +68,21 @@ service come later and extend this protocol.
 | `edit` | `{ clientId, edit }` | `{ "outbound": [UnsequencedMessage] }` |
 | `process` | `{ clientId, message: SequencedMessage }` | `{ "outbound": [UnsequencedMessage] }` |
 | `state` | `{ clientId }` | `{ "state": JSONValue }` |
+| `events` / `queries` | `{ clientId }` | `{ events: JSONValue[] }` / `{ queries: JSONValue }` |
 | `summarize` | `{ clientId }` | `{ "summary": SummaryTree }` |
+| `disconnect` | `{ clientId }` | `{ outbound }` |
+| `reconnect` | `{ clientId, newClientId }` | `{ clientId: newClientId, outbound }` |
+| `membership` | `{ clientId, members: string[] }` | `{ outbound }` |
+| `flush` / `rollback` | `{ clientId }` | `{ outbound }` |
+| `stash` | `{ clientId, contents }` | `{ outbound }` |
+| `reset` | `{}` | `{}` |
 | `disposeClient` | `{ clientId }` | `{}` |
 
 - `createClient`: `summary: null` creates a new attached channel with empty state at
   `sequenceNumber` 0. A non-null summary loads the channel from it; the client's last processed
   sequence number is `sequenceNumber`.
 - `edit`: performs one local edit through the DDS public API and returns every message the client
-  submitted as a result (flush mode immediate). `referenceSequenceNumber` is the client's last
+  submitted as a result (flush mode immediate by default). `referenceSequenceNumber` is the client's last
   processed sequence number.
 - `process`: delivers one sequenced message. The client treats it as local iff
   `message.clientId == clientId`, and then matches it against its oldest pending message by
@@ -98,10 +105,33 @@ service come later and extend this protocol.
 
 ## Checks
 
+Summary bytes are **not** a cross-replica invariant in TS. They depend on each client's local
+history. For example, SharedMap's header key order depends on when each key was applied locally,
+and SharedDirectory's creator-ID lists change when a client calls `createSubDirectory` on an
+existing child (see "Oracle preconditions" below). So byte-exactness is checked against
+a **lockstep TS twin**, where TS is deterministic, and cross-replica checks are semantic.
+
+**Lockstep twin.** Every client that does not run on the TS peer has a twin on the TS peer:
+- The twin has the same `clientId`. Anything else a client's identity feeds into (ID-compressor
+  session IDs, quorum and audience membership) is identical between the two.
+- The twin receives exactly the same calls, in the same order: every `edit`, `process`, flush,
+  rollback, stash, disconnect/reconnect and membership change.
+- The twin's outbound messages are never sequenced. The driver compares them with its subject's
+  outbound messages after every call.
+- The twin sees the subject's own ops as local acks, exactly as the subject does.
+
+On every call, the subject's outbound messages must equal its twin's, byte-exact as JSON text.
+
 At a *checkpoint*, the driver sequences everything and delivers to every client, then:
 
-1. `state` of every client is deep-equal.
-2. `summarize` of every client is identical as JSON text (blob strings byte-exact).
+1. **Across replicas:** `state` of every client is deep-equal.
+2. **Against the twin:** each subject's `state`, `summarize` output and recorded events equal
+   its twin's, byte-exact as JSON text.
+3. **Cross-load:** each client's summary, loaded by a fresh TS client and by a fresh Swift client,
+   yields that same `state`. The fresh clients are discarded afterwards.
+
+In `--peers ts,ts` self-check runs, the second TS peer plays the subject, so the twin machinery
+itself is exercised against TS.
 
 Any mismatch, peer error, or protocol violation (wrong `referenceSequenceNumber`,
 `clientSequenceNumber` not strictly increasing per client) fails the seed. A failing seed writes a
@@ -115,14 +145,129 @@ exactly.
 - edit: `{ "kind": "increment", "amount": <integer> }` → `SharedCounter.increment(amount)`.
 - state: `{ "value": <number> }`.
 
+### Other DDS contracts (E1)
+
+Names accepted by `--dds` are the following names, comma-separated, or `all`.
+`hello.ddsTypes` contains the actual factory URLs, not these CLI aliases.
+A Swift adapter must reproduce the TS adapter in `src/dds.ts` exactly:
+the same API call per edit, the same `state`, `queries` and event journal JSON
+(property order included; `undefined` members are omitted, as `JSON.stringify` does).
+`canonicalValue(v)` is `v` with handles encoded, or `{"$fluid":"undefined"}` for undefined.
+Sorted means JS `<` on keys, which compares UTF-16 code units.
+
+| Name | Edit → API call | `state` | `queries` | Events (`[name, ...args]`) |
+|---|---|---|---|---|
+| map | `set{key,value,valueKind?}` → `set`; `delete{key}`; `clear` | sorted `[key, canonicalValue][]` | `{}` | `valueChanged {key,previousValue}, local`; `clear local` |
+| directory | as map, plus `path`; `createSubDirectory`/`deleteSubDirectory{path,name}` on `getWorkingDirectory(path)` | `{entries: sorted pairs, children: [name, state][]}` in `subdirectories()` order | `{}` | `valueChanged {key,path,previousValue}, local`; `clear local`; `cleared path, local`; `containedValueChanged {key,previousValue}, local`; `subDirectoryCreated`/`subDirectoryDeleted relativePath, local` |
+| cell | `set{value,valueKind?:"handle"}` → `set(value)`; `delete` → `delete()` | `{empty, value: empty ? null : canonicalValue(get())}` | `{}` | `valueChanged value`; `delete` |
+| task-manager | `volunteer` → `volunteerForTask` (ignores only the "Disconnected/Abandoned before acquiring task assignment" rejections); `subscribe` → `subscribeToTask`; `abandon`; `complete` (tolerates only "Attempted to complete task in disconnected state") | non-empty queues from the `header` summary blob, sorted by task ID | `{canVolunteer, tasks: [{key,assigned,queued,subscribed}]}` for tasks `a`,`b`,`c` | `assigned key`; `lost key`; `completed key` |
+| register-collection | `set{key,value}` → `write(key,value)` (a rejection fails the peer) | sorted `[key, read(Atomic), read(LWW), readVersions][]` | `{keys: keys()}` in DDS order | `atomicChanged key, value, local`; `versionChanged key, value, local` |
+| ordered-collection | `add{value}`; `acquire{result}` → `acquire` whose callback returns Complete or Release | `{available: header blob, acquired: jobTracking blob sorted by acquire ID}` | `{}` | `add value, newlyAdded`; `acquire value, clientId`; `complete value`; `localRelease value, intentional` |
+| pact-map | `set{key,value,valueKind?:"undefined"}` → `set`; `delete{key}` | for keys `a,b,c,0,10,constructor`: `{key, value: get, details: getWithDetails, pending: isPending, proposal: getPending}` | `{}` | `pending key`; `accepted key` |
+| shared-summary-block | `set{key,value}`, issued to every client identically | `[key, get(key)][]` for the six keys | `{}` | none |
+| shared-array | `insert{index,value}`; `delete{index}`; `move{oldIndex,newIndex}`; `toggle{entryId}`; `toggleMove{oldEntryId,newEntryId}`; `insertBulkAfter{ref?,values}`, each applied as given | `get()` | `{length, values: get(), insertIds, deleteIds, moveIds: [old,new][]}`, the upstream fuzzUtils entry bookkeeping driven by `valueChanged` | `valueChanged op, local` |
+| shared-signal | `notify{value}` | `{persistent:false}`; notifications are checked through events, never invented as persistent state | `{}` | `notify value, local` |
+
+TaskManager and ConsensusQueue have no public read API for their global state, so their
+canonical state reads the DDS's own summary blobs. Register `keys()` order is twin-only
+(see "Oracle preconditions" below); everything else in `queries` is client-relative.
+
+Summary trees and blob strings remain byte-exact against the twin, without normalization.
+Map/Directory state sorting does not change their authored summaries. Set edits support
+`valueKind: "undefined" | "handle"`: the TS adapter creates actual native handles, not
+handle-shaped plain objects. Undefined map entries use `{$fluid:"undefined"}` in canonical
+state to distinguish them from null; summaries retain the upstream omitted-value encoding.
+`events` drains the domain-event journal. `queries` compares client-relative public queries
+against the twin only: assignments cannot be equal across replicas with different identities.
+UUID entropy is deterministic per client/method/call ordinal in `entropy.ts`; every UUID
+byte still participates in outbound, summary and event comparison. Read-only calls do not
+shift mutation entropy. Cross-loading uses every configured implementation, so TS-only runs
+can self-check DDSes whose Swift implementations deliberately remain red.
+Twin comparisons use each response's exact `result` JSON text, as the peer wrote it.
+
+A client has a stable protocol `clientId` and a changing wire identity. The driver
+supplies `newClientId` on reconnect and resets the wire CSN to zero. The TS adapter
+uses the upstream reconnection algorithm with only UUID allocation replaced by that
+trace-supplied ID. Membership is propagated to every local quorum after joins and
+connection changes. A reconnect scenario drains the session, disconnects one client,
+makes three offline edits (every DDS except shared-summary-block), then reconnects/resubmits.
+It does not yet exercise disconnect with outstanding sequenced acknowledgements or
+remote edits during the offline interval. `membership` currently updates quorum,
+not audience. Flush/rollback/stash are available as protocol operations but are not
+selected by the random scheduler yet. `createClient.flushMode` optionally selects
+`turnBased`; default is `immediate`.
+
+### Oracle preconditions
+
+Raw-summary equality across replicas fails in the real TS oracle independently of Swift.
+The original Map seed 33 had equal data with header keys in different orders; Directory's
+creator-ID arrays also depend on local history. `src/oracle-precondition-check.ts` preserves
+a minimal executable proof: calling createSubDirectory on an existing child changes its
+creator IDs without submitting an op. The lockstep contract above preserves byte checks
+where the oracle actually guarantees deterministic inputs.
+
+ConsensusRegisterCollection `keys()` order is likewise local history. Its summary is a plain
+object, so a replica loaded from it enumerates array-index keys (`"0"`, `"10"`) first, while a
+live replica keeps arrival order: 17 of `ts,ts` seeds 0..19 failed cross-load on order alone.
+Upstream `assertEqualConsensusRegisterCollections` compares `keys()` in order, but its key pool
+has no index keys. The canonical state is sorted; `queries.keys` holds the order against the twin.
+
+### SharedArray convergence counterexample (expanded E1)
+
+`tsx src/oracle-array-precondition-check.ts` proves a separate problem in one TS
+process, with two clients, two values, six ops and no Swift, summaries, joins or
+reconnections. Insert "1" and "2", then move "1" to the end: both see `["2","1"]`.
+Concurrently, A undoes the move while B deletes "1". Sequence the undo then the deletion:
+both see `["2"]`. B undeletes "1": A sees `["1","2"]`, B sees `["2","1"]` after both have
+processed every op.
+
+The cause is in `legacy-dds/src/array/sharedArray.ts`. `handleToggleMoveOp`, `handleMoveOp`
+and `handleToggleOp` suppress (or mark dead) an incoming remote change while the receiver
+has a local delete or move of that entry pending. Acknowledging the local op
+(`handleDeleteOp`) never replays what was suppressed, so the replicas keep different live
+positions, which a later toggle exposes. This is a state convergence failure, not summary
+order or twin entropy. Upstream knows this class: `arrayFuzzTests.spec.ts` skips seeds 3,
+14 and 42 for "Concurrent move/undo-move and delete can resurrect a deleted entry" and
+"Concurrent move and delete/toggle undo can restore an entry at its old position".
+
+With the upstream fuzz model, `--dds shared-array --peers ts,ts --seeds 0..199` fails seeds
+56, 78, 121 and 189, every one on cross-replica state; seed 56 replays exactly. Each failing
+trace processes a remote op that this suppression swallows: a remote move against a local
+pending delete (56, 121, 189), or a remote toggle against a local pending move (78).
+Comparisons are not loosened and no seeds are skipped; the reference TS client is
+read-only. SharedArray cannot be certified green until the coordinator decides how the
+harness treats this upstream behavior.
+
 ## Harness generation
 
 Clients are assigned to peer slots round-robin (two `ts` slots are separate processes).
 The fixed Mulberry32 generator uses 2–5 initial clients, up to 10 after joins, and 120 random
-steps per seed. Integer increments near ±2^53 are isolated between checkpoints, then undone
-before random concurrent edits resume: JS addition is not associative outside the safe-integer
-range, so concurrent boundary probes can make even two real TS counters disagree legitimately.
-Ordinary increments in [-100, 100] retain arbitrary edit/sequence/delivery interleaving.
+steps per seed. Counter increments in [-100,100] retain arbitrary edit/sequence/delivery interleaving.
+Map and Directory use key contention over `a,b,c,0,10,constructor`, deletes/clears, 8,200-unit
+values (separate summary blobs), undefined and handle values, and nested directory
+create/delete races on the actual tree. Where upstream has a fuzz model
+(`packages/dds/<dds>/src/test/fuzzUtils.ts`), the generator follows its operations, weights
+and acceptance conditions:
+
+- task-manager: a task from `a,b,c`, then volunteer (if `canVolunteer`), abandon (if
+  queued), subscribe, or complete (if assigned), each weight 1, read from the acting
+  client's `queries`.
+- register-collection: write only, keys `a,b,c,0,10`, random 5-letter values. The index keys
+  are added deliberately (see "Oracle preconditions").
+- ordered-collection: add (from 3 values) and acquire (Complete or Release), weight 1:1.
+- shared-array: insert 5, delete 3, move 3, insertBulkAfter 1, toggle 1, toggleMove 1, with
+  upstream indices, 1–5 letter values and entry IDs from `queries`. Index-based operations
+  also require a non-empty array: upstream's insertIds bookkeeping can drift non-empty over
+  an empty array (`ts,ts` seed 24), and its own generator would then emit a throwing
+  `delete(0)`.
+
+Cell, PactMap, SharedSummaryBlock and SharedSignal have no upstream fuzz model; their
+generators cover the unit-test surface: Cell plain and handle values; PactMap set,
+undefined set and delete (no handles: PactMap summarizeCore uses plain JSON.stringify);
+summary-block sets; signal notifications. Rollback, stashed clients and turn-based
+batching (upstream `rollbackProbability`, `stashableClientProbability`, rebasing suites)
+are not scheduled yet: TS's turn-based mock sends one CSN for a whole batch, which the
+strictly-increasing CSN check above would first have to admit.
 The sequencer updates the sender's latest reference when sequencing its message, before
 computing the minimum over all clients; receiving a message alone does not advance that reference.
 

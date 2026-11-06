@@ -6,3 +6,5 @@ harness/traces/
 *.xcodeproj/
 .DS_Store
 reference/
+
+harness/results/e1/

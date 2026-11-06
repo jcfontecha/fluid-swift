@@ -85,9 +85,10 @@ function generate(seed: number): Scenario {
     return s;
 }
 const self = process.argv.includes('--self');
+const scratchPath = process.argv.find(arg => arg.startsWith('--scratch-path='))?.slice('--scratch-path='.length) ?? '.build/h2';
 const count = Number(process.argv.find(a => a.startsWith('--seeds='))?.split('=')[1] ?? 1000);
-if (!self) execFileSync('swift', ['build', '--scratch-path', '.build/h2', '--product', 'FluidIdCompressorPeer', '-c', 'release'], { cwd: root, stdio: 'inherit' });
-const child = self ? undefined : spawn(resolve(root, '.build/h2/release/FluidIdCompressorPeer'), [], { stdio: ['pipe', 'pipe', 'inherit'] });
+if (!self) execFileSync('swift', ['build', '--scratch-path', scratchPath, '--product', 'FluidIdCompressorPeer', '-c', 'release'], { cwd: root, stdio: 'inherit' });
+const child = self ? undefined : spawn(resolve(root, scratchPath, 'release/FluidIdCompressorPeer'), [], { stdio: ['pipe', 'pipe', 'inherit'] });
 const lines = child ? createInterface({ input: child.stdout })[Symbol.asyncIterator]() : undefined;
 let seed = 0;
 let scenario: Scenario | undefined;

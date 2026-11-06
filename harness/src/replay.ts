@@ -26,9 +26,13 @@ const peers: Peer[] = [];
 const trace: TraceEntry[] = [];
 let count = 0;
 let baselineState: unknown;
-let baselineSummary: string | undefined;
+let previousCall:
+  { peer: number; request: string; result: unknown } | undefined;
 let reproduced = false;
-const clients = new Map<string, { cursor: number; csn: number }>();
+const clients = new Map<
+  string,
+  { cursor: number; csn: number; wireId: string }
+>();
 try {
   for (const [i, kind] of header.peers.entries())
     peers.push(new Peer(kind, i, trace));
@@ -66,20 +70,62 @@ try {
       reproduced = true;
       break;
     }
+    const fingerprint = JSON.stringify(call);
+    if (
+      previousCall?.peer !== request.peer &&
+      previousCall?.request === fingerprint &&
+      JSON.stringify(previousCall.result) !== JSON.stringify(response.result)
+    ) {
+      reproduced = true;
+      break;
+    }
+    previousCall = {
+      peer: request.peer,
+      request: fingerprint,
+      result: response.result,
+    };
+    const key =
+      "clientId" in call.params
+        ? `${request.peer}:${call.params.clientId}`
+        : "";
     if (call.method === "createClient")
-      clients.set(call.params.clientId, {
+      clients.set(key, {
         cursor: call.params.sequenceNumber,
         csn: 0,
+        wireId: call.params.clientId,
       });
-    if (call.method === "edit" || call.method === "process") {
-      const client = clients.get(call.params.clientId);
+    if (call.method === "reconnect") {
+      const c = clients.get(key);
+      if (!c) throw Error("unknown reconnect client");
+      c.wireId = call.params.newClientId;
+      c.csn = 0;
+    }
+    if (
+      call.method === "edit" ||
+      call.method === "process" ||
+      call.method === "reconnect" ||
+      call.method === "flush" ||
+      call.method === "rollback" ||
+      call.method === "stash" ||
+      call.method === "membership" ||
+      call.method === "disconnect"
+    ) {
+      const client = clients.get(key);
       if (!client) throw new Error("Trace references unknown client");
       if (call.method === "process")
         client.cursor = call.params.message.sequenceNumber;
       try {
-        for (const op of outboundResult.parse(response.result).outbound) {
+        for (const op of (call.method === "reconnect"
+          ? z
+              .object({
+                outbound: outboundResult.shape.outbound,
+                clientId: z.string(),
+              })
+              .parse(response.result)
+          : outboundResult.parse(response.result)
+        ).outbound) {
           if (
-            op.clientId !== call.params.clientId ||
+            op.clientId !== client.wireId ||
             op.referenceSequenceNumber !== client.cursor ||
             op.clientSequenceNumber <= client.csn
           )
@@ -100,18 +146,19 @@ try {
         break;
       }
       baselineState = response.result;
-    } else if (call.method === "summarize") {
-      if (baselineState !== undefined) {
-        const text = JSON.stringify(response.result);
-        if (baselineSummary !== undefined && baselineSummary !== text) {
-          reproduced = true;
-          break;
-        }
-        baselineSummary = text;
-      }
-    } else {
+    } else if (
+      call.method === "edit" ||
+      call.method === "process" ||
+      call.method === "reconnect" ||
+      call.method === "disconnect" ||
+      call.method === "membership" ||
+      call.method === "flush" ||
+      call.method === "rollback" ||
+      call.method === "stash" ||
+      (call.method === "createClient" &&
+        !call.params.clientId.startsWith("cross-load-"))
+    ) {
       baselineState = undefined;
-      baselineSummary = undefined;
     }
   }
   if (!reproduced)

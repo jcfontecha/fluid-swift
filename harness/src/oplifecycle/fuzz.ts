@@ -111,12 +111,13 @@ function verifyFraming(wire: IBatchMessage[][], s: Scenario) {
         assert.equal(JSON.stringify(m.metadata), JSON.stringify(expected[i]?.metadata));
 }
 const self = process.argv.includes('--self');
+const scratchPath = process.argv.find(arg => arg.startsWith('--scratch-path='))?.slice('--scratch-path='.length) ?? '.build/h1';
 const count = Number(process.argv.find(a => a.startsWith('--seeds='))?.split('=')[1] ?? 1000);
 if (!self)
-    execFileSync('swift', ['build', '--scratch-path', '.build/h1', '--product', 'FluidOpLifecyclePeer', '-c', 'release'], {
+    execFileSync('swift', ['build', '--scratch-path', scratchPath, '--product', 'FluidOpLifecyclePeer', '-c', 'release'], {
         cwd: root, stdio: 'inherit'
     });
-const child = self ? undefined : spawn(resolve(root, '.build/h1/release/FluidOpLifecyclePeer'), [], {
+const child = self ? undefined : spawn(resolve(root, scratchPath, 'release/FluidOpLifecyclePeer'), [], {
     stdio: ['pipe', 'pipe', 'inherit']
 });
 const lines = child ? createInterface({

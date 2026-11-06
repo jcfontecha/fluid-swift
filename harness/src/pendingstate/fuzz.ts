@@ -34,11 +34,12 @@ function generate(seed: number): Scenario {
 }
 await checkStateCheckpoints();
 const self = process.argv.includes('--self');
+const scratchPath = process.argv.find(arg => arg.startsWith('--scratch-path='))?.slice('--scratch-path='.length) ?? '.build/h3';
 const count = Number(process.argv.find(arg => arg.startsWith('--seeds='))?.split('=')[1] ?? 1000);
 if (!self) {
-    execFileSync('swift', ['build', '--scratch-path', '.build/h3', '--product', 'FluidPendingStatePeer', '-c', 'release'], { cwd: root, stdio: 'inherit' });
+    execFileSync('swift', ['build', '--scratch-path', scratchPath, '--product', 'FluidPendingStatePeer', '-c', 'release'], { cwd: root, stdio: 'inherit' });
 }
-const child = self ? undefined : spawn(resolve(root, '.build/h3/release/FluidPendingStatePeer'), [], { stdio: ['pipe', 'pipe', 'inherit'] });
+const child = self ? undefined : spawn(resolve(root, scratchPath, 'release/FluidPendingStatePeer'), [], { stdio: ['pipe', 'pipe', 'inherit'] });
 const lines = child ? createInterface({ input: child.stdout })[Symbol.asyncIterator]() : undefined;
 function generateRuntime(seed: number): RuntimeScenario {
     const random = new Random(seed);

@@ -16,13 +16,29 @@ public protocol Channel: AnyObject {
     /// Loads the channel from its summary (`SharedObject.loadCore`).
     static func load(id: JSString, summary: SummaryTree) throws -> Self
 
-    /// Attaches the channel to a delta connection; from now on local edits are submitted.
-    func connect(_ submit: @escaping (_ contents: JSONValue, _ localOpMetadata: LocalOpMetadata) -> Void)
+    /// Attaches the channel to its datastore runtime and delta connection; from now on local edits
+    /// are submitted.
+    func connect(
+        _ runtime: any IFluidDataStoreRuntime,
+        _ submit: @escaping (_ contents: JSONValue, _ localOpMetadata: LocalOpMetadata) -> Void
+    )
 
     /// Processes one sequenced op (`SharedObject.processMessagesCore`). For local ops,
     /// `localOpMetadata` is what was passed to `submit`.
     func process(_ message: SequencedMessage, local: Bool, localOpMetadata: LocalOpMetadata?) throws
 
+    func setConnectionState(_ connected: Bool)
+    func reSubmitCore(_ content: JSONValue, localOpMetadata: LocalOpMetadata) throws
+    func rollback(_ content: JSONValue, localOpMetadata: LocalOpMetadata) throws
+    func applyStashedOp(_ content: JSONValue) throws
+
     /// `SharedObject.summarizeCore`.
     func summarize() -> SummaryTree
+}
+
+/// The part of `IFluidDataStoreRuntime` (datastore-definitions/src/dataStoreRuntime.ts) that
+/// channels read.
+public protocol IFluidDataStoreRuntime: AnyObject {
+    /// Undefined while the container has never connected.
+    var clientId: JSString? { get }
 }

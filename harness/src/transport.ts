@@ -18,10 +18,12 @@ export class Peer {
   private id = 0;
   private stderr = "";
   private failure: Error | undefined;
+  /** The exact JSON text of the last successful call's result. */
+  resultText = "";
   constructor(
     readonly kind: PeerKind,
     readonly index: number,
-    private readonly trace: TraceEntry[],
+    private trace: TraceEntry[],
   ) {
     const binary = `${repoRoot}.build/debug/fluid-swift-peer`;
     if (kind === "swift" && !existsSync(binary))
@@ -45,6 +47,10 @@ export class Peer {
     this.lines = createInterface({ input: this.child.stdout })[
       Symbol.asyncIterator
     ]();
+  }
+  startTrace(trace: TraceEntry[]): void {
+    this.trace = trace;
+    this.id = 0;
   }
   async call(request: Request): Promise<unknown> {
     const payload = { jsonrpc: "2.0", id: ++this.id, ...request };
@@ -75,6 +81,12 @@ export class Peer {
       throw new Error(`Peer ${this.index}: ${response.error.message}`);
     if (!Object.hasOwn(response, "result"))
       throw new Error("Missing RPC result");
+    // Both peers frame responses as {"jsonrpc":"2.0","id":n,"result":...}; keep the result's
+    // exact JSON text so byte-exact checks never compare re-serialized values.
+    const prefix = `{"jsonrpc":"2.0","id":${this.id},"result":`;
+    if (!line.value.startsWith(prefix) || !line.value.endsWith("}"))
+      throw new Error(`Peer ${this.index}: unexpected response framing`);
+    this.resultText = line.value.slice(prefix.length, -1);
     return response.result;
   }
   async close(): Promise<void> {

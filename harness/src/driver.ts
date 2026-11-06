@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { z } from "zod";
 import { Peer, harnessRoot, type TraceEntry } from "./transport.js";
 import { Session } from "./session.js";
+import { names, type DDSName } from "./dds.js";
 import { Random } from "./random.js";
 const args = process.argv.slice(2);
 const option = (name: string, fallback: string): string => {
@@ -23,38 +24,63 @@ if (
   end > 0xffffffff
 )
   throw new Error("Invalid seed range");
+const selected = option("--dds", "counter");
+const ddss =
+  selected === "all"
+    ? names
+    : selected.split(",").map((n) => {
+        if (!names.includes(n as DDSName)) throw Error(`Unknown DDS ${n}`);
+        return n as DDSName;
+      });
 let failures = 0;
-for (let seed = start; seed <= end; seed++) {
-  const trace: TraceEntry[] = [];
-  const peers: Peer[] = [];
+for (const dds of ddss) {
+  const peers = kinds.map((kind, i) => new Peer(kind, i, []));
+  let ddsFailures = 0;
   try {
-    for (const [i, kind] of kinds.entries())
-      peers.push(new Peer(kind, i, trace));
-    await new Session(peers, new Random(seed)).run();
-  } catch (error) {
-    failures++;
-    await mkdir(`${harnessRoot}traces`, { recursive: true });
-    const reason = error instanceof Error ? error.message : String(error);
-    await writeFile(
-      `${harnessRoot}traces/${seed}.jsonl`,
-      [
-        JSON.stringify({ version: 1, seed, peers: kinds, failure: reason }),
-        ...trace.map((entry) => JSON.stringify(entry)),
-      ].join("\n") + "\n",
-    );
-    console.error(
-      `seed ${seed} FAIL: ${reason.replaceAll("\n", " ")} (traces/${seed}.jsonl)`,
-    );
-    // Configuration and startup failures won't change on the next seed.
-    if (trace.length === 0 || /binary missing|exited|timed out/.test(reason))
-      break;
+    for (let seed = start; seed <= end; seed++) {
+      const trace: TraceEntry[] = [];
+      for (const peer of peers) {
+        await peer.call({ method: "reset", params: {} });
+        peer.startTrace(trace);
+      }
+      try {
+        await new Session(peers, new Random(seed), dds).run();
+      } catch (error) {
+        failures++;
+        ddsFailures++;
+        const reason = error instanceof Error ? error.message : String(error);
+        const file = `${dds}-${kinds.join("-")}-${seed}.jsonl`;
+        await mkdir(`${harnessRoot}traces`, { recursive: true });
+        await writeFile(
+          `${harnessRoot}traces/${file}`,
+          [
+            JSON.stringify({
+              version: 1,
+              dds,
+              seed,
+              peers: kinds,
+              failure: reason,
+            }),
+            ...trace.map((entry) => JSON.stringify(entry)),
+          ].join("\n") + "\n",
+        );
+        console.error(
+          `${dds} seed ${seed} FAIL: ${reason.slice(0, 300).replaceAll("\n", " ")} (traces/${file})`,
+        );
+        if (
+          trace.length === 0 ||
+          /binary missing|exited|timed out/.test(reason)
+        )
+          break;
+      }
+      if ((seed - start + 1) % 50 === 0)
+        console.log(`${dds}: ${seed - start + 1} seeds exercised`);
+    }
   } finally {
     await Promise.all(peers.map((peer) => peer.close()));
   }
-  if ((seed - start + 1) % 50 === 0)
-    console.log(`${seed - start + 1} seeds exercised`);
+  console.log(
+    `${dds}: ${ddsFailures ? "FAIL" : "PASS"} seeds ${start}..${end}; ${ddsFailures} failures`,
+  );
 }
-console.log(
-  `${failures ? "FAIL" : "PASS"} seeds ${start}..${end}; ${failures} failures`,
-);
 if (failures) process.exitCode = 1;
