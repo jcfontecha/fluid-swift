@@ -77,7 +77,7 @@ bunch handling, complete rollback branches and full upstream public surfaces rem
 outside the current coverage. Quorum/audience utilities are initial utilities, not full
 EventEmitter ports. Domain event recording is not proof of complete base-class events.
 
-Local experiment logs live under ignored `results/`; no generated sweep logs belong in the
+Local experiment logs live under ignored `results/e1/`; no generated sweep logs belong in the
 commit. No E1 command stages, commits or changes branches.
 
 E1 debugging record (the logs themselves are not kept):
