@@ -3,6 +3,7 @@ import FluidContainerRuntime
 import FluidDatastore
 import FluidDatastoreDefinitions
 import FluidDriverBase
+import FluidDriverUtils
 import FluidDriverDefinitions
 import FluidJS
 import FluidPresence
@@ -39,6 +40,8 @@ public final class Container: IContainer {
         case connectionFailed(attempt: Int, any Error)
         /// connectionManager.ts connectCore after its synchronous start: the awaited half.
         case connect(attempt: Int)
+        case reconnect(generation: Int, delay: Double)
+        case previousClientLeft(generation: Int)
         /// containerRuntime.ts scheduleFlush, TurnBased: the flush at the end of the turn.
         case flush
         /// deltaScheduler.ts paused the inbound queue; resume it on a later turn.
@@ -102,6 +105,7 @@ public final class Container: IContainer {
     private let configProvider: (any IConfigProviderBase)?
     private let specifiedVersion: JSString?
     private let client: IClient
+    private let retryDelay: RetrySleep
     private var service: (any IDocumentService)?
     private var storage: (any IDocumentStorageService)?
     private var deltaStorage: (any IDocumentDeltaStorageService)?
@@ -125,6 +129,10 @@ public final class Container: IContainer {
     private var disposed = false
     /// The owner tasks running a connection attempt and a storage fetch, cancelled on close.
     private var connectTask: Task<Void, Never>?
+    private var reconnectTask: Task<Void, Never>?
+    private var reconnectGeneration = 0
+    private var leaveTask: Task<Void, Never>?
+    private var leaveGeneration = 0
     private var fetchTask: Task<Void, Never>?
     private let jobs: AsyncStream<Job>
     private let jobSink: AsyncStream<Job>.Continuation
@@ -142,7 +150,8 @@ public final class Container: IContainer {
     init(
         resolvedUrl: IResolvedUrl?, urlResolver: any IUrlResolver, documentServiceFactory: any IDocumentServiceFactory,
         runtimeFactory: any IRuntimeFactory<ContainerRuntime>, configProvider: (any IConfigProviderBase)?,
-        specifiedVersion: JSString?, clientDetailsOverride: JSONValue?, loadRuntime: Bool, summaryMode: SummaryManager.Mode
+        specifiedVersion: JSString?, clientDetailsOverride: JSONValue?, loadRuntime: Bool, summaryMode: SummaryManager.Mode,
+        retryDelay: @escaping RetrySleep = retrySleep, canReconnect: Bool = true
     ) throws {
         var fields = try JSON.parse(#"{"mode":"write","details":{"capabilities":{"interactive":true}},"permission":[],"scopes":[],"user":{"id":""}}"#).asObject()
         if let clientDetailsOverride {
@@ -153,6 +162,7 @@ public final class Container: IContainer {
         let client = try IClient(json: .object(fields))
         let isSummarizer = client.details.type == summarizerClientType
         self.client = client
+        self.retryDelay = retryDelay
         self.resolvedUrl = resolvedUrl
         self.urlResolver = urlResolver
         serviceFactory = documentServiceFactory
@@ -163,9 +173,11 @@ public final class Container: IContainer {
         self.isSummarizer = isSummarizer
         self.summaryMode = summaryMode
         automaticSummaries = loadRuntime && !isSummarizer && (summaryMode == .enabled || summaryMode == .disableHeuristics)
-        let connectionManager = ConnectionManager()
+        let connectionManager = ConnectionManager(reconnectAllowed: canReconnect, sleep: retryDelay)
         self.connectionManager = connectionManager
-        deltaManager = DeltaManager(active: { connectionManager.connected })
+        deltaManager = DeltaManager(
+            active: { connectionManager.connected && connectionManager.connection?.details.mode == .write },
+            readonly: { connectionManager.readonlyPermissions })
         (jobs, jobSink) = AsyncStream.makeStream()
     }
 
@@ -250,7 +262,7 @@ public final class Container: IContainer {
             let service = try await serviceFactory.createContainer(summary, resolvedUrl: resolved, clientIsSummarizer: false)
             self.service = service
             resolvedUrl = service.resolvedUrl
-            let storage = try await service.connectToStorage()
+            let storage = RetriableDocumentStorageService(try await service.connectToStorage(), sleep: retryDelay)
             self.storage = storage
             guard !closed else { throw JSONDecodingError("container closed during attach") }
             if summary == nil {
@@ -273,7 +285,7 @@ public final class Container: IContainer {
             guard !closed else { throw JSONDecodingError("container closed during attach") }
             try transitionAttachState(.attached)
             detachedBlobStorage.dispose()
-            connect()
+            startConnection()
         } catch {
             close(error)
             throw error
@@ -378,11 +390,24 @@ public final class Container: IContainer {
                 try receive(event)
                 startGapFetchIfNeeded(on: owner)
             } catch {
-                connectionFailed(error)
+                close(error)
             }
         case .connectionFailed(let attempt, let error):
             guard connectionManager.isCurrent(attempt) else { return }
             connectionFailed(error)
+        case .reconnect(let generation, let delay):
+            reconnectTask = Task {
+                _ = owner
+                do { try await self.retryDelay(delay) } catch { return }
+                guard !self.closed, self.reconnectGeneration == generation,
+                      self.connectionManager.reconnectMode == .enabled else { return }
+                self.startConnection()
+            }
+        case .previousClientLeft(let generation):
+            guard generation == leaveGeneration else { return }
+            let wasConnected = connectionManager.connected
+            connectionManager.connectionStateHandler.leaveTimerExpired()
+            do { try propagateConnected(wasConnected: wasConnected) } catch { close(error) }
         case .connect(let attempt):
             guard connectionManager.pendingConnection == attempt else { return }
             connectTask = Task {
@@ -394,8 +419,15 @@ public final class Container: IContainer {
                 }
             }
         case .flush:
-            // containerRuntime.ts flush: a failure closes the container.
+            // connectionManager.ts beforeProcessingOutgoingOps: a read connection upgrades
+            // before sending. Flushing while disconnected records the batch for replay.
             do {
+                if connectionManager.connection?.details.mode == .read {
+                    if connectionManager.readonlyPermissions {
+                        throw NetworkError("writeOnReadOnlyDocument", canRetry: false)
+                    }
+                    connectionFailed(NetworkError("Switch to write", canRetry: true), mode: .write)
+                }
                 try runtime?.flush()
                 updateDirtyContainerState()
             } catch {
@@ -465,6 +497,15 @@ public final class Container: IContainer {
     public func connect() {
         precondition(!closed, "The Container is closed and cannot be connected")
         guard attachState == .attached else { return }
+        precondition(connectionManager.reconnectMode != .never, "Automatic reconnect was permanently disabled")
+        try! connectionManager.setAutoReconnect(.enabled)
+        reconnectGeneration += 1
+        reconnectTask?.cancel()
+        startConnection()
+    }
+
+    private func startConnection() {
+        guard !closed else { return }
         guard !connectionManager.connected, let attempt = connectionManager.beginConnection() else { return }
         establishing = true
         jobSink.yield(.connect(attempt: attempt))
@@ -477,7 +518,7 @@ public final class Container: IContainer {
         let service = try await serviceFactory.createDocumentService(
             resolvedUrl, clientIsSummarizer: client.details.type == summarizerClientType)
         self.service = service
-        let storage = try await service.connectToStorage()
+        let storage = RetriableDocumentStorageService(try await service.connectToStorage(), sleep: retryDelay)
         self.storage = storage
         let (snapshot, version) = try await getSnapshot(
             storage, supportGetSnapshotApi: supportGetSnapshotApi(), specifiedVersion: specifiedVersion)
@@ -530,8 +571,9 @@ public final class Container: IContainer {
                 let prepared = try deltaManager.prepareMessage(
                     type: "op", contents: message.member("contents"),
                     referenceSequenceNumber: message.member("referenceSequenceNumber").asInt())
-                var fields = try prepared.json.asObject()
-                for (key, value) in try message.asObject().entries { fields[key] = value }
+                var fields = try message.asObject()
+                fields["type"] = .string("op")
+                fields["clientSequenceNumber"] = .number(Double(prepared.clientSequenceNumber))
                 batch.append(try IDocumentMessage(json: .object(fields)))
             }
             try connectionManager.sendMessages(batch)
@@ -590,12 +632,19 @@ public final class Container: IContainer {
     /// awaited the driver installs nothing.
     private nonisolated(nonsending) func connectToDeltaStream(_ attempt: Int) async throws {
         guard let service else { throw JSONDecodingError("no document service") }
+        let wasReadonly = connectionManager.readonlyPermissions
         guard let connection = try await connectionManager.connect(service, client: client, attempt: attempt) else {
             return
         }
         establishing = false
         deltaStreamOpen = true
         let details = connection.details
+        if wasReadonly != connectionManager.readonlyPermissions {
+            events.emit(.readonly(connectionManager.readonlyPermissions))
+        }
+        connectionManager.connectionStateHandler.receivedConnectEvent(
+            details, sequenceNumber: protocolHandler?.sequenceNumber ?? snapshotSequenceNumber,
+            selfAlreadyJoined: protocolHandler?.quorum.getMember(details.clientId) != nil)
         // container.ts propagateConnectionState: the signal audience learns the client id while catching up.
         signalAudience.setCurrentClientId(details.clientId)
         deltaManager.connect(
@@ -603,6 +652,7 @@ public final class Container: IContainer {
         try protocolHandler?.initialClients(details.initialClients)
         try resetSignalAudience(details.initialClients)
         deltaManager.enqueueMessages(details.initialMessages)
+        try propagateConnected(wasConnected: false)
         for signal in details.initialSignals { try processSignal(signal) }
         forwardEvents(of: connection, attempt: attempt)
         try await catchUp(fetchUnbounded: true)
@@ -628,10 +678,9 @@ public final class Container: IContainer {
     private func connectAttemptFailed(_ attempt: Int, _ error: any Error) {
         if connectionManager.pendingConnection == attempt {
             connectionManager.cancelConnection()
-            establishing = false
-            failure = String(describing: error)
+            close(error)
         } else if connectionManager.isCurrent(attempt) {
-            connectionFailed(error)
+            close(error)
         }
     }
 
@@ -643,18 +692,26 @@ public final class Container: IContainer {
             scheduleSummaryWork()
         case .signal(let batch):
             for signal in batch { try processSignal(signal) }
-        case .nack(let documentId, let nacks):
-            throw DriverError("nack", .array([.string(documentId), .array(nacks.map(\.json))]))
+        case .nack(_, let nacks):
+            if connectionManager.readonlyPermissions {
+                close(NetworkError("writeOnReadOnlyDocument", canRetry: false))
+            } else if let nack = nacks.first {
+                let error = getNackReconnectInfo(nack.content)
+                if !canRetryOnError(error) { close(error) }
+                else { connectionFailed(error, mode: .write) }
+            }
         case .disconnect(let reason):
-            throw reason
+            connectionFailed(reason)
         case .pong:
             break
         }
     }
 
-    /// The delta connection failed: a socket error, a nack, or an error processing its events.
-    private func connectionFailed(_ error: any Error) {
-        failure = String(describing: error)
+    /// connectionManager.ts reconnect: live disconnects reconnect even when the driver marks
+    /// the reason fatal. Only fatal nacks and fatal connection-attempt failures close immediately.
+    private func connectionFailed(_ error: any Error, mode: ConnectionMode? = nil) {
+        guard connectionManager.connection != nil else { return }
+        prepareForDisconnect()
         finishSummaryWait(error: error)
         setRuntimeDisconnected()
         let connection = connectionManager.disconnect()
@@ -662,6 +719,39 @@ public final class Container: IContainer {
         deltaStreamLost()
         raisePresenceDisconnected()
         if let connection { Task { await connection.dispose() } }
+        if connectionManager.reconnectMode == .never {
+            close(nil)
+        } else if connectionManager.reconnectMode == .enabled {
+            connectionManager.requestedMode = mode ?? client.mode
+            if runtime?.pendingStateManager.hasPendingMessages() == true {
+                connectionManager.requestedMode = .write
+            }
+            reconnectGeneration += 1
+            jobSink.yield(.reconnect(generation: reconnectGeneration, delay: getRetryDelayFromError(error) ?? 0))
+        }
+    }
+
+    private func prepareForDisconnect() {
+        let handler = connectionManager.connectionStateHandler
+        let wasWaiting = handler.waitingForLeave != nil
+        handler.receivedDisconnectEvent(
+            hasPendingOps: runtime?.pendingStateManager.hasPendingMessages() == true,
+            currentClientInQuorum: handler.clientId.flatMap { protocolHandler?.quorum.getMember($0) } != nil)
+        if !wasWaiting, handler.waitingForLeave != nil {
+            leaveGeneration += 1
+            let generation = leaveGeneration
+            leaveTask = Task { [jobSink] in
+                do { try await retrySleep(300000) } catch { return }
+                jobSink.yield(.previousClientLeft(generation: generation))
+            }
+        }
+    }
+
+    private func propagateConnected(wasConnected: Bool) throws {
+        guard !wasConnected, connectionManager.connected, let id = connectionManager.clientId else { return }
+        try runtime?.reconnect(clientId: id.description)
+        protocolHandler?.audience.setCurrentClientId(id)
+        events.emit(.connected(clientId: id))
     }
 
     private func processSignal(_ signal: ISignalMessage) throws {
@@ -702,6 +792,9 @@ public final class Container: IContainer {
         case "join":
             let entry = try ISignalClient(json: content.member("content"))
             try signalAudience.addMember(entry.clientId, entry.client)
+            let wasConnected = connectionManager.connected
+            connectionManager.connectionStateHandler.receivedReadJoin(entry.clientId)
+            try propagateConnected(wasConnected: wasConnected)
         default: signalAudience.removeMember(try content.member("content").asString())
         }
     }
@@ -792,7 +885,6 @@ public final class Container: IContainer {
                 summaryRequested = true
             }
             let wasConnected = connectionManager.connected
-            try connectionManager.receivedJoin(message)
             try runtime?.recordSummaryMessage(message.json)
             if message.type == "op", let runtime {
                 _ = try runtime.process(message.json)
@@ -804,11 +896,9 @@ public final class Container: IContainer {
                 deltaScheduler?.batchEnd()
             }
             runtime?.referenceSequenceNumber = message.sequenceNumber
-            if !wasConnected && connectionManager.connected, let id = connectionManager.clientId {
-                try runtime?.reconnect(clientId: id.description)
-                protocolHandler.audience.setCurrentClientId(id)
-                events.emit(.connected(clientId: id))
-            }
+            try connectionManager.connectionStateHandler.receivedMessage(
+                message, hasPendingOps: runtime?.pendingStateManager.hasPendingMessages() == true)
+            try propagateConnected(wasConnected: wasConnected)
             if connectionManager.connected {
                 if result.immediateNoOp == true {
                     try connectionManager.sendMessages([
@@ -980,8 +1070,9 @@ public final class Container: IContainer {
 
     /// container.ts propagateConnectionState: one `disconnected` per transition to Disconnected.
     private func deltaStreamLost() {
-        guard deltaStreamOpen else { return }
+        guard deltaStreamOpen || establishing else { return }
         deltaStreamOpen = false
+        establishing = false
         events.emit(.disconnected)
     }
 
@@ -1036,6 +1127,8 @@ public final class Container: IContainer {
     /// summarizer and the job queue go away.
     private func tearDown() {
         disconnectCore()
+        leaveTask?.cancel()
+        (storage as? RetriableDocumentStorageService)?.dispose()
         connectTask?.cancel()
         connectTask = nil
         fetchTask?.cancel()
@@ -1276,10 +1369,16 @@ public final class Container: IContainer {
     /// up on this container's loop.
     public func disconnect() {
         precondition(!closed, "The Container is closed and cannot be disconnected")
+        precondition(connectionManager.reconnectMode != .never, "Automatic reconnect was permanently disabled")
+        try! connectionManager.setAutoReconnect(.disabled)
         disconnectCore()
     }
 
     private func disconnectCore() {
+        reconnectGeneration += 1
+        reconnectTask?.cancel()
+        connectTask?.cancel()
+        prepareForDisconnect()
         if !isSummarizer, let child = summarizerChild, summaryManager.state == .running {
             summaryManager.stop(reason: "parentNotConnected", now: Date().timeIntervalSince1970 * 1000)
             Task { [jobSink] in
@@ -1296,12 +1395,9 @@ public final class Container: IContainer {
         summaryTimer = nil
         setRuntimeDisconnected()
         let hadConnection = connectionManager.connection != nil
-        establishing = false
         let connection = connectionManager.disconnect()
-        if hadConnection {
-            deltaManager.disconnect("Client disconnect")
-            deltaStreamLost()
-        }
+        if hadConnection { deltaManager.disconnect("Client disconnect") }
+        deltaStreamLost()
         noopTimer?.cancel()
         noopTimer = nil
         if let connection { Task { await connection.dispose() } }

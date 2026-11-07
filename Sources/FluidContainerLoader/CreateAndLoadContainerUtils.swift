@@ -20,19 +20,21 @@ public struct ILoadExistingContainerProps: Sendable {
     public let documentServiceFactory: any IDocumentServiceFactory
     public let runtimeFactory: any IRuntimeFactory<ContainerRuntime>
     public let configProvider: (any IConfigProviderBase)?
+    public let canReconnect: Bool
     public let summaryMode: SummaryManager.Mode
     public let loadRuntime: Bool
 
     public init(
         request: IRequest, urlResolver: any IUrlResolver, documentServiceFactory: any IDocumentServiceFactory,
         runtimeFactory: any IRuntimeFactory<ContainerRuntime>, configProvider: (any IConfigProviderBase)? = nil,
-        summaryMode: SummaryManager.Mode = .enabled, loadRuntime: Bool = true
+        summaryMode: SummaryManager.Mode = .enabled, loadRuntime: Bool = true, canReconnect: Bool = true
     ) {
         self.request = request
         self.urlResolver = urlResolver
         self.documentServiceFactory = documentServiceFactory
         self.runtimeFactory = runtimeFactory
         self.configProvider = configProvider
+        self.canReconnect = canReconnect
         self.summaryMode = summaryMode
         self.loadRuntime = loadRuntime
     }
@@ -74,7 +76,7 @@ func prepareContainer(_ props: ILoadExistingContainerProps) async throws -> send
         resolvedUrl: resolvedUrl, urlResolver: props.urlResolver, documentServiceFactory: props.documentServiceFactory,
         runtimeFactory: props.runtimeFactory, configProvider: props.configProvider, specifiedVersion: version,
         clientDetailsOverride: headers?[LoaderHeader.clientDetails], loadRuntime: props.loadRuntime,
-        summaryMode: props.summaryMode)
+        summaryMode: props.summaryMode, canReconnect: props.canReconnect)
     do {
         try await container.open()
     } catch {
@@ -92,16 +94,18 @@ public struct ICreateDetachedContainerProps: Sendable {
     public let runtimeFactory: any IRuntimeFactory<ContainerRuntime>
     public let codeDetails: JSONValue
     public let configProvider: (any IConfigProviderBase)?
+    public let canReconnect: Bool
     public let summaryMode: SummaryManager.Mode
 
     public init(urlResolver: any IUrlResolver, documentServiceFactory: any IDocumentServiceFactory,
         runtimeFactory: any IRuntimeFactory<ContainerRuntime>, codeDetails: JSONValue,
-        configProvider: (any IConfigProviderBase)? = nil, summaryMode: SummaryManager.Mode = .enabled) {
+        configProvider: (any IConfigProviderBase)? = nil, summaryMode: SummaryManager.Mode = .enabled, canReconnect: Bool = true) {
         self.urlResolver = urlResolver
         self.documentServiceFactory = documentServiceFactory
         self.runtimeFactory = runtimeFactory
         self.codeDetails = codeDetails
         self.configProvider = configProvider
+        self.canReconnect = canReconnect
         self.summaryMode = summaryMode
     }
 }
@@ -117,7 +121,7 @@ private func prepareDetachedContainer(_ props: ICreateDetachedContainerProps) as
     let container = try Container(resolvedUrl: nil, urlResolver: props.urlResolver,
         documentServiceFactory: props.documentServiceFactory, runtimeFactory: props.runtimeFactory,
         configProvider: props.configProvider, specifiedVersion: nil, clientDetailsOverride: nil,
-        loadRuntime: true, summaryMode: props.summaryMode)
+        loadRuntime: true, summaryMode: props.summaryMode, canReconnect: props.canReconnect)
     try container.createDetached(codeDetails: props.codeDetails)
     return container
 }

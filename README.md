@@ -21,8 +21,10 @@ What works today:
 - These DDSes, each checked against TS: SharedMap and SharedDirectory, SharedString (with
   intervals), SharedMatrix, SharedCounter, SharedCell, ConsensusRegisterCollection,
   SharedSummaryBlock, PactMap, TaskManager, ConsensusQueue, SharedArray and SharedSignal.
-- Presence, resubmit of pending edits when a connection is re-established, and acting as the
-  summarizing client.
+- Automatic reconnect after a dropped socket or a retryable nack, with pending edits resubmitted
+  on the new connection, and retries of storage requests on transient errors, as TS does. A fatal
+  nack closes the container.
+- Presence, and acting as the summarizing client.
 - `Fluid`, a Swift-native layer over the port: `String` text, typed `Codable` map values,
   `@Observable` objects and typed schemas (see `specs/design/swift-native-api.md`). It covers
   SharedString and SharedMap and only loads existing containers so far.
@@ -31,9 +33,6 @@ What doesn't:
 
 - There is no SharedTree DDS. The SharedTree change family, forest storage formats and
   EditManager are ported (`FluidTree`), but the DDS and its API are not.
-- The container does not reconnect on its own. After a dropped socket or a nack, the app calls
-  `connect()` again. Storage requests are not retried on transient errors either. `Fluid` has no
-  `connect()` yet, so a dropped connection cannot be recovered through it.
 - It has not been run against a production service. The ODSP driver matches the TS driver byte
   for byte against a local ODSP service, and the Routerlicious driver (including AzureClient's
   remote mode: discovery and whole-summary storage) matches TS against a scripted fake service.

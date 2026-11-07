@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "fuzz:reconnect": "tsx src/reconnect/fuzz.ts",
     "bench:ts": "tsx src/bench/bench.ts",
     "fuzz:odsp-net": "tsx src/odsp-net/fuzz.ts",
     "fuzz:r11s-service": "tsx src/r11s-service/fuzz.ts",

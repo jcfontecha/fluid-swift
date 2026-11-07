@@ -30,13 +30,14 @@ public final class DeltaManager: IDeltaManager {
     /// Connected in write mode and in the quorum (container.ts `activeConnection`).
     public var active: Bool { activeConnection() }
 
-    /// The loader connects in write mode only, so it never reports read-only.
-    public var readOnlyInfo: ReadOnlyInfo { ReadOnlyInfo(readonly: false) }
+    public var readOnlyInfo: ReadOnlyInfo { ReadOnlyInfo(readonly: readonlyPermissions()) }
+    private let readonlyPermissions: () -> Bool
 
     private let activeConnection: () -> Bool
 
-    public init(active: @escaping () -> Bool) {
+    public init(active: @escaping () -> Bool, readonly: @escaping () -> Bool = { false }) {
         activeConnection = active
+        readonlyPermissions = readonly
     }
 
     public func connect(_ details: IConnected, lastSequenceNumber: Int) {

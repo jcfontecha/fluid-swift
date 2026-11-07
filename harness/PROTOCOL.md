@@ -1666,3 +1666,57 @@ Not covered by T3:
 - The summarizer's blob/metadata layout (`EditManagerSummarizer`, `VersionedSummarizer`).
 - Version-dispatching codec selection.
 - The outer SharedTree message codec.
+
+## Reconnect — connection lifecycle
+
+`npm run fuzz:reconnect -- --seeds=300` drives the real 3.11.0 TS loader and the Swift
+`Container`/runtime against the same fake ordering service implementation. TS calls its ordering
+service directly; Swift reaches that identical service over HTTP on 7090. The service resets
+between oracle and subject replays. Both start at the captured `m2-summary`, drop the first
+submitted op before sequencing, then inject a socket drop
+or a 400/401/403/404/429/500/503 nack, with retryAfter ranging from 0 to 1 second. Each successful
+reconnect must replay the lost pending op and acknowledge it. This is a lockstep replay through
+one fake service, not a Swift reimplementation of its ordering algorithm. Mixed-replica
+convergence is exercised by the live test below.
+
+The comparison is exact: disconnected/connected/closed events, requested virtual delays,
+serialized submitted and resubmitted document-message bytes (including metadata order and
+batchId), and final map state. No message normalization is allowed. In addition, the real
+RetriableDocumentStorageService on each side retries storage failures under virtual time;
+429/503/offline error cases and retryAfter values rotate with the seed. The Swift storage fake
+uses the common retryable-error properties (the driver-specific classifiers have their own
+service fuzz gates). Each storage sequence fails one through four times before succeeding.
+
+`npm run fuzz:reconnect -- --seeds=1 --plant-divergence` appends a spurious connection event to
+the TS observation. It MUST exit nonzero at seed 0; `harness/traces/reconnect/0.json` retains
+both raw observations. Restore by running without that flag; no implementation mutation is used.
+
+`npx tsx src/reconnect/live.ts` runs actual TS and Swift clients through tinylicious (7081 TCP
+proxy to 7082) and the local ODSP service (7093). Each service drops both clients three times,
+with edits around the drop; both clients must reconnect without a host `connect()`, acknowledge
+pending edits and converge on all twelve map entries. Only processes created by the test are
+terminated. All Swift builds use `.build/reconnect`.
+
+Oracle-specific decisions:
+
+- `getNackReconnectInfo` makes only **403** fatal; 400 and 401 are retryable nacks, unlike some
+  HTTP status classifications. Read-only permission nacks close with writeOnReadOnlyDocument.
+- Live disconnect reasons reconnect even when their canRetry property is false. A subsequent
+  nonretryable connection-attempt error closes. Disabled suppresses reconnect; Never closes.
+- Initial connection failures start at 500 ms and double *before* waiting (first wait 1000 ms),
+  capped at 8 seconds without endpointReached and 60 seconds with it. A live nack/disconnect's
+  explicit retryAfter is used directly before the next connection attempt.
+- A writer waits for its own join, the previous writer's leave when pending ops exist, and the
+  handshake checkpoint before pending-state replay. The prior client id remains the runtime's
+  local-ack identity until then. The leave deadline defaults to 300000 ms, as TS does.
+- Ordinary summary uploads do **not** retry; only referenceSequenceNumber=0 creation summaries
+  retry, with the TS ackHandle invariant. Reads, versions, snapshots, blobs and downloads retry.
+- L4's TS 3.11.0 crash when targeted server_disconnect reaches a multiplexed connection during
+  another handshake is not mirrored. The live test uses OdspPush.serverDisconnect's existing
+  no-handshake-in-flight guard. It proves recovery after established-session faults, not safety
+  of the TS driver during that known crash window. No TS oracle patch is applied.
+
+Focused Swift coverage is in ReconnectTests, StorageRetryTests, RetryTests, and
+LoadExistingContainerTests.reconnectsAutomaticallyAndPreservesPendingEdits. The latter also
+holds an already-sequenced old-session ack across the drop and loads a new observer, guarding
+against duplicate replay and optimistic-local-only convergence claims.

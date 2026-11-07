@@ -29,7 +29,10 @@ extension ChannelCollection {
     func drainDatastoreMessages(_ submit: (JSONValue, JSONValue?) throws -> Void) throws {
         while !datastoreOutbound.isEmpty {
             let (id, message) = datastoreOutbound[0]
-            let contents = object([("address", .string(id)), ("contents", message.json)])
+            // channelCollection.ts wrapContextForInnerChannel constructs content before type.
+            // Reconnect resubmission must preserve these bytes, not the datastore's local shape.
+            let fluidDataStoreContent = object([("content", message.content), ("type", .string(message.type))])
+            let contents = object([("address", .string(id)), ("contents", fluidDataStoreContent)])
             try submit(object([("type", string("component")), ("contents", contents)]), metadataToken(message.metadata))
             datastoreOutbound.removeFirst()
         }

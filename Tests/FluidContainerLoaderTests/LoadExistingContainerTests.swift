@@ -1,6 +1,7 @@
 import FluidContainerDefinitions
 import FluidContainerRuntime
 import FluidDatastore
+import FluidDriverUtils
 import FluidDriverDefinitions
 import FluidJS
 import FluidMap
@@ -154,6 +155,7 @@ private actor Ordering {
     private(set) var sequenceNumber: Int
     private var clients: [String: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.Continuation] = [:]
     private var expected: [String: Int] = [:]
+    private var readers: Set<String> = []
     /// Clients whose deliveries are held, with what they have not received yet.
     private var held: [String: [ISequencedDocumentMessage]] = [:]
     private(set) var nacks: [String] = []
@@ -166,16 +168,30 @@ private actor Ordering {
         self.sequenceNumber = sequenceNumber
     }
 
-    func join(_ clientId: String, _ events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.Continuation) throws {
+    func join(_ clientId: String, _ events: AsyncThrowingStream<DocumentDeltaConnectionEvent, any Error>.Continuation, read: Bool = false) throws {
         clients[clientId] = events
         expected[clientId] = 1
+        if read {
+            readers.insert(clientId)
+            return
+        }
         let data = JSON.stringify(.object(try JSON.parse(#"{"clientId":"\#(clientId)","detail":\#(interactiveClient)}"#).asObject()))
         try sequence(system: "join", data: data)
     }
 
     func leave(_ clientId: String) throws {
         guard clients.removeValue(forKey: clientId) != nil else { return }
+        if readers.remove(clientId) != nil { return }
         try sequence(system: "leave", data: JSON.stringify(.string(JSString(clientId))))
+    }
+
+    func fault(_ clientId: String, code: Int?) throws {
+        if let code {
+            let nack = try INack(json: JSON.parse("{\"operation\":{\"clientSequenceNumber\":1,\"referenceSequenceNumber\":0,\"type\":\"op\",\"contents\":null},\"sequenceNumber\":0,\"content\":{\"code\":\(code),\"type\":\"BadRequestError\",\"message\":\"fault\",\"retryAfter\":0}}"))
+            clients[clientId]?.yield(.nack(documentId: "doc", nacks: [nack]))
+        } else {
+            clients[clientId]?.yield(.disconnect(reason: NetworkError("socket drop", canRetry: true)))
+        }
     }
 
     func receive(_ clientId: String, _ messages: [IDocumentMessage]) throws {
@@ -242,14 +258,23 @@ private final class FakeDeltaConnection: IDocumentDeltaConnection {
     private let writes: AsyncStream<[IDocumentMessage]>.Continuation
     private let writer: Task<Void, Never>
 
-    init(clientId: String, ordering: Ordering?) throws {
+    init(clientId: String, ordering: Ordering?, read: Bool = false) throws {
         self.clientId = clientId
         self.ordering = ordering
-        details = try IConnected(json: JSON.parse("""
+        let base = try IConnected(json: JSON.parse("""
             {"claims":{"documentId":"doc","scopes":["doc:read","doc:write"],"tenantId":"fake","user":{"id":"u"},"iat":0,"exp":0,"ver":"1.0"},\
             "clientId":"\(clientId)","existing":true,"maxMessageSize":16384,"initialMessages":[],"initialSignals":[],"initialClients":[],\
             "version":"^0.4.0","supportedVersions":["^0.4.0"],"serviceConfiguration":{"maxMessageSize":16384,"blockSize":65436},"mode":"write"}
             """))
+        if read {
+            var fields = try base.json.asObject()
+            fields["mode"] = .string("read")
+            let selfClient = try JSON.parse("{\"clientId\":\"\(clientId)\",\"client\":{\"mode\":\"read\",\"details\":{\"capabilities\":{\"interactive\":true}},\"permission\":[],\"scopes\":[],\"user\":{\"id\":\"\"}}}")
+            fields["initialClients"] = .array([selfClient])
+            details = try IConnected(json: .object(fields))
+        } else {
+            details = base
+        }
         (events, continuation) = AsyncThrowingStream.makeStream()
         let (pending, writes) = AsyncStream<[IDocumentMessage]>.makeStream()
         self.writes = writes
@@ -261,7 +286,7 @@ private final class FakeDeltaConnection: IDocumentDeltaConnection {
     }
 
     func join() async throws {
-        try await ordering?.join(clientId, continuation)
+        try await ordering?.join(clientId, continuation, read: details.mode == .read)
     }
 
     func submit(_ messages: [IDocumentMessage]) {
@@ -280,6 +305,7 @@ private final class FakeDeltaConnection: IDocumentDeltaConnection {
 }
 
 private final class FakeService: IDocumentService {
+    let readFirst: Bool
     let resolvedUrl: IResolvedUrl
     let policies: IDocumentServicePolicies?
     let log: CallLog
@@ -288,7 +314,8 @@ private final class FakeService: IDocumentService {
     let ordering: Ordering?
     private let connections = Mutex(0)
 
-    init(resolvedUrl: IResolvedUrl, policies: IDocumentServicePolicies?, log: CallLog, captured: CapturedSnapshot, clientId: String, ordering: Ordering?) {
+    init(resolvedUrl: IResolvedUrl, policies: IDocumentServicePolicies?, log: CallLog, captured: CapturedSnapshot, clientId: String, ordering: Ordering?, readFirst: Bool = false) {
+        self.readFirst = readFirst
         self.resolvedUrl = resolvedUrl
         self.policies = policies
         self.log = log
@@ -314,7 +341,8 @@ private final class FakeService: IDocumentService {
             count += 1
             return count
         }
-        let connection = try FakeDeltaConnection(clientId: "\(clientId)-\(index)", ordering: ordering)
+        let connection = try FakeDeltaConnection(clientId: "\(clientId)-\(index)", ordering: ordering,
+                                                 read: index == 1 && readFirst)
         try await connection.join()
         return connection
     }
@@ -323,13 +351,15 @@ private final class FakeService: IDocumentService {
 }
 
 private final class FakeFactory: IDocumentServiceFactory {
+    let readFirst: Bool
     let policies: IDocumentServicePolicies?
     let log: CallLog
     let captured: CapturedSnapshot
     let ordering: Ordering?
     private let services = Mutex(0)
 
-    init(policies: IDocumentServicePolicies?, log: CallLog, captured: CapturedSnapshot, ordering: Ordering? = nil) {
+    init(policies: IDocumentServicePolicies?, log: CallLog, captured: CapturedSnapshot, ordering: Ordering? = nil, readFirst: Bool = false) {
+        self.readFirst = readFirst
         self.policies = policies
         self.log = log
         self.captured = captured
@@ -342,7 +372,7 @@ private final class FakeFactory: IDocumentServiceFactory {
             count += 1
             return count
         }
-        return FakeService(resolvedUrl: resolvedUrl, policies: policies, log: log, captured: captured, clientId: "client-\(index)", ordering: ordering)
+        return FakeService(resolvedUrl: resolvedUrl, policies: policies, log: log, captured: captured, clientId: "client-\(index)", ordering: ordering, readFirst: readFirst)
     }
 
     func createContainer(_ createNewSummary: SummaryTree?, resolvedUrl: IResolvedUrl, clientIsSummarizer: Bool) async throws
@@ -381,12 +411,12 @@ private struct Gates: IConfigProviderBase {
 
 private let snapshotFetchGate = "Fluid.Container.UseLoadingGroupIdForSnapshotFetch2"
 
-private func props(_ factory: FakeFactory, _ log: CallLog, gates: Set<String> = []) throws -> ILoadExistingContainerProps {
+private func props(_ factory: FakeFactory, _ log: CallLog, gates: Set<String> = [], canReconnect: Bool = true) throws -> ILoadExistingContainerProps {
     ILoadExistingContainerProps(
         request: IRequest(url: "doc"), urlResolver: FakeResolver(log: log), documentServiceFactory: factory,
         runtimeFactory: try createDOProviderContainerRuntimeFactory(
             schema: ContainerSchema(initialObjects: ["map": SharedMap.self]), oldestSupportedClient: "2.0.0"),
-        configProvider: Gates(names: gates), summaryMode: .disabled)
+        configProvider: Gates(names: gates), summaryMode: .disabled, canReconnect: canReconnect)
 }
 
 /// fluid-static: the root data object's "map".
@@ -428,6 +458,116 @@ private func until(_ label: String, _ condition: () async throws -> Bool) async 
 private let capturedValue = #"{"seed":0,"nested":[null,true,"hello"]}"#
 
 @Suite("loadExistingContainer") @MainActor struct LoadExistingContainerTests {
+    @Test(arguments: [nil, 400, 401, 429, 500, 503] as [Int?])
+    func reconnectsAutomaticallyAndPreservesPendingEdits(code: Int?) async throws {
+        let log = CallLog()
+        let captured = try CapturedSnapshot()
+        let ordering = Ordering(sequenceNumber: captured.sequenceNumber)
+        let factory = FakeFactory(policies: nil, log: log, captured: captured, ordering: ordering)
+        let container = try await loadExistingContainer(props(factory, log), isolation: MainActor.shared)
+        defer { container.dispose(nil) }
+        try await until("first join") { container.connectionState == .connected }
+        var events: [String] = []
+        container.events.on {
+            switch $0 {
+            case .connected: events.append("connected")
+            case .disconnected: events.append("disconnected")
+            case .closed: events.append("closed")
+            default: break
+            }
+        }
+        let map = try initialMap(await container.getEntryPoint())
+        // The old op is sequenced but its ack is withheld. Reconnect must consume that ack
+        // under the OLD runtime client ID before replaying the remaining pending operations.
+        await ordering.hold("client-1-1")
+        try map.set("before", .number(1))
+        try await until("old edit sequenced") {
+            await ordering.log.contains { $0.clientId == "client-1-1" && $0.type == "op" }
+        }
+        try await ordering.fault("client-1-1", code: code)
+        try map.set("during", .number(2))
+        try await until("automatic recovery") {
+            try container.clientId == "client-1-2" && container.connectionState == .connected && pendingMessages(container) == 0
+        }
+        #expect(events == ["disconnected", "connected"])
+        #expect(!container.closed)
+        #expect(await ordering.nacks == [])
+        #expect(try await mapEntries(container).member("before") == .number(1))
+        #expect(try await mapEntries(container).member("during") == .number(2))
+        let observer = try await loadExistingContainer(props(factory, log), isolation: MainActor.shared)
+        defer { observer.dispose(nil) }
+        try await until("observer caught up") { observer.connectionState == .connected }
+        #expect(try await mapEntries(container) == mapEntries(observer))
+    }
+
+    @Test func readConnectionUpgradesBeforeSendingLocalEdits() async throws {
+        let log = CallLog()
+        let captured = try CapturedSnapshot()
+        let ordering = Ordering(sequenceNumber: captured.sequenceNumber)
+        let factory = FakeFactory(policies: nil, log: log, captured: captured, ordering: ordering, readFirst: true)
+        let container = try Container(
+            resolvedUrl: IResolvedUrl(json: JSON.parse(resolvedJSON)), urlResolver: FakeResolver(log: log),
+            documentServiceFactory: factory,
+            runtimeFactory: createDOProviderContainerRuntimeFactory(schema: ContainerSchema(initialObjects: ["map": SharedMap.self]), oldestSupportedClient: "2.0.0"),
+            configProvider: nil, specifiedVersion: nil, clientDetailsOverride: nil, loadRuntime: true, summaryMode: .disabled)
+        var events: [String] = []
+        container.events.on {
+            switch $0 {
+            case .connected: events.append("connected")
+            case .disconnected: events.append("disconnected")
+            default: break
+            }
+        }
+        try await container.open()
+        container.start(on: MainActor.shared)
+        defer { container.dispose(nil) }
+        try await until("read connected") { container.connectionState == .connected }
+        #expect(events == ["connected"])
+        let map = try initialMap(await container.getEntryPoint())
+        try map.set("upgrade", .number(42))
+        try await until("write connected and acknowledged") {
+            try container.clientId == "client-1-2" && container.connectionState == .connected && pendingMessages(container) == 0
+        }
+        #expect(events == ["connected", "disconnected", "connected"])
+        #expect(await ordering.log.filter { $0.type == "op" }.allSatisfy { $0.clientId == "client-1-2" })
+        #expect(map.get("upgrade") == .number(42))
+    }
+
+    @Test func neverReconnectClosesOnSocketLoss() async throws {
+        let log = CallLog()
+        let captured = try CapturedSnapshot()
+        let ordering = Ordering(sequenceNumber: captured.sequenceNumber)
+        let factory = FakeFactory(policies: nil, log: log, captured: captured, ordering: ordering)
+        let container = try await loadExistingContainer(props(factory, log, canReconnect: false), isolation: MainActor.shared)
+        defer { container.dispose(nil) }
+        try await until("first join") { container.connectionState == .connected }
+        try await ordering.fault("client-1-1", code: nil)
+        try await until("closed without reconnect") { container.closed }
+        #expect(log.all.filter { $0.hasPrefix("connectToDeltaStream(") }.count == 1)
+    }
+
+    @Test func fatalNackClosesInsteadOfReconnecting() async throws {
+        let log = CallLog()
+        let captured = try CapturedSnapshot()
+        let ordering = Ordering(sequenceNumber: captured.sequenceNumber)
+        let factory = FakeFactory(policies: nil, log: log, captured: captured, ordering: ordering)
+        let container = try await loadExistingContainer(props(factory, log), isolation: MainActor.shared)
+        defer { container.dispose(nil) }
+        try await until("first join") { container.connectionState == .connected }
+        var events: [String] = []
+        container.events.on {
+            switch $0 {
+            case .disconnected: events.append("disconnected")
+            case .closed: events.append("closed")
+            default: break
+            }
+        }
+        try await ordering.fault("client-1-1", code: 403)
+        try await until("closed") { container.closed }
+        #expect(events == ["disconnected", "closed"])
+        #expect(log.all.filter { $0.hasPrefix("connectToDeltaStream(") }.count == 1)
+    }
+
     /// serializedStateManager.ts fetchISnapshotTree: without supportGetSnapshotApi the loader asks for
     /// the latest version, then its tree, and reads every blob through storage.
     @Test func loadsThroughVersionsAndSnapshotTreeWithoutGetSnapshotSupport() async throws {
