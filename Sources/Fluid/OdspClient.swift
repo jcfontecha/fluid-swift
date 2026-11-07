@@ -20,7 +20,7 @@ public protocol OdspTokenProvider: Sendable {
     func fetchWebsocketToken(siteUrl: String, refresh: Bool) async throws -> TokenResponse
 }
 
-/// Loads containers stored as files in a SharePoint Embedded drive.
+/// Creates and loads containers stored as files in a SharePoint Embedded drive.
 public struct OdspClient: Sendable {
     private let port: FluidOdspClient.OdspClient
 
@@ -40,6 +40,19 @@ public struct OdspClient: Sendable {
         let (container, _) = try await port.getContainer(
             itemID, containerSchema: InitialObjects.schema(of: schema), isolation: owner)
         return try FluidContainer(port: container)
+    }
+
+    /// A new, detached container whose objects are usable right away. `attach()` stores it as a
+    /// new file in the drive's root. The container and its objects belong to `owner`.
+    public func createContainer<Schema: ContainerSchema>(
+        schema: Schema.Type, isolation owner: isolated any Actor
+    ) async -> FluidContainer<Schema> {
+        do {
+            let (container, _) = try await port.createContainer(InitialObjects.schema(of: schema), isolation: owner)
+            return try FluidContainer(port: container)
+        } catch {
+            preconditionFailure("Creating a detached container failed: \(error)")
+        }
     }
 }
 

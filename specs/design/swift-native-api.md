@@ -1,6 +1,6 @@
 # Swift-native app API
 
-2026-11-06. Proposal only. Nothing here is implemented. It covers the layer an iOS or macOS app
+2026-11-06. Approved by Juan and implemented in `Sources/Fluid` (see the Creation addendum for `createContainer`). It covers the layer an iOS or macOS app
 imports, which sits on top of the 1:1 TypeScript port. ARCHITECTURE.md §2 (one owner, synchronous
 DDS access and events) and §3 (JS value semantics inside the port) are taken as settled. This
 proposal does not reopen them.
@@ -503,3 +503,69 @@ What this means:
     (`Sources/FluidJS/JSString.swift:21`). Bulk transcoding from UTF-8 would fix that.
   - `String(decoding:as: UTF16.self)` has no ASCII fast path: 17 µs, against 2.5 µs in the other
     direction. A native `string` getter could special-case ASCII.
+
+## Addendum: Creation
+
+2026-11-06. Implemented in `Sources/Fluid`. It follows the approved shape: a typed schema, one
+path per use case, edits that do not throw, and `throws` only on calls that reach the service.
+
+```swift
+// OdspClient, AzureClient and TinyliciousClient each gain:
+public func createContainer<Schema: ContainerSchema>(
+    schema: Schema.Type, isolation owner: isolated any Actor
+) async -> FluidContainer<Schema>
+
+public final class FluidContainer<Schema: ContainerSchema>: Observable {
+    // as before, plus:
+    public nonisolated(nonsending) func attach() async throws -> String
+}
+
+public enum ContainerStatus {
+    case detached        // created, not yet stored; edits apply locally
+    case attaching       // attach() is storing it
+    case connecting, connected, disconnected
+    case closed((any Error)?)
+}
+```
+
+```swift
+let note = await client.createContainer(schema: Note.self, isolation: MainActor.shared)
+note.initialObjects.text.insert("Draft", at: 0)     // detached: applies locally
+let itemID = try await note.attach()                // the id loadContainer takes
+```
+
+The semantics are TS's:
+
+- **Edits made while detached are part of the attach summary.** The returned container's objects
+  are the root data object's channels, so they take edits right away. `attach()` uploads them in
+  the create-new summary, and a fresh TS client that loads the id sees them.
+- **Attach on a container that is not detached throws** (fluidContainer.ts `attach`). The
+  container stays open.
+- **A failed attach closes the container** (container.ts `attach`). `attach()` rethrows, and
+  `status` becomes `.closed(error)` with the same error.
+- **Every client creates for Fluid Framework 2.0 and later**, the same as `loadContainer`. For
+  ODSP the new file goes in the drive root, with a random name.
+
+**`createContainer` does not throw.** It makes no network call: it builds a detached loader
+container and its runtime locally. Its only failures are internal invariant violations, and
+`schemaMismatch` cannot happen because the objects come from the same schema. By Q5's rule those
+trap. It stays `async` because the port's detached creation is.
+
+**Attach state is part of `status`, not a second property.** For an app the two never vary
+independently. A detached container is never connected, attaching always comes before
+connecting, and closed covers a failed attach. With one enum, the UI has one switch, and there is
+no impossible pair to render, such as "detached and connected". TS splits them into `attachState`
+and `connectionState` because its loader tracks them separately, but the native layer reads both
+from the port and stores neither. A view that shows "saving…" can use `.attaching`, and
+`.detached` tells it that nothing has reached the service yet.
+
+How the status changes are observed: `FluidStatic.FluidContainer` forwards no attach events
+(TS's `IFluidContainerEvents` has none), so `attach()` announces `\.status` when it starts and
+again when it returns or throws. The port's `Container.attach` moves to `.attaching` before its
+first suspension, so a deferred reader such as SwiftUI's next render sees `.attaching`. Then it
+sees `.connecting`, or `.closed` after a failure, which the container's `disposed` event also
+announces. `CreateContainerTests.failedAttachClosesTheContainer` reads `status` the way SwiftUI
+does, and sees exactly `attaching`, then `closed`.
+
+Not covered: detached blob uploads, serializing and rehydrating a detached container, and the
+opt-in retry-attachment configuration. Each will follow when an app needs it.

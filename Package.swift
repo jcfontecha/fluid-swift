@@ -125,6 +125,6 @@ let package = Package(
         .testTarget(name: "FluidDriverDefinitionsTests", dependencies: ["FluidDriverDefinitions", "FluidJS"], resources: [.copy("Fixtures")]),
         .testTarget(name: "FluidJSTests", dependencies: ["FluidJS"]),
         .target(name: "Fluid", dependencies: ["FluidOdspClient", "FluidAzureClient", "FluidTinyliciousClient", "FluidRouterliciousDriver", "FluidStatic", "FluidContainerDefinitions", "FluidDatastoreDefinitions", "FluidSequence", "FluidMap", "FluidJS"]),
-        .testTarget(name: "FluidTests", dependencies: ["Fluid", "FluidStatic", "FluidContainerDefinitions", "FluidContainerLoader", "FluidContainerRuntime", "FluidDatastoreDefinitions", "FluidDriverDefinitions", "FluidTestRuntimeUtils", "FluidSequence", "FluidMap", "FluidJS"], resources: [.copy("Fixtures")]),
+        .testTarget(name: "FluidTests", dependencies: ["Fluid", "FluidStatic", "FluidContainerDefinitions", "FluidContainerLoader", "FluidContainerRuntime", "FluidDatastoreDefinitions", "FluidDriverDefinitions", "FluidTestRuntimeUtils", "FluidSequence", "FluidMap", "FluidJS"], exclude: ["ts-load-client.mjs"], resources: [.copy("Fixtures")]),
     ]
 )

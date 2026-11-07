@@ -60,12 +60,11 @@ final class NotesModel {
     }
 
     func open(itemId: String) async {
-        guard let tokenProvider else { return }
+        guard let client else { return }
         note = nil
         container = nil
         isOpening = true
         defer { isOpening = false }
-        let client = OdspClient(siteURL: config.siteURL, driveID: config.driveId, tokenProvider: tokenProvider)
         do {
             let container = try await client.loadContainer(itemId, schema: Note.self, isolation: MainActor.shared)
             // No await from here on: no remote op can run before the editor's handler is installed.
@@ -74,6 +73,21 @@ final class NotesModel {
         } catch {
             failure = error.localizedDescription
         }
+    }
+
+    /// Creates a note and stores it as a new file. The editor takes typing right away, and what
+    /// is typed before the attach finishes is stored with it. Returns the new item id, or nil when
+    /// the attach failed: that closes the container, whose error `closeFailure` reports.
+    func create() async -> String? {
+        guard let client else { return nil }
+        let container = await client.createContainer(schema: Note.self, isolation: MainActor.shared)
+        self.container = container
+        note = NoteText(text: container.initialObjects.text)
+        return try? await container.attach()
+    }
+
+    private var client: OdspClient? {
+        tokenProvider.map { OdspClient(siteURL: config.siteURL, driveID: config.driveId, tokenProvider: $0) }
     }
 
     /// The error the open container closed with.

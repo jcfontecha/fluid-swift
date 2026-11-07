@@ -1,5 +1,6 @@
 import Fluid
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @State private var model = NotesModel(config: .active)
@@ -8,7 +9,8 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            content
+            // A container, so the toolbar shows while no note is open.
+            ZStack { content }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .toolbar {
                     if model.isSignedIn {
@@ -18,6 +20,16 @@ struct ContentView: View {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Open", systemImage: "doc") {
                                 isEnteringItem = true
+                            }
+                        }
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("New Note", systemImage: "square.and.pencil") {
+                                Task {
+                                    if let id = await model.create() {
+                                        itemId = id
+                                        UIPasteboard.general.string = id
+                                    }
+                                }
                             }
                         }
                     }
@@ -73,13 +85,13 @@ private struct ConnectionIndicator: View {
 
     var body: some View {
         switch status {
-        case .connecting:
+        case .attaching, .connecting:
             ProgressView()
         case .connected:
             Image(systemName: "circle.fill")
                 .imageScale(.small)
                 .accessibilityLabel("Connected")
-        case .disconnected, .closed:
+        case .detached, .disconnected, .closed:
             Image(systemName: "circle")
                 .imageScale(.small)
                 .accessibilityLabel("Disconnected")

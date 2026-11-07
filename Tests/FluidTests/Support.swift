@@ -70,3 +70,42 @@ final class ChangeCounter {
         }
     }
 }
+
+extension ContainerStatus {
+    /// The case, without the closing error, for comparisons.
+    var name: String {
+        switch self {
+        case .detached: "detached"
+        case .attaching: "attaching"
+        case .connecting: "connecting"
+        case .connected: "connected"
+        case .disconnected: "disconnected"
+        case .closed: "closed"
+        }
+    }
+}
+
+/// Records a container's `status` the way SwiftUI reads it: each announced change is read on a
+/// later turn of the main actor, which also re-arms the tracking.
+@MainActor
+final class StatusRecorder<Schema: ContainerSchema> {
+    private(set) var seen: [String] = []
+    private let container: FluidContainer<Schema>
+
+    init(_ container: FluidContainer<Schema>) {
+        self.container = container
+        track()
+    }
+
+    private func track() {
+        withObservationTracking {
+            _ = container.status
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.seen.append(self.container.status.name)
+                self.track()
+            }
+        }
+    }
+}

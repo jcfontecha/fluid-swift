@@ -166,6 +166,42 @@ struct FluidContainerTests {
         #expect(observed.count == 2)
     }
 
+    @Test func attachMovesFromDetachedThroughAttachingToConnecting() async throws {
+        let fake = try fakeContainer()
+        fake.attachState = .detached
+        fake.connectionState = .disconnected
+        var container: Fluid.FluidContainer<MapSchema>?
+        var duringAttach: [String] = []
+        let port = try await createFluidContainer(container: fake, attach: {
+            // container.ts attach: attaching, then attached and connecting.
+            fake.attachState = .attaching
+            duringAttach.append(container?.status.name ?? "none")
+            fake.attachState = .attached
+            fake.connectionState = .establishingConnection
+            return "new-id"
+        })
+        container = try Fluid.FluidContainer(port: port)
+        let created = try #require(container)
+        #expect(created.status.name == "detached")
+        let observed = ChangeCounter { _ = created.status }
+        #expect(try await created.attach() == "new-id")
+        #expect(duringAttach == ["attaching"])
+        #expect(created.status.name == "connecting")
+        #expect(observed.count == 2)
+    }
+
+    /// fluidContainer.ts `attach`: a container that is not detached cannot attach, and stays open.
+    @Test func attachOnAnAttachedContainerThrows() async throws {
+        let fake = try fakeContainer()
+        let container = try Fluid.FluidContainer<MapSchema>(port: await createFluidContainer(container: fake, attach: { "id" }))
+        do {
+            _ = try await container.attach()
+            Issue.record("attach on an attached container must throw")
+        } catch {}
+        #expect(container.status.name == "connected")
+        #expect(fake.closeCount == 0)
+    }
+
     /// There is no dispose: releasing the last reference closes the container.
     @Test func releasingTheContainerClosesIt() async throws {
         let fake = try fakeContainer()

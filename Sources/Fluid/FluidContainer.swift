@@ -4,6 +4,11 @@ import Observation
 
 /// Where a container stands with its service.
 public enum ContainerStatus {
+    /// Created and not yet stored by the service. Edits apply locally and are part of what
+    /// `attach()` stores.
+    case detached
+    /// `attach()` is storing the container with the service.
+    case attaching
     /// Establishing the connection, or catching up on ops after it.
     case connecting
     case connected
@@ -12,8 +17,8 @@ public enum ContainerStatus {
     case closed((any Error)?)
 }
 
-/// A loaded container and its typed initial objects. It belongs to the actor that loaded it, and
-/// it closes when its last reference goes away.
+/// A container and its typed initial objects. It belongs to the actor that loaded or created it,
+/// and it closes when its last reference goes away.
 public final class FluidContainer<Schema: ContainerSchema>: Observable {
     public let initialObjects: Schema
     private let port: FluidStatic.FluidContainer
@@ -45,6 +50,14 @@ public final class FluidContainer<Schema: ContainerSchema>: Observable {
         if port.disposed {
             return .closed(closeError)
         }
+        switch port.attachState {
+        case .detached:
+            return .detached
+        case .attaching:
+            return .attaching
+        case .attached:
+            break
+        }
         switch port.connectionState {
         case .establishingConnection, .catchingUp:
             return .connecting
@@ -59,6 +72,21 @@ public final class FluidContainer<Schema: ContainerSchema>: Observable {
     public var isDirty: Bool {
         registrar.access(self, keyPath: \.isDirty)
         return port.isDirty
+    }
+
+    /// Stores a container from `createContainer` with the service, edits made so far included,
+    /// then connects it. Returns the id `loadContainer` takes.
+    ///
+    /// Throws when the container is not detached, or when the service fails. A failed attach
+    /// closes the container: `status` becomes `.closed(error)`.
+    public nonisolated(nonsending) func attach() async throws -> String {
+        // The port moves to attaching before its first suspension, and to attached (then
+        // connecting) or closed before it returns.
+        registrar.withMutation(of: self, keyPath: \.status) {}
+        defer {
+            registrar.withMutation(of: self, keyPath: \.status) {}
+        }
+        return try await port.attach()
     }
 
     private func receive(_ event: FluidContainerEvent) {

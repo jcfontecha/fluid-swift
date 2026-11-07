@@ -9,7 +9,7 @@ public protocol AzureTokenProvider: Sendable {
     func fetchStorageToken(tenantID: String, documentID: String, refresh: Bool) async throws -> TokenResponse
 }
 
-/// Loads containers from the Azure Fluid Relay, or from a local relay (tinylicious) in local mode.
+/// Creates and loads containers on the Azure Fluid Relay, or from a local relay (tinylicious) in local mode.
 public struct AzureClient: Sendable {
     private let port: FluidAzureClient.AzureClient
 
@@ -36,6 +36,21 @@ public struct AzureClient: Sendable {
         let (container, _) = try await port.getContainer(
             id, containerSchema: InitialObjects.schema(of: schema), oldestSupportedClient: "2.0.0", isolation: owner)
         return try FluidContainer(port: container)
+    }
+
+    /// A new, detached container whose objects are usable right away. `attach()` stores it and
+    /// returns its id. The container and its objects belong to `owner`. Documents this client
+    /// writes stay readable by Fluid Framework 2.0 clients and later.
+    public func createContainer<Schema: ContainerSchema>(
+        schema: Schema.Type, isolation owner: isolated any Actor
+    ) async -> FluidContainer<Schema> {
+        do {
+            let (container, _) = try await port.createContainer(
+                InitialObjects.schema(of: schema), oldestSupportedClient: "2.0.0", isolation: owner)
+            return try FluidContainer(port: container)
+        } catch {
+            preconditionFailure("Creating a detached container failed: \(error)")
+        }
     }
 }
 
